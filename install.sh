@@ -335,6 +335,19 @@ display_summary() {
     echo -e "${YELLOW}Note: Installation tracked in $TRACKER_FILE${NC}"
 }
 
+#=============================================================================
+# Install Python Monitor
+#=============================================================================
+install_python_monitor() {
+    local install_dir="$1"
+    local user="$2"
+    
+    echo ""
+    echo "=========================================="
+    echo "Installing Python Monitor"
+    # ... (rest of function from Artifact 1)
+}
+
 # Main installation flow
 main() {
     echo "Installation Mode: $INSTALL_MODE"
