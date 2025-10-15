@@ -105,6 +105,13 @@ if [[ "$INSTALL_MODE" != "dashboard" && $EUID -ne 0 ]]; then
    exit 1
 fi
 
+# Detect actual user (not root)
+if [ $SUDO_USER ]; then
+    ACTUAL_USER=$SUDO_USER
+else
+    ACTUAL_USER=$(whoami)
+fi
+
 # Banner
 echo -e "${BLUE}"
 cat << "EOF"
@@ -127,7 +134,8 @@ init_tracker() {
   "docker_volumes": [],
   "systemd_services": [],
   "config_files": [],
-  "directories": []
+  "directories": [],
+  "files": []
 }
 EOF
     echo -e "${GREEN}✓ Installation tracker initialized${NC}"
@@ -171,6 +179,20 @@ check_prerequisites() {
         apt-get update && apt-get install -y jq
     fi
     
+    # Check Python3 and pip3
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${YELLOW}! Python3 not found, installing...${NC}"
+        apt-get install -y python3 python3-pip
+    else
+        PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+        echo -e "${GREEN}✓ Python3 found: ${PYTHON_VERSION}${NC}"
+    fi
+    
+    if ! command -v pip3 &> /dev/null; then
+        echo -e "${YELLOW}! pip3 not found, installing...${NC}"
+        apt-get install -y python3-pip
+    fi
+    
     if [ ${#missing_deps[@]} -gt 0 ]; then
         echo -e "${RED}Error: Missing required dependencies: ${missing_deps[*]}${NC}"
         echo ""
@@ -188,10 +210,14 @@ create_directories() {
     echo -e "${BLUE}Creating directory structure...${NC}"
     
     mkdir -p "$INSTALL_DIR"/{rippled/{config,data},monitoring/{grafana/{dashboards,data},prometheus/{data,config}}}
+    mkdir -p "$INSTALL_DIR"/{src,logs,data}
     
     track_component "directories" "$INSTALL_DIR"
     track_component "directories" "$INSTALL_DIR/rippled"
     track_component "directories" "$INSTALL_DIR/monitoring"
+    track_component "directories" "$INSTALL_DIR/src"
+    track_component "directories" "$INSTALL_DIR/logs"
+    track_component "directories" "$INSTALL_DIR/data"
     
     echo -e "${GREEN}✓ Directories created${NC}"
 }
@@ -300,6 +326,144 @@ install_dashboard_only() {
     echo -e "${GREEN}✓ Dashboard file location provided${NC}"
 }
 
+#=============================================================================
+# Install Python Monitor
+#=============================================================================
+install_python_monitor() {
+    local install_dir="$1"
+    local user="$2"
+    
+    echo ""
+    echo -e "${BLUE}==========================================${NC}"
+    echo -e "${BLUE}Installing Python Monitor${NC}"
+    echo -e "${BLUE}==========================================${NC}"
+    echo ""
+    
+    # Check if src/ directory exists in repo
+    if [[ ! -d "$SCRIPT_DIR/src" ]]; then
+        echo -e "${RED}Error: Python source directory '$SCRIPT_DIR/src' not found${NC}"
+        echo "Make sure you're running from the repo root with src/ present"
+        exit 1
+    fi
+    
+    # Install Python dependencies
+    echo -e "${BLUE}[1/6] Installing Python dependencies...${NC}"
+    if [[ -f "$SCRIPT_DIR/requirements.txt" ]]; then
+        su - "$user" -c "pip3 install -r $SCRIPT_DIR/requirements.txt --user" 2>&1 | grep -v "Requirement already satisfied" || true
+        echo -e "${GREEN}  ✓ Python dependencies installed${NC}"
+    else
+        echo -e "${YELLOW}  ⚠ No requirements.txt found, skipping${NC}"
+    fi
+    
+    # Create src directory in installation
+    echo ""
+    echo -e "${BLUE}[2/6] Creating Python source directory...${NC}"
+    mkdir -p "$install_dir/src"
+    echo -e "${GREEN}  ✓ Created $install_dir/src${NC}"
+    
+    # Copy Python source files
+    echo ""
+    echo -e "${BLUE}[3/6] Copying Python source files...${NC}"
+    
+    # Use rsync if available, otherwise cp
+    if command -v rsync &> /dev/null; then
+        rsync -av --exclude='__pycache__' --exclude='*.pyc' --exclude='*.backup*' \
+            "$SCRIPT_DIR/src/" "$install_dir/src/"
+    else
+        cp -r "$SCRIPT_DIR/src/"* "$install_dir/src/"
+        # Remove __pycache__ directories
+        find "$install_dir/src" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+        find "$install_dir/src" -type f -name "*.pyc" -delete 2>/dev/null || true
+        find "$install_dir/src" -type f -name "*.backup*" -delete 2>/dev/null || true
+    fi
+    
+    # Track each Python file
+    find "$install_dir/src" -name "*.py" -type f | while read -r pyfile; do
+        track_component "files" "$pyfile"
+    done
+    
+    PYTHON_FILE_COUNT=$(find "$install_dir/src" -name "*.py" -type f | wc -l)
+    echo -e "${GREEN}  ✓ Copied $PYTHON_FILE_COUNT Python files${NC}"
+    
+    # Replace ${INSTALL_DIR} placeholder with actual path
+    echo ""
+    echo -e "${BLUE}[4/6] Configuring installation paths...${NC}"
+    find "$install_dir/src" -name "*.py" -type f -exec \
+        sed -i "s|\${INSTALL_DIR}|$install_dir|g" {} \; 2>/dev/null
+    echo -e "${GREEN}  ✓ Paths configured for $install_dir${NC}"
+    
+    # Set ownership
+    chown -R "$user:$user" "$install_dir/src"
+    chown -R "$user:$user" "$install_dir/logs"
+    chown -R "$user:$user" "$install_dir/data"
+    echo -e "${GREEN}  ✓ Ownership set to $user${NC}"
+    
+    # Create systemd service
+    echo ""
+    echo -e "${BLUE}[5/6] Creating systemd service...${NC}"
+    if [[ -f "$SCRIPT_DIR/systemd/xrpl-monitor.service.template" ]]; then
+        # Replace template variables
+        sed -e "s|\${INSTALL_DIR}|$install_dir|g" \
+            -e "s|\${USER}|$user|g" \
+            "$SCRIPT_DIR/systemd/xrpl-monitor.service.template" \
+            > /tmp/xrpl-monitor.service
+        
+        # Install service
+        cp /tmp/xrpl-monitor.service /etc/systemd/system/
+        track_component "systemd_services" "xrpl-monitor.service"
+        
+        # Reload systemd
+        systemctl daemon-reload
+        
+        echo -e "${GREEN}  ✓ Service created: xrpl-monitor.service${NC}"
+    else
+        echo -e "${YELLOW}  ⚠ Service template not found at $SCRIPT_DIR/systemd/xrpl-monitor.service.template${NC}"
+        echo -e "${YELLOW}  ⚠ Skipping service creation${NC}"
+        return
+    fi
+    
+    # Enable and start service
+    echo ""
+    echo -e "${BLUE}[6/6] Starting monitor service...${NC}"
+    
+    systemctl enable xrpl-monitor.service
+    systemctl start xrpl-monitor.service
+    
+    # Wait for service to start
+    sleep 3
+    
+    if systemctl is-active --quiet xrpl-monitor.service; then
+        echo -e "${GREEN}  ✓ Service started successfully${NC}"
+        
+        # Show quick status
+        echo ""
+        echo "Service status:"
+        systemctl status xrpl-monitor.service --no-pager -l | head -10
+        
+        # Check Prometheus metrics
+        echo ""
+        echo "Checking Prometheus metrics..."
+        sleep 2
+        if curl -s http://localhost:9091/metrics 2>/dev/null | grep -q "xrpl_validator_state"; then
+            echo -e "${GREEN}  ✓ Prometheus metrics available at http://localhost:9091/metrics${NC}"
+        else
+            echo -e "${YELLOW}  ⚠ Prometheus metrics not yet available (may need more time)${NC}"
+        fi
+    else
+        echo -e "${YELLOW}  ⚠ Service failed to start${NC}"
+        echo ""
+        echo "Check logs with:"
+        echo "  sudo journalctl -u xrpl-monitor.service -n 50"
+        echo "  tail -f $install_dir/logs/error.log"
+    fi
+    
+    echo ""
+    echo -e "${BLUE}==========================================${NC}"
+    echo -e "${GREEN}Python Monitor Installation Complete${NC}"
+    echo -e "${BLUE}==========================================${NC}"
+    echo ""
+}
+
 # Display summary
 display_summary() {
     echo ""
@@ -317,11 +481,14 @@ display_summary() {
         if [[ "$INSTALL_MODE" == "full" ]]; then
             echo "  • Rippled Validator: docker ps | grep rippledvalidator"
         fi
+        echo "  • Python Monitor: systemctl status xrpl-monitor"
         echo "  • Grafana: http://localhost:3000 (admin/admin)"
         echo "  • Prometheus: http://localhost:9090"
+        echo "  • Validator Metrics: http://localhost:9091/metrics"
         echo ""
         echo "Commands:"
         echo "  • Check status: cd $INSTALL_DIR && docker compose ps"
+        echo "  • Monitor logs: sudo journalctl -u xrpl-monitor -f"
         echo "  • View logs: docker logs -f <container_name>"
         if [[ "$INSTALL_MODE" == "full" ]]; then
             echo "  • Rippled info: docker exec rippledvalidator rippled server_info"
@@ -335,23 +502,11 @@ display_summary() {
     echo -e "${YELLOW}Note: Installation tracked in $TRACKER_FILE${NC}"
 }
 
-#=============================================================================
-# Install Python Monitor
-#=============================================================================
-install_python_monitor() {
-    local install_dir="$1"
-    local user="$2"
-    
-    echo ""
-    echo "=========================================="
-    echo "Installing Python Monitor"
-    # ... (rest of function from Artifact 1)
-}
-
 # Main installation flow
 main() {
     echo "Installation Mode: $INSTALL_MODE"
     echo "Installation Directory: $INSTALL_DIR"
+    echo "Installing as user: $ACTUAL_USER"
     if [[ "$INSTALL_MODE" != "dashboard" ]]; then
         echo "Rippled Type: $RIPPLED_TYPE"
     fi
@@ -375,11 +530,13 @@ main() {
         full)
             create_directories
             install_rippled
+            install_python_monitor "$INSTALL_DIR" "$ACTUAL_USER"
             import_dashboard
             ;;
         monitoring)
             create_directories
             install_monitoring
+            install_python_monitor "$INSTALL_DIR" "$ACTUAL_USER"
             import_dashboard
             ;;
         dashboard)
