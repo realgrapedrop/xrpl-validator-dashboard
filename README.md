@@ -360,6 +360,169 @@ The Python monitoring service is configured via:
 
 To modify settings, edit the source files in `${INSTALL_DIR}/src/` and restart the service.
 
+### Systemd Service Template
+
+#### Overview
+
+The Python monitoring service runs as a systemd service for reliability and automatic startup. The service is created automatically during installation.
+
+#### Template Location
+
+```
+systemd/xrpl-monitor.service.template
+```
+
+This template file contains variables that are replaced during installation:
+- `${INSTALL_DIR}` - Replaced with actual installation directory
+- `${USER}` - Replaced with the user running the installation
+
+#### Template Contents
+
+```ini
+[Unit]
+Description=XRPL Validator Monitor (State + Validation + Prometheus)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${USER}                              # ← Replaced during install
+Group=${USER}                             # ← Replaced during install
+WorkingDirectory=${INSTALL_DIR}           # ← Replaced during install
+Environment="INSTALL_DIR=${INSTALL_DIR}"  # ← Replaced during install
+ExecStart=/usr/bin/python3 ${INSTALL_DIR}/src/collectors/fast_poller.py
+
+Restart=always
+RestartSec=10
+MemoryMax=512M
+CPUQuota=50%
+
+StandardOutput=append:${INSTALL_DIR}/logs/monitor.log
+StandardError=append:${INSTALL_DIR}/logs/error.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### Automatic Installation
+
+**The install.sh script handles everything:**
+
+1. ✅ Reads the template from `systemd/xrpl-monitor.service.template`
+2. ✅ Replaces `${INSTALL_DIR}` with actual path (e.g., `/opt/xrpl-validator`)
+3. ✅ Replaces `${USER}` with actual username (e.g., `grapedrop`)
+4. ✅ Creates `/etc/systemd/system/xrpl-monitor.service`
+5. ✅ Reloads systemd daemon
+6. ✅ Enables service for auto-start on boot
+7. ✅ Starts the service immediately
+
+**Result:** After installation, the service runs automatically with the correct paths for your system.
+
+#### Manual Template Usage (Advanced)
+
+If you need to manually create the service (development/testing):
+
+```bash
+# Set your paths
+INSTALL_DIR="/path/to/installation"
+USER="your-username"
+
+# Process template
+sed -e "s|\${INSTALL_DIR}|$INSTALL_DIR|g" \
+    -e "s|\${USER}|$USER|g" \
+    systemd/xrpl-monitor.service.template \
+    > /tmp/xrpl-monitor.service
+
+# Install service
+sudo cp /tmp/xrpl-monitor.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable xrpl-monitor
+sudo systemctl start xrpl-monitor
+```
+
+#### Verifying Service Installation
+
+After `install.sh` completes, verify the service was created correctly:
+
+```bash
+# Check service file exists and has correct paths
+cat /etc/systemd/system/xrpl-monitor.service
+
+# Verify no template variables remain
+grep '\${' /etc/systemd/system/xrpl-monitor.service  # Should return nothing
+
+# Check service is running
+systemctl status xrpl-monitor
+
+# View service configuration
+systemctl cat xrpl-monitor
+```
+
+#### Customizing the Service
+
+To modify service parameters (memory limits, restart policy, etc.):
+
+**Option 1: Edit template before installation**
+```bash
+# Edit systemd/xrpl-monitor.service.template
+# Change MemoryMax, CPUQuota, etc.
+# Then run install.sh
+```
+
+**Option 2: Override after installation**
+```bash
+# Create override file
+sudo systemctl edit xrpl-monitor
+
+# Add your changes:
+[Service]
+MemoryMax=1G
+CPUQuota=100%
+
+# Reload and restart
+sudo systemctl daemon-reload
+sudo systemctl restart xrpl-monitor
+```
+
+#### Troubleshooting Service Creation
+
+**If service fails to start after installation:**
+
+1. **Check template file exists:**
+   ```bash
+   ls -la systemd/xrpl-monitor.service.template
+   ```
+
+2. **Verify service file was created:**
+   ```bash
+   ls -la /etc/systemd/system/xrpl-monitor.service
+   ```
+
+3. **Check for template variables:**
+   ```bash
+   grep '\${' /etc/systemd/system/xrpl-monitor.service
+   # If this returns anything, variables weren't replaced
+   ```
+
+4. **View installation logs:**
+   ```bash
+   # install.sh outputs service creation status
+   # Look for: "[5/6] Creating systemd service..."
+   ```
+
+5. **Check systemd errors:**
+   ```bash
+   sudo journalctl -u xrpl-monitor -n 50
+   systemctl status xrpl-monitor
+   ```
+
+#### Related Files
+
+- **Template**: `systemd/xrpl-monitor.service.template`
+- **Installed service**: `/etc/systemd/system/xrpl-monitor.service`
+- **Installation script**: `install.sh` (handles template processing)
+- **Uninstall script**: `uninstall.sh` (removes service cleanly)
+
 ### Prometheus Configuration
 
 Prometheus config is at `${INSTALL_DIR}/monitoring/prometheus/prometheus.yml`
