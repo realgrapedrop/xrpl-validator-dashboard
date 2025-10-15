@@ -1,0 +1,13 @@
+# XRPL Monitor Python Dependencies
+# Install with: pip3 install -r requirements.txt
+
+# Prometheus client for metrics export
+prometheus-client>=0.19.0
+
+# No other external dependencies required!
+# The monitor uses Python standard library for:
+# - subprocess (Docker/rippled commands)
+# - sqlite3 (local database)
+# - json (API responses)
+# - datetime (timestamps)
+# - logging (alerts and debugging)
