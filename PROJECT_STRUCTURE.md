@@ -145,12 +145,18 @@ xrpl-validator-monitor-dashboard/
     - Common issues and solutions
     - **Content:** See artifact "TROUBLESHOOTING.md"
 
-16. **docs/INSTALLATION.md** ⏳
+16. **docs/TIPS.md** ✅
+    - Tips and best practices
+    - Grafana optimization, Prometheus tuning
+    - State monitoring, alerts, security
+    - **Content:** See artifact "TIPS.md"
+
+17. **docs/INSTALLATION.md** ⏳
     - Detailed step-by-step installation guide
     - **Status:** Can be extracted from README.md or enhanced separately
     - **Recommendation:** Start with README.md, create detailed version later
 
-17. **docs/SECURITY.md** ⏳
+18. **docs/SECURITY.md** ⏳
     - Security best practices
     - Hardening guide
     - **Status:** Future enhancement
@@ -235,6 +241,7 @@ xrpl-validator-monitor-dashboard/
 | config/prometheus.yml.template | prometheus_config | ✅ |
 | docs/PREREQUISITES.md | prerequisites_doc | ✅ |
 | docs/TROUBLESHOOTING.md | troubleshooting_doc | ✅ |
+| docs/TIPS.md | tips_doc | ✅ |
 | PROJECT_STRUCTURE.md | project_structure_doc | 📄 |
 
 ## Next Steps
