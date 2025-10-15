@@ -1,0 +1,48 @@
+[Unit]
+Description=XRPL Validator Monitor (State + Validation + Prometheus)
+After=docker.service network-online.target
+Wants=network-online.target
+Documentation=https://github.com/yourusername/xrpl-validator-monitor
+
+[Service]
+Type=simple
+User=${USER}
+Group=${USER}
+WorkingDirectory=${INSTALL_DIR}
+
+# Python interpreter (will be set during installation)
+Environment="PYTHONUNBUFFERED=1"
+Environment="INSTALL_DIR=${INSTALL_DIR}"
+
+# Run the fast poller
+ExecStart=/usr/bin/python3 ${INSTALL_DIR}/src/collectors/fast_poller.py
+
+# Auto-restart on failure
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Logging
+StandardOutput=append:${INSTALL_DIR}/logs/monitor.log
+StandardError=append:${INSTALL_DIR}/logs/error.log
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=${INSTALL_DIR}/data ${INSTALL_DIR}/logs
+
+# Resource limits
+MemoryMax=512M
+MemoryHigh=384M
+CPUQuota=50%
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
