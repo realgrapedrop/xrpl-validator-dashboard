@@ -434,6 +434,8 @@ sudo netstat -tulpn | grep -E "51235|5005|3000|9090"
 
 For more troubleshooting, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
+**For optimization tips and best practices, see [docs/TIPS.md](docs/TIPS.md)**
+
 ## Project Structure
 
 ```
@@ -462,6 +464,7 @@ xrpl-validator-monitor-dashboard/
     ├── PREREQUISITES.md               # Detailed prerequisites
     ├── INSTALLATION.md                # Detailed installation guide
     ├── TROUBLESHOOTING.md             # Troubleshooting guide
+    ├── TIPS.md                        # Tips & best practices
     └── SECURITY.md                    # Security best practices
 ```
 
