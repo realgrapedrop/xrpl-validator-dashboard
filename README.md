@@ -1,6 +1,6 @@
 # XRPL Validator Monitor Dashboard
 
-A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides real-time metrics, performance tracking, and alerting through Grafana and Prometheus.
+A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides real-time metrics, performance tracking, and alerting through Grafana and Prometheus with a custom Python monitoring service.
 
 **Created by:** [Grapedrop](https://xrp-validator.grapedrop.xyz) | [@realGrapedrop](https://x.com/realGrapedrop)
 
@@ -13,17 +13,20 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 ## Features
 
 - 📊 **Real-time Monitoring** - Track validator performance, consensus state, and network metrics
+- 🐍 **Python Monitoring Service** - Custom exporter with 3-second polling for fast state transitions
 - 🐳 **Docker-based** - Easy deployment with Docker Compose
 - 🔧 **Modular Installation** - Choose what you need (full stack, monitoring only, or just the dashboard)
 - 📈 **Pre-built Dashboard** - Grafana dashboard with key XRPL validator metrics
 - 🔐 **Security Hardened** - Best practices for production validator security
 - 🗑️ **Clean Uninstall** - Surgical removal script that tracks and removes everything
+- 📦 **Auto-deployment** - Installation script handles Python service setup automatically
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Use Cases](#use-cases)
 - [Quick Start](#quick-start)
+- [Python Monitoring System](#python-monitoring-system)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
@@ -41,6 +44,8 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 ### Software Requirements
 - **Docker**: 28.3.3 or later
 - **Docker Compose**: v2.39.1 or later
+- **Python**: 3.8+ (automatically installed if missing)
+- **pip3**: Python package manager (automatically installed if missing)
 - **Grafana**: 11.2.0 (included in monitoring stack)
 - **Prometheus**: 2.54.1 (included in monitoring stack)
 - **Node Exporter**: 1.8.2 (included in monitoring stack)
@@ -59,31 +64,32 @@ Install Docker and Docker Compose:
 
 **For monitoring-only installations:**
 - **CPU**: 2+ cores
-- **RAM**: 4GB minimum
+- **RAM**: 4GB minimum (Python monitor uses <100MB)
 - **Storage**: 50GB for metrics retention
 
 ### Network Requirements
 - Peer port: 51235 (TCP/UDP) - Must be publicly accessible
 - Admin ports: 5005, 5006, 6006 (bound to localhost only)
+- Prometheus metrics: 9091 (Python monitor exporter)
 
 ## Use Cases
 
 This project supports multiple deployment scenarios:
 
 ### Use Case 1: Full Stack with Docker Rippled
-Complete setup including rippled validator and monitoring stack.
+Complete setup including rippled validator and monitoring stack with Python service.
 ```bash
 ./install.sh --full
 ```
 
 ### Use Case 2: Monitoring Only (Docker Rippled)
-Add monitoring to existing rippled Docker container.
+Add monitoring to existing rippled Docker container. Includes Python monitoring service.
 ```bash
 ./install.sh --monitoring --rippled-type docker
 ```
 
 ### Use Case 3: Monitoring Only (Native Rippled)
-Add monitoring to rippled running as systemd service or binary.
+Add monitoring to rippled running as systemd service or binary. Includes Python monitoring service.
 ```bash
 ./install.sh --monitoring --rippled-type native
 ```
@@ -92,6 +98,136 @@ Add monitoring to rippled running as systemd service or binary.
 Import dashboard into existing Grafana instance.
 ```bash
 ./install.sh --dashboard-only
+```
+
+## Python Monitoring System
+
+### Overview
+
+The Python monitoring service (`xrpl-monitor`) is the core component that collects validator metrics and exports them to Prometheus. It runs as a systemd service and polls your rippled node every 3 seconds.
+
+**What it does:**
+- ✅ Polls rippled API every 3 seconds for real-time state tracking
+- ✅ Tracks validator state transitions (disconnected → syncing → full → proposing)
+- ✅ Monitors validation performance (agreements, misses, rates)
+- ✅ Records peer network metrics (count, latency, health)
+- ✅ Stores historical data in SQLite database
+- ✅ Exports metrics to Prometheus (port 9091)
+- ✅ Sends alerts on state changes
+
+**Why Python?**
+- Fast polling interval (3s) catches quick state transitions
+- Rich API client for both Docker and native rippled
+- SQLite storage for historical analysis
+- Reliable systemd service management
+- Easy to extend and customize
+
+### Architecture
+
+```
+┌─────────────┐
+│   rippled   │ ← Docker or Native
+└──────┬──────┘
+       │ RPC API (port 5005)
+       ↓
+┌─────────────────────┐
+│  xrpl-monitor       │ ← Python Service (systemd)
+│  (fast_poller.py)   │    Polls every 3 seconds
+│                     │
+│  ├─ RippledAPI      │
+│  ├─ Database (SQLite)
+│  ├─ ValidationTracker
+│  └─ PrometheusExporter (port 9091)
+└──────┬──────────────┘
+       │ HTTP Metrics
+       ↓
+┌─────────────┐      ┌──────────┐
+│ Prometheus  │─────→│ Grafana  │
+└─────────────┘      └──────────┘
+```
+
+### Automatic Deployment
+
+The `install.sh` script automatically:
+1. ✅ Installs Python dependencies (`pip3 install -r requirements.txt`)
+2. ✅ Copies `src/` directory to installation location
+3. ✅ Creates systemd service from template
+4. ✅ Starts and enables `xrpl-monitor.service`
+5. ✅ Tracks all files for clean uninstallation
+
+**No manual setup required!**
+
+### Service Management
+
+After installation, manage the service with:
+
+```bash
+# Check status
+sudo systemctl status xrpl-monitor
+
+# View logs
+sudo journalctl -u xrpl-monitor -f
+
+# Restart service
+sudo systemctl restart xrpl-monitor
+
+# Stop service
+sudo systemctl stop xrpl-monitor
+
+# Start service
+sudo systemctl start xrpl-monitor
+
+# Check metrics endpoint
+curl http://localhost:9091/metrics
+```
+
+### Key Metrics Exported
+
+The Python service exports 40+ metrics including:
+
+**State Metrics:**
+- `xrpl_validator_state_value` - Current validator state (0-6)
+- `xrpl_time_in_current_state_seconds` - Time in current state
+- `xrpl_server_state_duration_seconds` - Uptime in current state
+
+**Validation Metrics:**
+- `xrpl_validation_rate` - Validation participation rate
+- `xrpl_validations_checked_total` - Total validations checked
+- `xrpl_validator_uptime_seconds` - Total validator uptime
+
+**Network Metrics:**
+- `xrpl_peer_count` - Connected peer count
+- `xrpl_peers_inbound` / `xrpl_peers_outbound` - Peer direction stats
+- `xrpl_peer_latency_p90_ms` - 90th percentile peer latency
+
+**Ledger Metrics:**
+- `xrpl_ledger_sequence` - Current ledger number
+- `xrpl_ledger_age_seconds` - Age since last ledger
+- `xrpl_load_factor` - Server load factor
+
+### Database Storage
+
+Historical metrics are stored in SQLite:
+- **Location**: `${INSTALL_DIR}/data/monitor.db`
+- **Retention**: Indefinite (manual cleanup if needed)
+- **Tables**: `validator_metrics` with timestamped data
+- **Size**: ~100MB per year of operation
+
+### For Developers
+
+Want to customize the monitoring? See:
+- **Technical Details**: [src/README.md](src/README.md)
+- **Development Guide**: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- **Source Code**: [src/](src/)
+
+The Python codebase is well-structured and documented:
+```
+src/
+├── collectors/      # Data collection (fast_poller.py)
+├── exporters/       # Prometheus exporter
+├── storage/         # SQLite database
+├── utils/           # rippled API client
+└── alerts/          # Alert system
 ```
 
 ## Quick Start
@@ -103,10 +239,14 @@ Import dashboard into existing Grafana instance.
 git clone https://github.com/realGrapedrop/xrpl-validator-monitor-dashboard.git
 cd xrpl-validator-monitor-dashboard
 
-# Run installation
+# Run installation (includes Python monitoring service)
 sudo ./install.sh --full
 
-# Follow the prompts to configure
+# Verify Python service is running
+sudo systemctl status xrpl-monitor
+
+# Check metrics are available
+curl http://localhost:9091/metrics | grep xrpl_validator_state
 ```
 
 **Monitoring only (existing rippled):**
@@ -116,11 +256,14 @@ sudo ./install.sh --full
 git clone https://github.com/realGrapedrop/xrpl-validator-monitor-dashboard.git
 cd xrpl-validator-monitor-dashboard
 
-# Install monitoring stack
+# Install monitoring stack (includes Python service)
 sudo ./install.sh --monitoring --rippled-type docker
 
 # Access Grafana at http://localhost:3000
 # Default credentials: admin/admin (change on first login)
+
+# Verify Python monitor
+sudo systemctl status xrpl-monitor
 ```
 
 ## Installation
@@ -137,9 +280,9 @@ cd xrpl-validator-monitor-dashboard
 The `install.sh` script supports multiple installation modes:
 
 **Options:**
-- `--full` - Complete stack (rippled + monitoring)
-- `--monitoring` - Monitoring stack only
-- `--dashboard-only` - Import dashboard only
+- `--full` - Complete stack (rippled + monitoring + Python service)
+- `--monitoring` - Monitoring stack only (includes Python service)
+- `--dashboard-only` - Import dashboard only (no Python service)
 - `--rippled-type [docker|native]` - Specify rippled deployment type
 - `--install-dir <path>` - Custom installation directory (default: $HOME/xrpl-validator)
 - `--help` - Show all options
@@ -168,6 +311,7 @@ The installation script will guide you through configuration. Key items:
 2. **Validator keys** - Generate new or import existing
 3. **Network ports** - Confirm firewall rules
 4. **Resource limits** - Memory and CPU allocation
+5. **Python service** - Automatically configured and started
 
 ### Step 4: Verify Installation
 
@@ -176,8 +320,15 @@ The installation script will guide you through configuration. Key items:
 docker ps | grep rippledvalidator
 docker exec rippledvalidator rippled server_info
 
+# Check Python monitoring service
+sudo systemctl status xrpl-monitor
+sudo journalctl -u xrpl-monitor -n 20
+
 # Check monitoring stack
 docker ps | grep -E "prometheus|grafana|node"
+
+# Verify metrics are being exported
+curl http://localhost:9091/metrics | head -20
 
 # Access Grafana
 # URL: http://localhost:3000
@@ -193,23 +344,40 @@ Configuration files are located in `${INSTALL_DIR}/rippled/config/`:
 - `validators.txt` - UNL (Unique Node List)
 - `validator-keys.json` - Validator keypair (keep secure!)
 
+### Python Monitor Configuration
+
+The Python monitoring service is configured via:
+- **Service file**: `/etc/systemd/system/xrpl-monitor.service`
+- **Source code**: `${INSTALL_DIR}/src/`
+- **Database**: `${INSTALL_DIR}/data/monitor.db`
+- **Logs**: `${INSTALL_DIR}/logs/monitor.log` and `error.log`
+
+**Default settings:**
+- Poll interval: 3 seconds
+- Metrics port: 9091
+- Memory limit: 512MB
+- CPU limit: 50%
+
+To modify settings, edit the source files in `${INSTALL_DIR}/src/` and restart the service.
+
 ### Prometheus Configuration
 
 Prometheus config is at `${INSTALL_DIR}/monitoring/prometheus/prometheus.yml`
 
-**Important Note on Metrics:**
+**Default scrape targets:**
+- xrpl-monitor: `localhost:9091` (Python monitoring service) - **Primary metrics source**
+- node_exporter: `localhost:9100` (Host system metrics)
+- cadvisor: `localhost:8080` (Docker container metrics)
 
-Most XRPL validator setups use a **custom metrics exporter** (like xrpl-monitor) rather than direct rippled metrics. The exporter:
-- Queries rippled's admin API (typically port 5005 or 6006)
-- Converts data to Prometheus format
-- Exposes metrics on a dedicated port (commonly 9091)
-
-Default scrape targets in the template:
-- xrpl-monitor: `localhost:9091` (custom exporter - recommended)
-- node_exporter: `localhost:9100`
-- cadvisor: `localhost:8080`
-
-**If you're using a custom exporter**, adjust the prometheus.yml target and port accordingly. Direct rippled metrics on port 5005 may not be available in standard installations.
+**Scrape interval recommendations:**
+```yaml
+scrape_configs:
+  - job_name: 'xrpl-monitor'
+    scrape_interval: 5s      # Match Python poller (3s) for real-time updates
+    scrape_timeout: 4s
+    static_configs:
+      - targets: ['localhost:9091']
+```
 
 ### Grafana Dashboard
 
@@ -227,24 +395,49 @@ The dashboard is automatically imported during installation. To manually import:
 
 **Full stack:**
 ```bash
+# Start Docker services
 cd ${INSTALL_DIR}
 docker compose -f docker-compose-full.yml up -d
+
+# Python monitor starts automatically via systemd
+sudo systemctl status xrpl-monitor
 ```
 
 **Monitoring only:**
 ```bash
+# Start Docker monitoring services
 cd ${INSTALL_DIR}
 docker compose -f docker-compose-monitoring.yml up -d
+
+# Python monitor starts automatically via systemd
+sudo systemctl status xrpl-monitor
 ```
 
 ### Stopping Services
 
 ```bash
+# Stop Docker services
 cd ${INSTALL_DIR}
 docker compose down
+
+# Stop Python monitor
+sudo systemctl stop xrpl-monitor
 ```
 
 ### Viewing Logs
+
+**Python monitor logs:**
+```bash
+# Real-time logs
+sudo journalctl -u xrpl-monitor -f
+
+# Last 50 lines
+sudo journalctl -u xrpl-monitor -n 50
+
+# Application logs
+tail -f ${INSTALL_DIR}/logs/monitor.log
+tail -f ${INSTALL_DIR}/logs/error.log
+```
 
 **Rippled logs:**
 ```bash
@@ -268,9 +461,34 @@ docker logs -f grafana
 docker exec rippledvalidator rippled server_info
 ```
 
+**Check Python monitor metrics:**
+```bash
+# Quick health check
+curl http://localhost:9091/metrics | grep xrpl_validator_state
+
+# All metrics
+curl http://localhost:9091/metrics
+
+# Specific metric
+curl http://localhost:9091/metrics | grep xrpl_validation_rate
+```
+
+**Check database:**
+```bash
+# View record count
+sqlite3 ${INSTALL_DIR}/data/monitor.db "SELECT COUNT(*) FROM validator_metrics;"
+
+# View recent records
+sqlite3 ${INSTALL_DIR}/data/monitor.db "SELECT datetime(timestamp, 'unixepoch'), server_state, ledger_seq FROM validator_metrics ORDER BY timestamp DESC LIMIT 10;"
+```
+
 **Check resource usage:**
 ```bash
+# Docker containers
 docker stats
+
+# Python service
+systemctl status xrpl-monitor | grep Memory
 ```
 
 **Access Grafana:**
@@ -323,9 +541,10 @@ For the `xrpl-monitor` job in prometheus.yml:
 ```
 
 **Why 5 seconds?**
+- Python service polls every 3 seconds
 - Validator state transitions can happen quickly (syncing in 5-10s)
-- Default 15s interval may miss intermediate states
 - 5s provides good balance between data granularity and system load
+- Default 15s interval may miss intermediate states
 
 **After changing prometheus.yml:**
 ```bash
@@ -353,7 +572,7 @@ docker restart prometheus
 The uninstall script performs surgical removal of all installed components based on the installation tracker.
 
 ```bash
-# Full uninstall (removes everything)
+# Full uninstall (removes everything including Python service)
 sudo ./uninstall.sh
 
 # Preview what will be removed (dry-run)
@@ -365,17 +584,88 @@ sudo ./uninstall.sh --rippled-only
 ```
 
 **What gets removed:**
-- Docker containers and volumes
-- Configuration files
-- Installation directories
-- System services (if any)
-- Installation tracker
+- ✅ Python monitoring service (xrpl-monitor.service)
+- ✅ Python source code (src/ directory)
+- ✅ Database and logs
+- ✅ Docker containers and volumes
+- ✅ Configuration files
+- ✅ Installation directories
+- ✅ System services
+- ✅ Installation tracker
 
 **What is preserved:**
 - Docker images (use `docker image prune` manually if needed)
-- Backup files (stored in `${INSTALL_DIR}/backups/`)
+- Backup files (stored in `${INSTALL_DIR}_backup_<timestamp>/`)
+- Python dependencies (use `pip3 uninstall prometheus-client` if desired)
+
+**Verification:**
+
+After uninstall, the script verifies complete removal:
+```bash
+# Service removed
+systemctl status xrpl-monitor  # Should not exist
+
+# Metrics endpoint gone
+curl http://localhost:9091/metrics  # Should fail
+
+# Directory removed
+ls ${INSTALL_DIR}  # Should not exist
+```
 
 ## Troubleshooting
+
+### Python Monitor Not Starting
+
+1. Check service status:
+```bash
+sudo systemctl status xrpl-monitor
+sudo journalctl -u xrpl-monitor -n 50
+```
+
+2. Common issues:
+   - **Permission denied**: Check file ownership in `${INSTALL_DIR}/src`
+   - **Module not found**: Reinstall Python dependencies: `pip3 install -r requirements.txt`
+   - **Connection refused**: Verify rippled is running and accessible on port 5005
+
+3. Test manually:
+```bash
+# Run Python monitor directly to see errors
+sudo -u $USER python3 ${INSTALL_DIR}/src/collectors/fast_poller.py
+```
+
+### Metrics Not Appearing in Grafana
+
+1. Check Python metrics endpoint:
+```bash
+curl http://localhost:9091/metrics
+```
+
+2. Check Prometheus targets:
+   - Visit http://localhost:9090/targets
+   - Look for `xrpl-monitor` job
+   - Should show "UP" status
+
+3. Verify Prometheus scrape config:
+```bash
+cat ${INSTALL_DIR}/monitoring/prometheus/prometheus.yml | grep -A 5 xrpl-monitor
+```
+
+### Database Errors
+
+1. Check database file:
+```bash
+ls -la ${INSTALL_DIR}/data/monitor.db
+```
+
+2. Check permissions:
+```bash
+sudo chown $USER:$USER ${INSTALL_DIR}/data/monitor.db
+```
+
+3. Verify database integrity:
+```bash
+sqlite3 ${INSTALL_DIR}/data/monitor.db "PRAGMA integrity_check;"
+```
 
 ### Rippled Not Syncing
 
@@ -399,7 +689,7 @@ sudo netstat -tulpn | grep 51235
 
 2. Test Prometheus query:
    - Visit http://localhost:9090
-   - Try query: `rippled_server_info`
+   - Try query: `xrpl_validator_state_value`
 
 ### High Memory Usage
 
@@ -408,12 +698,17 @@ sudo netstat -tulpn | grep 51235
 docker stats rippledvalidator
 ```
 
-2. Adjust memory limits in docker-compose.yml:
+2. Check Python monitor memory:
+```bash
+systemctl status xrpl-monitor | grep Memory
+```
+
+3. Adjust memory limits in docker-compose.yml:
 ```yaml
 mem_limit: "64g"  # Adjust based on available RAM
 ```
 
-3. Consider reducing `node_size` in rippled.cfg (not recommended for validators)
+4. Consider reducing `node_size` in rippled.cfg (not recommended for validators)
 
 ### Container Won't Start
 
@@ -429,7 +724,7 @@ ls -la ${INSTALL_DIR}/rippled/{config,data}
 
 3. Check port conflicts:
 ```bash
-sudo netstat -tulpn | grep -E "51235|5005|3000|9090"
+sudo netstat -tulpn | grep -E "51235|5005|3000|9090|9091"
 ```
 
 For more troubleshooting, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
@@ -442,11 +737,30 @@ For more troubleshooting, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 xrpl-validator-monitor-dashboard/
 ├── README.md                          # This file
 ├── LICENSE                            # MIT License
-├── install.sh                         # Installation script
-├── uninstall.sh                       # Uninstallation script
+├── install.sh                         # Installation script (deploys Python service)
+├── uninstall.sh                       # Uninstallation script (removes Python service)
+├── requirements.txt                   # Python dependencies
 ├── docker-compose-full.yml            # Full stack (rippled + monitoring)
 ├── docker-compose-monitoring.yml      # Monitoring only
 ├── docker-compose-rippled-template.yml # Rippled reference config
+├── src/                               # Python monitoring service source code
+│   ├── README.md                      # Technical documentation for developers
+│   ├── alerts/
+│   │   └── alerter.py                 # Alert system for state changes
+│   ├── collectors/
+│   │   ├── fast_poller.py             # Main monitoring loop (3s polling)
+│   │   └── validation_tracker.py     # Validation performance tracking
+│   ├── exporters/
+│   │   └── prometheus_exporter.py    # Prometheus metrics exporter (port 9091)
+│   ├── storage/
+│   │   └── database.py                # SQLite database for historical data
+│   ├── utils/
+│   │   ├── rippled_api.py             # rippled API client (Docker/native)
+│   │   └── config.py                  # Configuration loader
+│   ├── outputs/                       # Reserved for future output plugins
+│   └── processors/                    # Reserved for future data processors
+├── systemd/
+│   └── xrpl-monitor.service.template  # Systemd service template for Python monitor
 ├── config/
 │   ├── rippled.cfg.template           # Rippled configuration template
 │   ├── validators.txt.template        # UNL template
@@ -465,18 +779,62 @@ xrpl-validator-monitor-dashboard/
     ├── INSTALLATION.md                # Detailed installation guide
     ├── TROUBLESHOOTING.md             # Troubleshooting guide
     ├── TIPS.md                        # Tips & best practices
-    └── SECURITY.md                    # Security best practices
+    ├── SECURITY.md                    # Security best practices
+    └── DEVELOPMENT.md                 # Developer guide for Python codebase
 ```
+
+### Key Files Explained
+
+**install.sh & uninstall.sh**
+- These scripts handle **everything**, including Python service deployment
+- install.sh: Installs dependencies, copies src/, creates systemd service, starts monitoring
+- uninstall.sh: Stops service, removes files, cleans up completely
+- Both track all changes for surgical removal
+
+**src/ directory**
+- Complete Python monitoring system
+- Automatically deployed by install.sh
+- Runs as systemd service (xrpl-monitor.service)
+- See [src/README.md](src/README.md) for technical details
+
+**systemd/ directory**
+- Service templates for xrpl-monitor
+- install.sh replaces variables with actual paths
+- Creates `/etc/systemd/system/xrpl-monitor.service`
+
+**requirements.txt**
+- Python dependencies (mainly prometheus-client)
+- Automatically installed by install.sh
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### For Code Contributions
+
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+3. Make your changes
+4. Test thoroughly (especially if modifying Python monitoring service)
+5. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+6. Push to the branch (`git push origin feature/AmazingFeature`)
+7. Open a Pull Request
+
+### Development Setup
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
+- Project architecture
+- Code structure
+- Testing procedures
+- Contributing guidelines
+
+### Areas for Contribution
+
+- Additional metrics in Python monitor
+- Dashboard panel improvements
+- Alert rule templates
+- Documentation enhancements
+- Bug fixes and performance improvements
 
 ## Acknowledgments
 
@@ -484,10 +842,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [XRPL Labs](https://xrpl-labs.com) - For the rippled Docker image
 - [Prometheus](https://prometheus.io) - Monitoring and alerting
 - [Grafana](https://grafana.com) - Visualization and dashboards
+- Python community for excellent monitoring libraries
 
 ## Support
 
 - **Documentation**: [docs/](docs/)
+- **Python Monitor Docs**: [src/README.md](src/README.md)
+- **Developer Guide**: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 - **Issues**: https://github.com/realGrapedrop/xrpl-validator-monitor-dashboard/issues
 - **XRPL Documentation**: https://xrpl.org/docs.html
 - **Author**: [Grapedrop](https://xrp-validator.grapedrop.xyz) | [@realGrapedrop](https://x.com/realGrapedrop)
