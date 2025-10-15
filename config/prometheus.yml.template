@@ -1,0 +1,85 @@
+# Prometheus Configuration for XRPL Validator Monitoring
+# This file is automatically configured during installation
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'xrpl-validator-monitor'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# Scrape configurations
+scrape_configs:
+  # XRPL Rippled Validator Metrics
+  - job_name: 'rippled'
+    static_configs:
+      # For Docker rippled in same network
+      - targets: ['rippledvalidator:5005']
+      # For native rippled or host network mode, use:
+      # - targets: ['localhost:5005']
+    
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    
+    # Rippled-specific metric relabeling
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'rippled_.*'
+        action: keep
+
+  # Prometheus Self-Monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # Node Exporter - Host System Metrics
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['node_exporter:9100']
+      # For host network mode:
+      # - targets: ['localhost:9100']
+    
+    scrape_interval: 15s
+    
+    # Useful node_exporter metrics
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'node_(cpu|memory|disk|network|filesystem).*'
+        action: keep
+
+  # cAdvisor - Container Metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+      # For host network mode:
+      # - targets: ['localhost:8080']
+    
+    scrape_interval: 15s
+    
+    # Focus on relevant container metrics
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'container_(cpu|memory|network|fs).*'
+        action: keep
+
+# Recording rules for derived metrics (optional)
+# rule_files:
+#   - 'rules/*.yml'
+
+# Example recording rules (uncomment and customize as needed)
+# groups:
+#   - name: rippled_rules
+#     interval: 30s
+#     rules:
+#       - record: rippled:ledger_close_rate:5m
+#         expr: rate(rippled_ledger_index[5m])
+#       
+#       - record: rippled:memory_usage_percent
+#         expr: (rippled_memory_bytes / node_memory_MemTotal_bytes) * 100
