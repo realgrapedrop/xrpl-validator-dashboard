@@ -197,10 +197,19 @@ Configuration files are located in `${INSTALL_DIR}/rippled/config/`:
 
 Prometheus config is at `${INSTALL_DIR}/monitoring/prometheus/prometheus.yml`
 
-Default scrape targets:
-- rippled metrics: `localhost:5005`
+**Important Note on Metrics:**
+
+Most XRPL validator setups use a **custom metrics exporter** (like xrpl-monitor) rather than direct rippled metrics. The exporter:
+- Queries rippled's admin API (typically port 5005 or 6006)
+- Converts data to Prometheus format
+- Exposes metrics on a dedicated port (commonly 9091)
+
+Default scrape targets in the template:
+- xrpl-monitor: `localhost:9091` (custom exporter - recommended)
 - node_exporter: `localhost:9100`
 - cadvisor: `localhost:8080`
+
+**If you're using a custom exporter**, adjust the prometheus.yml target and port accordingly. Direct rippled metrics on port 5005 may not be available in standard installations.
 
 ### Grafana Dashboard
 
@@ -270,6 +279,74 @@ docker stats
 
 **Access Prometheus:**
 - URL: http://localhost:9090
+
+## Tips & Best Practices
+
+### Optimize Grafana Dashboard Performance
+
+**Enable Fast Refresh for Real-Time Monitoring:**
+
+1. **Open your Grafana dashboard**
+
+2. **Set Auto-Refresh Interval:**
+   - Look at the top-right corner of the dashboard
+   - Click the refresh dropdown (🔄 icon)
+   - Select **5s** for real-time updates
+   - This queries Prometheus every 5 seconds
+
+3. **Enable Live Dashboard (Recommended):**
+   - Click the dashboard settings icon (⚙️) at the top
+   - Navigate to **Settings** → **General**
+   - Under **Time options**, enable **"Refresh live dashboards"**
+   - Click **Save dashboard**
+
+4. **Match Prometheus Scrape Interval:**
+   - Set Prometheus scrape interval to 5s (in prometheus.yml)
+   - Set Grafana refresh to 5s (as above)
+   - This ensures you see fresh data immediately
+
+**Why This Matters:**
+- **Catch fast state transitions** - Validator can sync in <10 seconds
+- **Real-time alerting** - See issues as they happen
+- **Better troubleshooting** - Precise timing of events
+
+### Prometheus Scrape Interval for State Monitoring
+
+For the `xrpl-monitor` job in prometheus.yml:
+
+```yaml
+- job_name: 'xrpl-monitor'
+  scrape_interval: 5s      # Recommended for state monitoring
+  scrape_timeout: 4s
+  static_configs:
+    - targets: ['localhost:9091']
+```
+
+**Why 5 seconds?**
+- Validator state transitions can happen quickly (syncing in 5-10s)
+- Default 15s interval may miss intermediate states
+- 5s provides good balance between data granularity and system load
+
+**After changing prometheus.yml:**
+```bash
+docker restart prometheus
+```
+
+### Dashboard Tips
+
+**State Timeline Panel:**
+- Use `xrpl_validator_state_value` for numeric state (0-6)
+- Map values to labels: 0=disconnected, 1=connected, 2=syncing, 3=tracking, 4=full, 6=proposing
+- Color code: red (disconnected), yellow (connected), orange (syncing), blue (full), green (proposing)
+
+**Historical State Tracking:**
+- Use `xrpl_state_accounting_duration_seconds` to see cumulative time in each state
+- Use `xrpl_state_accounting_transitions` to count how many times each state was entered
+
+**Alert Thresholds:**
+- Alert if state != proposing for >5 minutes
+- Alert if validation agreement drops below 95%
+- Alert if peer count <10
 
 ## Uninstallation
 
