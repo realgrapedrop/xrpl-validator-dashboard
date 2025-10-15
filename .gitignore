@@ -1,0 +1,44 @@
+# Installation tracking
+.install-tracker.json
+.install-state/
+
+# Rippled data and logs
+data/
+logs/
+*.log
+
+# Secrets and credentials
+*.json.key
+validator-keys.json
+*.pem
+.env
+
+# Docker volumes
+docker-data/
+
+# Grafana
+monitoring/grafana/data/
+
+# Prometheus
+monitoring/prometheus/data/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
