@@ -1,0 +1,101 @@
+# docker-compose-monitoring.yml
+# Monitoring Stack Only (for existing rippled installations)
+# Replace ${INSTALL_DIR} with your installation path during setup
+
+services:
+  # Prometheus - Metrics Collection
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.54.1
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    
+    ports:
+      - "127.0.0.1:9090:9090"
+    
+    volumes:
+      - ${INSTALL_DIR}/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${INSTALL_DIR}/monitoring/prometheus/data:/prometheus
+    
+    # For Docker rippled: use host network to access container
+    # For native rippled: use host network to access localhost:5005
+    network_mode: host
+
+  # Grafana - Visualization
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:11.2.0
+    restart: always
+    
+    ports:
+      - "3000:3000"
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=
+    
+    volumes:
+      - ${INSTALL_DIR}/monitoring/grafana/data:/var/lib/grafana
+      - ${INSTALL_DIR}/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    
+    networks:
+      - monitoring-network
+    
+    depends_on:
+      - prometheus
+
+  # Node Exporter - Host Metrics
+  node_exporter:
+    container_name: node_exporter
+    image: prom/node-exporter:v1.8.2
+    restart: always
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    
+    ports:
+      - "127.0.0.1:9100:9100"
+    
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    
+    networks:
+      - monitoring-network
+
+  # cAdvisor - Container Metrics (Optional)
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    restart: always
+    
+    ports:
+      - "127.0.0.1:8080:8080"
+    
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    
+    privileged: true
+    devices:
+      - /dev/kmsg
+    
+    networks:
+      - monitoring-network
+
+networks:
+  monitoring-network:
+    driver: bridge

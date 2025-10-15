@@ -1,0 +1,102 @@
+# docker-compose-rippled-template.yml
+# Reference Template for Rippled Configuration with Monitoring Support
+# 
+# If you already have rippled running, compare your configuration against this
+# template to ensure it's compatible with the monitoring stack.
+#
+# KEY REQUIREMENTS FOR MONITORING:
+# 1. Port 5005 must be exposed (Prometheus scrapes metrics here)
+# 2. Healthcheck configured for validator state monitoring
+# 3. Resource limits defined for cAdvisor tracking
+#
+# Replace ${INSTALL_DIR} with your actual installation path
+
+services:
+  rippledvalidator:
+    container_name: rippledvalidator
+    image: xrpllabsofficial/xrpld:2.6.1
+    restart: always
+    
+    # Make PID 1 behave and allow graceful stop
+    init: true
+    stop_grace_period: 90s
+    
+    # Run with your config
+    entrypoint: /opt/ripple/bin/rippled
+    command: ["--conf", "/opt/ripple/etc/rippled.cfg"]
+    
+    # CRITICAL FOR MONITORING: Port 5005 must be exposed
+    ports:
+      - "51235:51235/tcp"          # Peer protocol (must be public)
+      - "51235:51235/udp"          # Peer protocol (must be public)
+      - "127.0.0.1:5005:5005"      # ⚠️ REQUIRED: Admin HTTP for metrics
+      - "127.0.0.1:6006:6006"      # Admin WebSocket
+      - "127.0.0.1:5006:5006"      # Optional: second WS
+    
+    # Bind mounts
+    volumes:
+      - ${INSTALL_DIR}/rippled/config/rippled.cfg:/opt/ripple/etc/rippled.cfg:ro
+      - ${INSTALL_DIR}/rippled/config/validators.txt:/opt/ripple/etc/validators.txt:ro
+      - ${INSTALL_DIR}/rippled/config/validator-keys.json:/keystore/validator-keys.json:ro
+      - ${INSTALL_DIR}/rippled/data:/var/lib/rippled
+      # Optional: log/metric output directories
+      - ${INSTALL_DIR}/monitoring/xrp-watchdog/data/raw:/output/raw
+      - ${INSTALL_DIR}/monitoring/xrp-watchdog/logs:/output/logs
+    
+    # RECOMMENDED: Resource limits for monitoring and stability
+    # Adjust based on your hardware
+    mem_limit: "64g"         # For node_size: huge
+    memswap_limit: "64g"     # Prevent swap usage
+    cpus: "8.0"              # CPU allocation
+    # cpuset: "0-7"          # Optional: pin to specific cores
+    
+    # File descriptor limits
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    
+    # Security hardening (recommended)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    
+    # RECOMMENDED: Healthcheck for monitoring
+    # This allows Grafana to track validator state
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/ripple/bin/rippled --conf /opt/ripple/etc/rippled.cfg -q server_info | grep -Eq '\"server_state\"\\s*:\\s*\"(proposing|full)\"'"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 10
+    
+    networks:
+      - xrpl-network
+
+networks:
+  xrpl-network:
+    driver: bridge
+
+# PROMETHEUS SCRAPE CONFIGURATION
+# Your prometheus.yml should include this job:
+#
+# scrape_configs:
+#   - job_name: 'rippled'
+#     static_configs:
+#       - targets: ['rippledvalidator:5005']  # For Docker networking
+#       # OR
+#       - targets: ['localhost:5005']         # For host networking / native
+#     scrape_interval: 15s
+#
+# COMPARISON CHECKLIST:
+# □ Port 5005 exposed to localhost
+# □ Healthcheck configured
+# □ Resource limits defined
+# □ Volume mounts for configs and data
+# □ Security options applied
+# □ Proper network configuration
+#
+# If your existing rippled configuration differs significantly,
+# consider adapting it to match this template or adjusting the
+# monitoring configuration accordingly.
