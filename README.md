@@ -4,6 +4,12 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 
 **Created by:** [Grapedrop](https://xrp-validator.grapedrop.xyz) | [@realGrapedrop](https://x.com/realGrapedrop)
 
+## Dashboard Preview
+
+![XRPL Validator Dashboard](images/dashboard-screenshot.png)
+
+*Real-time monitoring of XRPL validator performance, consensus state, and network metrics*
+```
 ## Features
 
 - 📊 **Real-time Monitoring** - Track validator performance, consensus state, and network metrics
