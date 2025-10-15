@@ -24,7 +24,7 @@ This is a custom Python-based monitoring service that:
 │                                                            │
 │  ┌──────────────┐    ┌──────────────┐    ┌─────────────┐   │
 │  │ RippledAPI   │───→│   Database   │───→│  Prometheus │   │
-│  │ (Docker/Native)   │   (SQLite)   │    │  Exporter   │   │
+│  │(Docker/Native)    │   (SQLite)   │    │  Exporter   │   │
 │  └──────────────┘    └──────────────┘    └─────────────┘   │
 │         ↓                    ↓                    ↓        │
 │  ┌──────────────┐    ┌──────────────┐    ┌─────────────┐   │
