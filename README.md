@@ -6,7 +6,9 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 
 ## Dashboard Preview
 
-![XRPL Validator Dashboard](images/dashboard-screenshot.gif)
+![XRPL Validator Dashboard](images/dashboard-screenshot.png)
+
+**[▶️ Watch Live Demo Video](images/xrpl-validator-monitor-dashboard-inaction.mp4)**
 
 *Real-time monitoring of XRPL validator performance, consensus state, and network metrics*
 
