@@ -16,22 +16,39 @@ global:
 
 # Scrape configurations
 scrape_configs:
-  # XRPL Rippled Validator Metrics
-  - job_name: 'rippled'
+  # XRPL Monitor Service (if using custom metrics exporter)
+  # Common port: 9091 for Python-based xrpl-monitor services
+  # Adjust the target based on your setup
+  - job_name: 'xrpl-monitor'
     static_configs:
-      # For Docker rippled in same network
-      - targets: ['rippledvalidator:5005']
-      # For native rippled or host network mode, use:
-      # - targets: ['localhost:5005']
+      - targets: ['localhost:9091']
+        labels:
+          instance: 'xrpl-validator'
+          service: 'xrpl-monitor'
     
-    scrape_interval: 15s
-    scrape_timeout: 10s
+    scrape_interval: 5s  # Fast interval to catch state transitions
+    scrape_timeout: 4s
+    metrics_path: /metrics
     
-    # Rippled-specific metric relabeling
+    # Keep all xrpl_* metrics
     metric_relabel_configs:
       - source_labels: [__name__]
-        regex: 'rippled_.*'
+        regex: 'xrpl_.*'
         action: keep
+
+  # Alternative: Direct Rippled Metrics (if available)
+  # Note: Many rippled installations don't expose Prometheus metrics directly
+  # Uncomment if your rippled exposes metrics on port 5005 or 6006
+  #
+  # - job_name: 'rippled'
+  #   static_configs:
+  #     # For Docker rippled in same network
+  #     - targets: ['rippledvalidator:5005']
+  #     # For native rippled:
+  #     # - targets: ['localhost:5005']
+  #   
+  #   scrape_interval: 15s
+  #   scrape_timeout: 10s
 
   # Prometheus Self-Monitoring
   - job_name: 'prometheus'
@@ -42,32 +59,35 @@ scrape_configs:
   # Node Exporter - Host System Metrics
   - job_name: 'node_exporter'
     static_configs:
+      # For Docker deployment
       - targets: ['node_exporter:9100']
-      # For host network mode:
+      # For host network or native deployment:
       # - targets: ['localhost:9100']
     
     scrape_interval: 15s
-    
-    # Useful node_exporter metrics
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: 'node_(cpu|memory|disk|network|filesystem).*'
-        action: keep
+    scrape_timeout: 10s
 
-  # cAdvisor - Container Metrics
+  # cAdvisor - Container Metrics (optional)
   - job_name: 'cadvisor'
     static_configs:
+      # For Docker deployment
       - targets: ['cadvisor:8080']
-      # For host network mode:
+      # For host network:
       # - targets: ['localhost:8080']
     
     scrape_interval: 15s
-    
-    # Focus on relevant container metrics
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: 'container_(cpu|memory|network|fs).*'
-        action: keep
+    scrape_timeout: 10s
+
+# Note on XRPL Metrics:
+# Most XRPL validator monitoring setups use a custom metrics exporter (like xrpl-monitor)
+# that scrapes rippled's admin API and exposes Prometheus-format metrics.
+# 
+# If using a custom exporter:
+# - Adjust the xrpl-monitor target above to match your exporter's port
+# - Common ports: 9091, 9092, or custom
+# - Set scrape_interval to 5s to catch fast state transitions
+#
+# Direct rippled metrics on port 5005 are often NOT available in standard setups.
 
 # Recording rules for derived metrics (optional)
 # rule_files:
@@ -75,11 +95,11 @@ scrape_configs:
 
 # Example recording rules (uncomment and customize as needed)
 # groups:
-#   - name: rippled_rules
+#   - name: xrpl_rules
 #     interval: 30s
 #     rules:
-#       - record: rippled:ledger_close_rate:5m
-#         expr: rate(rippled_ledger_index[5m])
+#       - record: xrpl:ledger_close_rate:5m
+#         expr: rate(xrpl_ledger_sequence[5m])
 #       
-#       - record: rippled:memory_usage_percent
-#         expr: (rippled_memory_bytes / node_memory_MemTotal_bytes) * 100
+#       - record: xrpl:validation_agreement_rate:1h
+#         expr: xrpl_validation_agreement_pct_1h
