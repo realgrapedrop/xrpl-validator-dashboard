@@ -30,7 +30,7 @@ This document explains the project architecture, development workflow, and contr
 ┌─────────────────────────────────────┐
 │   Python Monitoring System          │
 │  (fast_poller.py - runs every 3s)   │
-│                                      │
+│                                     │
 │  ├── RippledAPI (query validator)   │
 │  ├── Database (SQLite storage)      │
 │  ├── ValidationTracker (metrics)    │
@@ -39,7 +39,7 @@ This document explains the project architecture, development workflow, and contr
          │ Metrics Export
          ↓
 ┌─────────────────┐      ┌──────────────┐
-│   Prometheus    │──────→│   Grafana    │
+│   Prometheus    │─────→│   Grafana    │
 │  (port 9090)    │      │  (port 3000) │
 └─────────────────┘      └──────────────┘
          │                       │
