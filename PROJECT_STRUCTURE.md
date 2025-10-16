@@ -21,13 +21,13 @@ xrpl-validator-monitor-dashboard/
 ├── docker-compose-monitoring.yml      ✅ Created
 ├── docker-compose-rippled-template.yml ✅ Created
 ├── config/
-│   ├── rippled.cfg.template           ⚠️ To be created
-│   ├── validators.txt.template        ⚠️ To be created
+│   ├── rippled.cfg.template           ⚠️ future example
+│   ├── validators.txt.template        ⚠️ future example
 │   └── prometheus.yml.template        ✅ Created
 ├── monitoring/
 │   ├── grafana/
 │   │   └── dashboards/
-│   │       └── Rippled-Dashboard.json ⏳ User will provide
+│   │       └── Rippled-Dashboard.json ✅ Created
 │   └── prometheus/
 │       └── prometheus.yml             (Copy from template)
 ├── scripts/
@@ -133,7 +133,7 @@ xrpl-validator-monitor-dashboard/
     - **Instructions:** Export from Grafana with "Export for sharing externally" enabled
     - **Location to add:** Via GitHub Gist or direct file
 
-### Documentation (✅ Mostly Complete)
+### Documentation (✅ Complete)
 
 14. **docs/PREREQUISITES.md**
     - Complete prerequisites guide
@@ -249,8 +249,8 @@ xrpl-validator-monitor-dashboard/
 ### Immediate Tasks
 
 1. ✅ Review all created artifacts
-2. ⚠️ Create rippled.cfg.template
-3. ⚠️ Create validators.txt.template
+2. ⚠️ Your rippled.cfg.template
+3. ⚠️ Your validators.txt.template
 4. ⏳ Add Rippled-Dashboard.json (export from your Grafana)
 5. ✅ Test generate-repo.sh
 6. ✅ Test install.sh in dry-run mode
