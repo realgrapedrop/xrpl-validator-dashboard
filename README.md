@@ -993,6 +993,17 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
 - Code structure
 - Testing procedures
 - Contributing guidelines
+See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for:
+- Directory structure
+- Python Source files
+- Configuration Templates files
+- Docker Compose files
+- Monitoring Stack files
+- Systemd Service file
+- Documentation files
+- Scripts files (coming)
+- Images files
+- Import Paths
 
 ### Areas for Contribution
 
