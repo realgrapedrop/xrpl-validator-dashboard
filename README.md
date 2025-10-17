@@ -33,6 +33,8 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 - [Uninstallation](#uninstallation)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [Acknowledgments](#Acknowledgments)
+- [Support](#upport)
 - [License](#license)
 
 ## Prerequisites
