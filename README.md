@@ -1010,7 +1010,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
 ## Support
 
 - **Documentation**: [docs/](docs/)
-- **Project Structure**: [PROJECT_STRUCTURE.MD](PROJECT_STRUCTURE.MD)
+- **Project Structure**: [./PROJECT_STRUCTURE.MD](./PROJECT_STRUCTURE.MD)
 - **Python Monitor Docs**: [src/README.md](src/README.md)
 - **Developer Guide**: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 - **Issues**: https://github.com/realGrapedrop/xrpl-validator-monitor-dashboard/issues
