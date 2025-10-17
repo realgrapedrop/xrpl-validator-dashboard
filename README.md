@@ -1025,7 +1025,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
 **Grapedrop**
 - Website: https://xrp-validator.grapedrop.xyz
 - X/Twitter: [@realGrapedrop](https://x.com/realGrapedrop)
-- Running XRPL validator since 2023
+- Running XRPL validator 2025
 
 ## License
 
