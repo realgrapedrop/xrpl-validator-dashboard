@@ -26,6 +26,8 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 - [Prerequisites](#prerequisites)
 - [Use Cases](#use-cases)
 - [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [How It Works](HOW_IT_WORKS.md) 🔄
 - [Python Monitoring System](#python-monitoring-system)
 - [Installation](#installation)
 - [Configuration](#configuration)
