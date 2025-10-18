@@ -29,6 +29,7 @@ A comprehensive monitoring solution for XRPL (Ripple) validator nodes. Provides 
 - [Architecture](#architecture)
 - [How It Works](HOW_IT_WORKS.md) 🔄
 - [Python Monitoring System](#python-monitoring-system)
+- [Grafana Panels Deep-dive](GRAFANA_DASHBOARD.md)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
