@@ -226,30 +226,30 @@ When a user accesses Grafana:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Data Flow Stages                             │
+│                     Data Flow Stages                            │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  1. RAW DATA (rippled API)                                       │
-│     └─ JSON response with nested objects                         │
-│                                                                   │
-│  2. PARSING (Python Collectors)                                  │
-│     └─ Extract, validate, normalize fields                       │
-│                                                                   │
-│  3. STORAGE (SQLite)                                             │
-│     └─ Structured tables with indexes                            │
-│                                                                   │
-│  4. AGGREGATION (SQL Queries)                                    │
-│     └─ Calculate rates, averages, percentiles                    │
-│                                                                   │
-│  5. TRANSFORMATION (Prometheus Exporter)                         │
-│     └─ Convert to OpenMetrics format                             │
-│                                                                   │
-│  6. TIME-SERIES DB (Prometheus)                                  │
-│     └─ Efficient storage with compression                        │
-│                                                                   │
-│  7. VISUALIZATION (Grafana)                                      │
-│     └─ Charts, graphs, alerts displayed                          │
-│                                                                   │
+│                                                                 │
+│  1. RAW DATA (rippled API)                                      │
+│     └─ JSON response with nested objects                        │
+│                                                                 │
+│  2. PARSING (Python Collectors)                                 │
+│     └─ Extract, validate, normalize fields                      │
+│                                                                 │
+│  3. STORAGE (SQLite)                                            │
+│     └─ Structured tables with indexes                           │
+│                                                                 │
+│  4. AGGREGATION (SQL Queries)                                   │
+│     └─ Calculate rates, averages, percentiles                   │
+│                                                                 │
+│  5. TRANSFORMATION (Prometheus Exporter)                        │
+│     └─ Convert to OpenMetrics format                            │
+│                                                                 │
+│  6. TIME-SERIES DB (Prometheus)                                 │
+│     └─ Efficient storage with compression                       │
+│                                                                 │
+│  7. VISUALIZATION (Grafana)                                     │
+│     └─ Charts, graphs, alerts displayed                         │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -316,38 +316,38 @@ systemd Services
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Network Architecture                          │
+│                    Network Architecture                         │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌──────────────┐                                                │
+│                                                                 │
+│  ┌──────────────┐                                               │
 │  │   rippled    │  127.0.0.1:5005 (admin API)                   │
-│  └──────┬───────┘                                                │
-│         │ localhost only (security)                              │
-│         ▼                                                         │
-│  ┌──────────────┐                                                │
-│  │  Collectors  │  No listening ports                            │
-│  └──────┬───────┘                                                │
-│         │ writes                                                 │
-│         ▼                                                         │
-│  ┌──────────────┐                                                │
+│  └──────┬───────┘                                               │
+│         │ localhost only (security)                             │
+│         ▼                                                       │
+│  ┌──────────────┐                                               │
+│  │  Collectors  │  No listening ports                           │
+│  └──────┬───────┘                                               │
+│         │ writes                                                │
+│         ▼                                                       │
+│  ┌──────────────┐                                               │
 │  │   SQLite     │  File: /opt/xrpl-monitor/data/monitor.db      │
-│  └──────┬───────┘                                                │
-│         │ reads (concurrent)                                     │
-│         ▼                                                         │
-│  ┌──────────────┐                                                │
+│  └──────┬───────┘                                               │
+│         │ reads (concurrent)                                    │
+│         ▼                                                       │
+│  ┌──────────────┐                                               │
 │  │   Exporter   │  127.0.0.1:9091 (metrics endpoint)            │
-│  └──────┬───────┘                                                │
-│         │ scraped by                                             │
-│         ▼                                                         │
-│  ┌──────────────┐                                                │
+│  └──────┬───────┘                                               │
+│         │ scraped by                                            │
+│         ▼                                                       │
+│  ┌──────────────┐                                               │
 │  │  Prometheus  │  0.0.0.0:9090 (web UI + API)                  │
-│  └──────┬───────┘                                                │
-│         │ queried by                                             │
-│         ▼                                                         │
-│  ┌──────────────┐                                                │
+│  └──────┬───────┘                                               │
+│         │ queried by                                            │
+│         ▼                                                       │
+│  ┌──────────────┐                                               │
 │  │   Grafana    │  0.0.0.0:3000 (web UI)                        │
-│  └──────────────┘                                                │
-│                                                                   │
+│  └──────────────┘                                               │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
