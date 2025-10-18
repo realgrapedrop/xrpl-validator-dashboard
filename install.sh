@@ -12,9 +12,11 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Installation tracker file
-TRACKER_FILE=".install-tracker.json"
+# Get script directory (absolute path)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Installation tracker file (FIXED: Use absolute path)
+TRACKER_FILE="${SCRIPT_DIR}/.install-tracker.json"
 
 # Default values
 INSTALL_DIR="${HOME}/xrpl-validator"
@@ -116,7 +118,7 @@ fi
 echo -e "${BLUE}"
 cat << "EOF"
 ╔══════════════════════════════════════════════════════════╗
-║   XRPL Validator Monitor Dashboard - Installation       ║
+║   XRPL Validator Monitor Dashboard - Installation        ║
 ╚══════════════════════════════════════════════════════════╝
 EOF
 echo -e "${NC}"
@@ -138,13 +140,19 @@ init_tracker() {
   "files": []
 }
 EOF
-    echo -e "${GREEN}✓ Installation tracker initialized${NC}"
+    echo -e "${GREEN}✓ Installation tracker initialized: $TRACKER_FILE${NC}"
 }
 
 # Add to tracker
 track_component() {
     local component_type="$1"
     local component_value="$2"
+    
+    # Verify tracker file exists
+    if [[ ! -f "$TRACKER_FILE" ]]; then
+        echo -e "${RED}Error: Tracker file not found: $TRACKER_FILE${NC}"
+        return 1
+    fi
     
     # Create temp file with updated JSON
     jq ".${component_type} += [\"${component_value}\"]" "$TRACKER_FILE" > "${TRACKER_FILE}.tmp"
@@ -476,6 +484,7 @@ display_summary() {
         echo "Dashboard file: $SCRIPT_DIR/monitoring/grafana/dashboards/Rippled-Dashboard.json"
     else
         echo "Installation directory: $INSTALL_DIR"
+        echo "Tracker file: $TRACKER_FILE"
         echo ""
         echo "Services:"
         if [[ "$INSTALL_MODE" == "full" ]]; then
