@@ -1,4 +1,4 @@
-# Grafana XRPL Validator Dashboard Panels
+# Grafana XRPL Validator Dashboard Panels Deep-dive
 
 ## Introduction
 
