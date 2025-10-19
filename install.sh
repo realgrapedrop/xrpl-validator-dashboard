@@ -118,7 +118,7 @@ fi
 echo -e "${BLUE}"
 cat << "EOF"
 ╔══════════════════════════════════════════════════════════╗
-║   XRPL Validator Monitor Dashboard - Installation        ║
+║   XRPL Validator Monitor Dashboard - Installation       ║
 ╚══════════════════════════════════════════════════════════╝
 EOF
 echo -e "${NC}"
@@ -234,6 +234,12 @@ create_directories() {
 install_rippled() {
     echo -e "${BLUE}Installing rippled validator...${NC}"
     
+    # Verify source files exist
+    if [[ ! -f "$SCRIPT_DIR/docker-compose-full.yml" ]]; then
+        echo -e "${RED}Error: docker-compose-full.yml not found in $SCRIPT_DIR${NC}"
+        exit 1
+    fi
+    
     # Copy docker-compose file
     cp "$SCRIPT_DIR/docker-compose-full.yml" "$INSTALL_DIR/docker-compose.yml"
     
@@ -242,11 +248,19 @@ install_rippled() {
     
     # Copy config templates
     if [ ! -f "$INSTALL_DIR/rippled/config/rippled.cfg" ]; then
+        if [[ ! -f "$SCRIPT_DIR/config/rippled.cfg.template" ]]; then
+            echo -e "${RED}Error: config/rippled.cfg.template not found${NC}"
+            exit 1
+        fi
         cp "$SCRIPT_DIR/config/rippled.cfg.template" "$INSTALL_DIR/rippled/config/rippled.cfg"
         track_component "config_files" "$INSTALL_DIR/rippled/config/rippled.cfg"
     fi
     
     if [ ! -f "$INSTALL_DIR/rippled/config/validators.txt" ]; then
+        if [[ ! -f "$SCRIPT_DIR/config/validators.txt.template" ]]; then
+            echo -e "${RED}Error: config/validators.txt.template not found${NC}"
+            exit 1
+        fi
         cp "$SCRIPT_DIR/config/validators.txt.template" "$INSTALL_DIR/rippled/config/validators.txt"
         track_component "config_files" "$INSTALL_DIR/rippled/config/validators.txt"
     fi
@@ -268,18 +282,40 @@ install_monitoring() {
     echo -e "${BLUE}Installing monitoring stack...${NC}"
     
     # Copy appropriate docker-compose
+    if [[ ! -f "$SCRIPT_DIR/docker-compose-monitoring.yml" ]]; then
+        echo -e "${RED}Error: docker-compose-monitoring.yml not found in $SCRIPT_DIR${NC}"
+        exit 1
+    fi
     cp "$SCRIPT_DIR/docker-compose-monitoring.yml" "$INSTALL_DIR/docker-compose.yml"
     
     # Substitute variables
     sed -i "s|\${INSTALL_DIR}|$INSTALL_DIR|g" "$INSTALL_DIR/docker-compose.yml"
     
     # Copy Prometheus config
+    if [[ ! -f "$SCRIPT_DIR/config/prometheus.yml.template" ]]; then
+        echo -e "${RED}Error: config/prometheus.yml.template not found${NC}"
+        echo "Expected location: $SCRIPT_DIR/config/prometheus.yml.template"
+        exit 1
+    fi
+    
+    # Ensure target directory exists
+    mkdir -p "$INSTALL_DIR/monitoring/prometheus"
+    
     cp "$SCRIPT_DIR/config/prometheus.yml.template" "$INSTALL_DIR/monitoring/prometheus/prometheus.yml"
+    
+    # Verify copy succeeded
+    if [[ ! -f "$INSTALL_DIR/monitoring/prometheus/prometheus.yml" ]]; then
+        echo -e "${RED}Error: Failed to copy Prometheus config${NC}"
+        exit 1
+    fi
     
     # Configure for rippled type
     if [[ "$RIPPLED_TYPE" == "native" ]]; then
         # Update scrape config for native rippled
         sed -i "s|rippledvalidator:5005|localhost:5005|g" "$INSTALL_DIR/monitoring/prometheus/prometheus.yml"
+        echo -e "${GREEN}✓ Configured for native rippled${NC}"
+    else
+        echo -e "${GREEN}✓ Configured for Docker rippled${NC}"
     fi
     
     track_component "config_files" "$INSTALL_DIR/monitoring/prometheus/prometheus.yml"
