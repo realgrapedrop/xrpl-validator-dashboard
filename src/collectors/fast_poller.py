@@ -2,6 +2,7 @@
 #!/usr/bin/env python3
 """
 Fast Poller - Monitors validator with Prometheus metrics export
+Supports both Docker and native rippled deployments
 """
 
 import sys
@@ -207,7 +208,7 @@ class FastPoller:
             if self.last_ledger_seq:
                 gap = current_seq - self.last_ledger_seq
                 if gap > 1:
-                    print(f"\n⚠️  LEDGER GAP: Jumped {gap} ledgers ({self.last_ledger_seq} → {current_seq})\n")
+                    print(f"\n[WARNING] LEDGER GAP: Jumped {gap} ledgers ({self.last_ledger_seq} -> {current_seq})\n")
             
             # Calculate time in state
             time_in_state = timestamp - self.state_entered_at if self.state_entered_at else 0
@@ -359,8 +360,6 @@ class FastPoller:
             return 0
         except Exception:
             return 0
-        except Exception:
-            return 0
     
     def _handle_api_error(self, error: Exception):
         """Handle API errors gracefully"""
@@ -376,9 +375,9 @@ class FastPoller:
         current_state = 'unreachable'
         
         if self.consecutive_errors == 1:
-            print(f"[{timestamp_str}] ⚠️  Validator unreachable (attempt {self.consecutive_errors})")
+            print(f"[{timestamp_str}] [WARNING] Validator unreachable (attempt {self.consecutive_errors})")
         elif self.consecutive_errors <= self.max_errors_before_alert:
-            print(f"[{timestamp_str}] ⚠️  Still unreachable (attempt {self.consecutive_errors})")
+            print(f"[{timestamp_str}] [WARNING] Still unreachable (attempt {self.consecutive_errors})")
         else:
             if self.last_state and self.last_state != 'unreachable':
                 duration = timestamp - self.state_entered_at if self.state_entered_at else 0
@@ -400,7 +399,7 @@ class FastPoller:
                     title='Validator Unreachable',
                     message=f'Unable to connect to validator after {self.consecutive_errors} attempts.\n'
                             f'Previous state: {self.last_state}\n'
-                            f'Likely cause: Container down, restarting, or network issue'
+                            f'Likely cause: Validator down, restarting, or network issue'
                 )
                 self.alerts_sent += 1
                 
@@ -412,7 +411,7 @@ class FastPoller:
                 
                 self.state_entered_at = timestamp
             
-            print(f"[{timestamp_str}] 🚨 Validator unreachable (attempt {self.consecutive_errors})")
+            print(f"[{timestamp_str}] [CRITICAL] Validator unreachable (attempt {self.consecutive_errors})")
         
         if self.consecutive_errors > self.max_errors_before_alert:
             self.last_state = 'unreachable'
@@ -420,7 +419,7 @@ class FastPoller:
     def _handle_unexpected_error(self, error: Exception):
         """Handle unexpected errors"""
         timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{timestamp_str}] ❌ Unexpected error: {error}")
+        print(f"[{timestamp_str}] [ERROR] Unexpected error: {error}")
         import traceback
         traceback.print_exc()
     
@@ -434,7 +433,13 @@ class FastPoller:
         print(f"Alerts: {self.alerter.alerts_file}")
         if self.prometheus:
             print(f"Prometheus: http://localhost:{self.prometheus.port}/metrics")
-        print(f"Validator: {self.validation_tracker.validator_pubkey[:25]}...")
+        
+        # FIXED: Handle None validator_pubkey
+        if self.validation_tracker.validator_pubkey:
+            print(f"Validator: {self.validation_tracker.validator_pubkey[:25]}...")
+        else:
+            print("Validator: Pubkey not detected (will retry from rippled API)")
+        
         print("Press Ctrl+C to stop")
         print("=" * 80)
         print()
@@ -462,9 +467,20 @@ def main():
     # Load configuration
     config = Config()
     
-    # Create API client
-    container_name = config.get('monitoring.container_name', 'rippledvalidator')
-    api = RippledAPI(container_name=container_name)
+    # FIXED: Support both Docker and native rippled
+    rippled_mode = config.get('monitoring.rippled_mode', 'native')  # Default to native
+    
+    if rippled_mode == 'docker':
+        # Docker mode - connect via container name
+        container_name = config.get('monitoring.container_name', 'rippledvalidator')
+        api = RippledAPI(container_name=container_name)
+        print(f"Connecting to rippled via Docker container: {container_name}")
+    else:
+        # Native mode - connect via host:port
+        rippled_host = config.get('monitoring.rippled_host', 'localhost')
+        rippled_port = config.get('monitoring.rippled_port', 5005)
+        api = RippledAPI(host=rippled_host, port=rippled_port)
+        print(f"Connecting to native rippled at {rippled_host}:{rippled_port}")
     
     # Create database
     db_path = config.get('database.path', '${INSTALL_DIR}/data/monitor.db')
