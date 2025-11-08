@@ -946,7 +946,7 @@ def generate_config(rippled_config: dict, monitor_port: int) -> bool:
     """Generate config.yaml for Docker or native rippled"""
     print_header("Step 5: Generating Configuration")
 
-    project_dir = Path(__file__).parent.absolute()
+    project_dir = Path(__file__).parent.parent.absolute()
     config_path = project_dir / 'config.yaml'
 
     # Build monitoring section based on mode
@@ -1022,7 +1022,7 @@ logging:
 
 def update_prometheus_config(monitor_port: int) -> bool:
     """Update Prometheus scrape configuration"""
-    project_dir = Path(__file__).parent.absolute()
+    project_dir = Path(__file__).parent.parent.absolute()
     prom_config_path = project_dir / 'compose' / 'prometheus' / 'prometheus.yml'
 
     if not prom_config_path.exists():
@@ -1054,7 +1054,7 @@ def update_prometheus_config(monitor_port: int) -> bool:
 
 def update_docker_compose(grafana_port: int, prometheus_port: int, node_exporter_port: int) -> bool:
     """Update docker-compose.yml port mappings"""
-    project_dir = Path(__file__).parent.absolute()
+    project_dir = Path(__file__).parent.parent.absolute()
     compose_path = project_dir / 'docker-compose.yml'
 
     if not compose_path.exists():
@@ -1083,7 +1083,7 @@ def update_docker_compose(grafana_port: int, prometheus_port: int, node_exporter
 
 def create_directories() -> bool:
     """Create necessary directories"""
-    project_dir = Path(__file__).parent.absolute()
+    project_dir = Path(__file__).parent.parent.absolute()
 
     dirs = [
         project_dir / 'data',
@@ -1224,7 +1224,7 @@ def run_preflight_checks(rippled_config: dict, monitor_port: int, skip_import_te
             all_passed = False
 
     # Check config file
-    project_dir = Path(__file__).parent.absolute()
+    project_dir = Path(__file__).parent.parent.absolute()
     config_path = project_dir / 'config.yaml'
     if config_path.exists():
         print_success("Configuration file exists")
