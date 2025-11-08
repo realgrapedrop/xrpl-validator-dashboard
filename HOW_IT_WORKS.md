@@ -37,21 +37,21 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
 │  3. Write to SQLite                         │
 │  4. Update Prometheus gauges                │
 │                                             │
-│  ┌─────────────────────────────────────┐   │
-│  │ SQLite (data/monitor.db)            │   │
-│  │ - State transitions                 │   │
-│  │ - Validation history                │   │
-│  │ - Performance metrics               │   │
-│  │ Used for: 24h stats, persistence    │   │
-│  └─────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────┐    │
+│  │ SQLite (data/monitor.db)            │    │
+│  │ - State transitions                 │    │
+│  │ - Validation history                │    │
+│  │ - Performance metrics               │    │
+│  │ Used for: 24h stats, persistence    │    │
+│  └─────────────────────────────────────┘    │
 │                                             │
-│  ┌─────────────────────────────────────┐   │
-│  │ Prometheus Exporter                 │   │
-│  │ Default port: 9094 (configurable)   │   │
-│  │ - In-memory gauges/counters         │   │
-│  │ - HTTP /metrics endpoint            │   │
-│  │ Used for: Real-time dashboards      │   │
-│  └─────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────┐    │
+│  │ Prometheus Exporter                 │    │
+│  │ Default port: 9094 (configurable)   │    │
+│  │ - In-memory gauges/counters         │    │
+│  │ - HTTP /metrics endpoint            │    │
+│  │ Used for: Real-time dashboards      │    │
+│  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
                      │
                      │ HTTP scrape every 5-15s
@@ -75,7 +75,7 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
 └─────────────────────────────────────────────┘
                      │
                      ▼
-                  You!
+                    You!
 
 Note: Ports shown are setup.py defaults.
 The wizard detects conflicts and suggests alternatives.
