@@ -292,16 +292,30 @@ def detect_rippled_container() -> Optional[str]:
 
     return container_name
 
-def is_port_available(port: int) -> bool:
-    """Check if a port is available"""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(1)
-    try:
-        sock.bind(('0.0.0.0', port))
-        sock.close()
-        return True
-    except:
-        return False
+def is_port_available(port: int, retries: int = 3, delay: float = 2.0) -> bool:
+    """Check if a port is available, with retries to handle TIME_WAIT state"""
+    import time
+
+    for attempt in range(retries):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        # Set SO_REUSEADDR to detect actual availability vs TIME_WAIT
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind(('0.0.0.0', port))
+            sock.close()
+            return True
+        except OSError as e:
+            sock.close()
+            # If port is in TIME_WAIT and this isn't the last retry, wait and retry
+            if attempt < retries - 1:
+                time.sleep(delay)
+            continue
+        except:
+            sock.close()
+            return False
+
+    return False
 
 def find_next_available_port(start_port: int, max_attempts: int = 100) -> Optional[int]:
     """Find the next available port starting from start_port"""

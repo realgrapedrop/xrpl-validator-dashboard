@@ -29,8 +29,8 @@ if systemctl is-active --quiet "${SERVICE_NAME}"; then
     sudo systemctl stop "${SERVICE_NAME}"
     echo -e "${GREEN}✓ Service stopped${NC}"
     # Wait for port to be fully released from TIME_WAIT
-    echo -e "${YELLOW}Waiting 5 seconds for ports to release...${NC}"
-    sleep 5
+    echo -e "${YELLOW}Waiting 8 seconds for ports to release...${NC}"
+    sleep 8
 else
     echo -e "${GREEN}✓ Service is not running${NC}"
 fi
@@ -61,8 +61,8 @@ if docker compose ps 2>/dev/null | grep -q "xrpl-dashboard"; then
     docker compose down
     echo -e "${GREEN}✓ Containers stopped and removed${NC}"
     # Wait for ports to be fully released from TIME_WAIT
-    echo -e "${YELLOW}Waiting 5 seconds for ports to release...${NC}"
-    sleep 5
+    echo -e "${YELLOW}Waiting 8 seconds for ports to release...${NC}"
+    sleep 8
 else
     echo -e "${GREEN}✓ No containers running${NC}"
 fi
@@ -96,8 +96,8 @@ echo -e "${GREEN}===============================================================
 echo -e "${GREEN}Cleanup Complete!${NC}"
 echo -e "${GREEN}================================================================================================${NC}"
 echo ""
-echo -e "${YELLOW}Waiting 5 more seconds to ensure all ports are fully released...${NC}"
-sleep 5
+echo -e "${YELLOW}Waiting 8 more seconds to ensure all ports are fully released...${NC}"
+sleep 8
 echo ""
 echo -e "You can now run the setup wizard again:"
 echo -e "  ${YELLOW}python3 setup.py${NC}"
