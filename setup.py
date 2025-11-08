@@ -864,7 +864,8 @@ def install_python_dependencies() -> bool:
         if result.returncode == 0:
             print_success("Python dependencies installed successfully")
             print_info("Packages installed to: ~/.local/lib/python*/site-packages/")
-            return True
+            print_warning("Note: You may need to re-run setup.py for import tests to work")
+            return 'installed'  # Signal that packages were just installed
 
         # If --user install failed, check if it's externally-managed error
         if 'externally-managed-environment' in result.stderr:
@@ -1111,7 +1112,7 @@ def test_rippled_api_calls(container_name: str) -> Tuple[bool, List[str]]:
 
     return len(failed_calls) == 0, failed_calls
 
-def run_preflight_checks(rippled_config: dict, monitor_port: int) -> bool:
+def run_preflight_checks(rippled_config: dict, monitor_port: int, skip_import_tests: bool = False) -> bool:
     """Run pre-flight checks for Docker or native rippled"""
     print_header("Step 6: Running Pre-Flight Checks")
 
@@ -1161,26 +1162,29 @@ def run_preflight_checks(rippled_config: dict, monitor_port: int) -> bool:
         print_error(f"Port {monitor_port} is in use - monitor cannot start")
         all_passed = False
 
-    # Check Python imports
-    print_info("Testing Python imports...")
-    try:
-        import prometheus_client
-        import yaml
-        print_success("Required Python packages are installed")
-    except ImportError as e:
-        print_error(f"Missing Python package: {e}")
-        all_passed = False
+    # Check Python imports (skip if packages were just installed)
+    if skip_import_tests:
+        print_info("Skipping import tests (packages just installed - re-run setup.py to verify)")
+    else:
+        print_info("Testing Python imports...")
+        try:
+            import prometheus_client
+            import yaml
+            print_success("Required Python packages are installed")
+        except ImportError as e:
+            print_error(f"Missing Python package: {e}")
+            all_passed = False
 
-    # Test Prometheus exporter initialization
-    print_info("Testing Prometheus exporter...")
-    try:
-        from prometheus_client import Gauge, Counter
-        test_gauge = Gauge('test_metric', 'Test metric')
-        test_gauge.set(1)
-        print_success("Prometheus exporter can initialize")
-    except Exception as e:
-        print_error(f"Prometheus exporter test failed: {e}")
-        all_passed = False
+        # Test Prometheus exporter initialization
+        print_info("Testing Prometheus exporter...")
+        try:
+            from prometheus_client import Gauge, Counter
+            test_gauge = Gauge('test_metric', 'Test metric')
+            test_gauge.set(1)
+            print_success("Prometheus exporter can initialize")
+        except Exception as e:
+            print_error(f"Prometheus exporter test failed: {e}")
+            all_passed = False
 
     # Check config file
     project_dir = Path(__file__).parent.absolute()
@@ -1584,7 +1588,10 @@ def main():
     grafana_port, prometheus_port, node_exporter_port, monitor_port = check_ports()
 
     # Step 4: Install dependencies
-    if not install_python_dependencies():
+    deps_result = install_python_dependencies()
+    packages_just_installed = (deps_result == 'installed')
+
+    if not deps_result:
         print_warning("Some dependencies may be missing")
         if not ask_yes_no("Continue anyway?", False):
             return 1
@@ -1603,7 +1610,7 @@ def main():
         print_warning("Could not update docker-compose.yml")
 
     # Step 6: Pre-flight checks
-    if not run_preflight_checks(rippled_config, monitor_port):
+    if not run_preflight_checks(rippled_config, monitor_port, packages_just_installed):
         print_warning("Some pre-flight checks failed")
         if not ask_yes_no("Continue anyway?", True):
             return 1
