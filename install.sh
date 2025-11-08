@@ -51,21 +51,23 @@ if [ "$PREREQS_INSTALLED" = true ]; then
     exit 0
 fi
 
-echo -e "${BLUE}This installation has 2 parts:${NC}"
+echo -e "${BLUE}This installation requires running ./install.sh TWICE:${NC}"
 echo ""
-echo -e "${YELLOW}Part 1: Install Prerequisites${NC}"
+echo -e "${YELLOW}Part 1: Install Prerequisites (first run)${NC}"
 echo "  • Python 3 and pip3"
 echo "  • Docker Engine"
 echo "  • Docker Compose V2"
 echo "  • Add user to docker group"
+echo "  ${BLUE}→ After Part 1: You must logout and login${NC}"
 echo ""
-echo -e "${YELLOW}Part 2: Dashboard Setup${NC} (after logout/login)"
+echo -e "${YELLOW}Part 2: Dashboard Setup (second run after logout/login)${NC}"
 echo "  • Detect rippled installation"
 echo "  • Create monitoring containers (Grafana, Prometheus, Node Exporter)"
 echo "  • Install systemd service"
 echo "  • Import Grafana dashboard"
 echo ""
-read -p "Press Enter to start Part 1..."
+echo -e "${BLUE}Ready to start Part 1?${NC}"
+read -p "Press Enter to continue..."
 echo ""
 
 echo -e "${BLUE}Installing prerequisites for user: ${YELLOW}${CURRENT_USER}${NC}"
