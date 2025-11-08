@@ -47,7 +47,7 @@ if [ "$PREREQS_INSTALLED" = true ]; then
     read -p "Press Enter to continue..."
     echo ""
     cd "${PROJECT_DIR}"
-    exec python3 setup.py
+    exec python3 scripts/setup.py
     exit 0
 fi
 
