@@ -1621,7 +1621,7 @@ def main():
 
             if ask_yes_no("Install missing prerequisites now?", True):
                 # Run the install-prerequisites.sh script
-                install_script = Path(__file__).parent / 'test' / 'install-prerequisites.sh'
+                install_script = Path(__file__).parent / 'install-prerequisites.sh'
 
                 if install_script.exists():
                     print("")
@@ -1666,7 +1666,7 @@ def main():
                         print_error(f"Installation failed: {e}")
                         return 1
                 else:
-                    print_warning("Installation script not found at: test/install-prerequisites.sh")
+                    print_warning("Installation script not found at: install-prerequisites.sh")
                     print_info("Please install the missing prerequisites manually.")
                     print_info("See README.md for detailed installation instructions.")
                     return 1
