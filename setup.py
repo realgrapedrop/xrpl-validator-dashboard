@@ -1595,7 +1595,7 @@ def main():
         'docker_compose': check_docker_compose()
     }
 
-    # If any prerequisite failed, show summary and exit
+    # If any prerequisite failed, show summary
     if not all(prereqs_met.values()):
         print_error("\nPrerequisite checks failed!")
         print("\nMissing requirements:")
@@ -1609,9 +1609,75 @@ def main():
         if not prereqs_met['docker_compose']:
             print(f"  ✗ docker-compose is required")
 
-        print(f"\n{Colors.OKBLUE}Please install the missing prerequisites and try again.{Colors.ENDC}")
-        print(f"{Colors.OKBLUE}See README.md for detailed installation instructions.{Colors.ENDC}\n")
-        return 1
+        # Check if only Docker/pip are missing (we can auto-install these)
+        can_auto_install = (
+            prereqs_met['python'] and  # Python must be present
+            (not prereqs_met['pip'] or not prereqs_met['docker'] or not prereqs_met['docker_compose'])
+        )
+
+        if can_auto_install:
+            print("")
+            print_info("I can automatically install the missing prerequisites for you.")
+
+            if ask_yes_no("Install missing prerequisites now?", True):
+                # Run the install-prerequisites.sh script
+                install_script = Path(__file__).parent / 'test' / 'install-prerequisites.sh'
+
+                if install_script.exists():
+                    print("")
+                    print_info("Running installation script...")
+                    print_info("You may be prompted for your sudo password.")
+                    print("")
+
+                    try:
+                        result = subprocess.run(
+                            ['bash', str(install_script)],
+                            cwd=Path(__file__).parent,
+                            timeout=600  # 10 minute timeout
+                        )
+
+                        if result.returncode == 0:
+                            print("")
+                            print_success("Prerequisites installed successfully!")
+                            print_info("Re-checking prerequisites...")
+                            print("")
+
+                            # Re-check prerequisites
+                            prereqs_met = {
+                                'python': check_python(),
+                                'pip': check_pip(),
+                                'docker': check_docker(),
+                                'docker_compose': check_docker_compose()
+                            }
+
+                            if not all(prereqs_met.values()):
+                                print_error("Some prerequisites still missing after installation")
+                                return 1
+
+                            print_success("All prerequisites are now installed!")
+                        else:
+                            print_error("Installation script failed")
+                            return 1
+
+                    except subprocess.TimeoutExpired:
+                        print_error("Installation timed out")
+                        return 1
+                    except Exception as e:
+                        print_error(f"Installation failed: {e}")
+                        return 1
+                else:
+                    print_warning("Installation script not found at: test/install-prerequisites.sh")
+                    print_info("Please install the missing prerequisites manually.")
+                    print_info("See README.md for detailed installation instructions.")
+                    return 1
+            else:
+                print(f"\n{Colors.OKBLUE}Please install the missing prerequisites and try again.{Colors.ENDC}")
+                print(f"{Colors.OKBLUE}See README.md for detailed installation instructions.{Colors.ENDC}\n")
+                return 1
+        else:
+            print(f"\n{Colors.OKBLUE}Please install the missing prerequisites and try again.{Colors.ENDC}")
+            print(f"{Colors.OKBLUE}See README.md for detailed installation instructions.{Colors.ENDC}\n")
+            return 1
 
     print_success("All prerequisites met!")
 
