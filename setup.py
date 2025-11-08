@@ -1,0 +1,1289 @@
+#!/usr/bin/env python3
+"""
+XRPL Validator Dashboard - Interactive Setup Wizard
+Validates environment and configures the dashboard for Docker-based rippled deployments
+"""
+
+import sys
+import os
+import subprocess
+import json
+import socket
+import shutil
+from typing import Optional, Tuple, List
+from pathlib import Path
+
+# Color codes for terminal output
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[34m'  # Darker blue for better visibility
+    OKCYAN = '\033[36m'  # Darker cyan for better visibility
+    OKGREEN = '\033[32m'  # Darker green for better visibility
+    WARNING = '\033[97m'  # White for warnings
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def print_header(text: str):
+    """Print a section header"""
+    print(f"\n{Colors.HEADER}{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{text}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{'=' * 80}{Colors.ENDC}\n")
+
+def print_success(text: str):
+    """Print success message"""
+    print(f"{Colors.OKGREEN}✓ {text}{Colors.ENDC}")
+
+def print_error(text: str):
+    """Print error message"""
+    print(f"{Colors.FAIL}✗ {text}{Colors.ENDC}")
+
+def print_warning(text: str):
+    """Print warning message"""
+    print(f"{Colors.WARNING}⚠ {text}{Colors.ENDC}")
+
+def print_info(text: str):
+    """Print info message"""
+    print(f"{Colors.OKCYAN}ℹ {text}{Colors.ENDC}")
+
+def ask_yes_no(question: str, default: bool = True) -> bool:
+    """Ask a yes/no question"""
+    default_str = "Y/n" if default else "y/N"
+    while True:
+        response = input(f"{Colors.OKBLUE}? {question} [{default_str}]: {Colors.ENDC}").strip().lower()
+        if response == '':
+            return default
+        if response in ['y', 'yes']:
+            return True
+        if response in ['n', 'no']:
+            return False
+        print_warning("Please answer 'y' or 'n'")
+
+def ask_input(question: str, default: str = "") -> str:
+    """Ask for text input"""
+    if default:
+        prompt = f"{Colors.OKBLUE}? {question} [{default}]: {Colors.ENDC}"
+    else:
+        prompt = f"{Colors.OKBLUE}? {question}: {Colors.ENDC}"
+
+    response = input(prompt).strip()
+    return response if response else default
+
+def check_command_exists(command: str) -> bool:
+    """Check if a command exists in PATH"""
+    return shutil.which(command) is not None
+
+def check_docker() -> bool:
+    """Check if Docker is installed and running"""
+    # Check if docker command exists
+    if not check_command_exists('docker'):
+        print_error("Docker is not installed")
+        return False
+
+    print_success("Docker command found")
+
+    # Check if Docker daemon is running
+    try:
+        result = subprocess.run(
+            ['docker', 'ps'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode != 0:
+            print_error("Docker daemon is not running")
+            return False
+
+        print_success("Docker daemon is running")
+        return True
+
+    except subprocess.TimeoutExpired:
+        print_error("Docker command timed out")
+        return False
+    except Exception as e:
+        print_error(f"Failed to check Docker: {e}")
+        return False
+
+def check_python() -> bool:
+    """Check Python version"""
+    version = sys.version_info
+    if version.major < 3 or (version.major == 3 and version.minor < 6):
+        print_error(f"Python 3.6+ required, found {version.major}.{version.minor}")
+        return False
+
+    print_success(f"Python {version.major}.{version.minor}.{version.micro}")
+    return True
+
+def check_pip() -> bool:
+    """Check if pip is available"""
+    if not check_command_exists('pip3'):
+        print_error("pip3 is not installed")
+        return False
+
+    print_success("pip3 found")
+    return True
+
+def check_docker_compose() -> bool:
+    """Check if docker-compose is available"""
+    # Try docker compose (v2)
+    try:
+        result = subprocess.run(
+            ['docker', 'compose', 'version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            print_success("docker compose (v2) found")
+            return True
+    except:
+        pass
+
+    # Try docker-compose (v1)
+    if check_command_exists('docker-compose'):
+        print_success("docker-compose (v1) found")
+        return True
+
+    print_error("docker-compose not found")
+    return False
+
+def find_rippled_containers() -> List[str]:
+    """Find running containers that might be rippled"""
+    try:
+        result = subprocess.run(
+            ['docker', 'ps', '--format', '{{.Names}}'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            return []
+
+        all_containers = result.stdout.strip().split('\n')
+
+        # Filter for containers that might be rippled
+        rippled_containers = [
+            c for c in all_containers
+            if 'rippled' in c.lower() or 'xrpl' in c.lower()
+        ]
+
+        return rippled_containers
+
+    except Exception as e:
+        print_warning(f"Could not list containers: {e}")
+        return []
+
+def test_rippled_connection(container_name: str) -> Tuple[bool, Optional[dict]]:
+    """Test connection to rippled via docker exec"""
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', container_name, 'rippled', 'server_info'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            return False, None
+
+        # Parse JSON response
+        try:
+            data = json.loads(result.stdout)
+            info = data.get('result', {}).get('info', {})
+            return True, info
+        except json.JSONDecodeError:
+            return False, None
+
+    except subprocess.TimeoutExpired:
+        print_warning("rippled command timed out")
+        return False, None
+    except Exception as e:
+        print_warning(f"Failed to connect: {e}")
+        return False, None
+
+def detect_rippled_container() -> Optional[str]:
+    """Detect and validate rippled container"""
+    print_header("Step 2: Detecting rippled Container")
+
+    # Find potential rippled containers
+    containers = find_rippled_containers()
+
+    if not containers:
+        print_warning("No rippled containers detected")
+        container_name = ask_input("Enter rippled container name", "rippledvalidator")
+    elif len(containers) == 1:
+        container_name = containers[0]
+        print_info(f"Found rippled container: {container_name}")
+        if not ask_yes_no(f"Use this container?", True):
+            container_name = ask_input("Enter rippled container name", "rippledvalidator")
+    else:
+        print_info(f"Found {len(containers)} potential rippled containers:")
+        for i, c in enumerate(containers, 1):
+            print(f"  {i}. {c}")
+
+        choice = ask_input(f"Select container (1-{len(containers)}) or enter custom name", "1")
+
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(containers):
+                container_name = containers[idx]
+            else:
+                container_name = choice
+        except ValueError:
+            container_name = choice
+
+    # Test connection
+    print_info(f"Testing connection to {container_name}...")
+    success, info = test_rippled_connection(container_name)
+
+    if not success:
+        print_error(f"Failed to connect to container '{container_name}'")
+        print_info("Make sure the container is running and rippled is accessible")
+
+        if ask_yes_no("Try a different container name?", True):
+            return detect_rippled_container()
+        return None
+
+    # Display validator info
+    print_success(f"Connected to rippled in container '{container_name}'")
+
+    if info:
+        print_info(f"  Server State: {info.get('server_state', 'unknown')}")
+        print_info(f"  Build Version: {info.get('build_version', 'unknown')}")
+        print_info(f"  Network: {info.get('network_id', 'unknown')}")
+
+        pubkey = info.get('pubkey_validator', '')
+        if pubkey:
+            print_info(f"  Validator Key: {pubkey[:30]}...")
+
+        ledger_seq = info.get('validated_ledger', {}).get('seq', 'unknown')
+        print_info(f"  Ledger Seq: {ledger_seq}")
+
+    # Explain how the monitor communicates with rippled
+    print("\n" + Colors.BOLD + "Communication Method:" + Colors.ENDC)
+    print_info("  Monitor → rippled: Docker exec (no network ports needed)")
+    print_info("  No rippled ports (5005, 6006, 51234, etc.) need to be exposed")
+    print("")
+
+    print(Colors.BOLD + "rippled APIs Called via Docker Exec:" + Colors.ENDC)
+    print(f"  {Colors.OKGREEN}✓{Colors.ENDC} server_info  - State, ledger, peers, validation data (every 3s)")
+    print(f"  {Colors.OKGREEN}✓{Colors.ENDC} peers        - Detailed peer information (every 30s)")
+    print(f"  {Colors.OKGREEN}✓{Colors.ENDC} fee          - Transaction rate calculation (every 3s)")
+    print(f"  {Colors.OKGREEN}✓{Colors.ENDC} ledger       - Ledger validation tracking (as needed)")
+    print("")
+
+    print(Colors.BOLD + "Ports Used by Dashboard Components:" + Colors.ENDC)
+    print(f"  {Colors.OKCYAN}→{Colors.ENDC} Monitor (fast_poller):  Port 9094 - Exports Prometheus metrics")
+    print(f"  {Colors.OKCYAN}→{Colors.ENDC} Node Exporter:          Port 9102 - Exports system metrics (CPU, RAM, Disk)")
+    print(f"  {Colors.OKCYAN}→{Colors.ENDC} Prometheus:             Port 9092 - Stores & queries metrics")
+    print(f"  {Colors.OKCYAN}→{Colors.ENDC} Grafana:                Port 3001 - Web dashboard UI")
+    print_info("  (Ports will be configured in Step 3)")
+    print("")
+
+    print(Colors.BOLD + "Data Flow:" + Colors.ENDC)
+    print(f"  System → {Colors.OKCYAN}Node Exporter:9102{Colors.ENDC} ┐")
+    print(f"  rippled ← {Colors.OKGREEN}docker exec{Colors.ENDC} ← Monitor:{Colors.OKCYAN}9094{Colors.ENDC} ├→ Prometheus:{Colors.OKCYAN}9092{Colors.ENDC} → Grafana:{Colors.OKCYAN}3001{Colors.ENDC}")
+    print(f"                                            ┘")
+    print("")
+
+    print(Colors.BOLD + "These APIs and ports will be tested in Step 6" + Colors.ENDC)
+
+    return container_name
+
+def is_port_available(port: int) -> bool:
+    """Check if a port is available"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    try:
+        sock.bind(('0.0.0.0', port))
+        sock.close()
+        return True
+    except:
+        return False
+
+def find_next_available_port(start_port: int, max_attempts: int = 100) -> Optional[int]:
+    """Find the next available port starting from start_port"""
+    for port in range(start_port, start_port + max_attempts):
+        if is_port_available(port):
+            return port
+    return None
+
+def get_container_ports(name_pattern: str) -> List[int]:
+    """Get ports used by containers matching a name pattern"""
+    try:
+        # Get all containers with their port mappings
+        result = subprocess.run(
+            ['docker', 'ps', '--format', '{{.Names}}\t{{.Ports}}'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            return []
+
+        ports = []
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+
+            parts = line.split('\t')
+            if len(parts) < 2:
+                continue
+
+            container_name = parts[0]
+            port_mappings = parts[1]
+
+            # Check if container name matches pattern
+            if name_pattern.lower() in container_name.lower():
+                # Extract host ports from mappings like "0.0.0.0:3000->3000/tcp"
+                import re
+                port_matches = re.findall(r'0\.0\.0\.0:(\d+)->', port_mappings)
+                ports.extend([int(p) for p in port_matches])
+
+        return ports
+
+    except Exception as e:
+        return []
+
+def check_ports() -> Tuple[int, int, int, int]:
+    """Check and configure ports"""
+    print_header("Step 3: Checking Port Availability")
+
+    ports = {
+        'grafana': 3001,
+        'prometheus': 9092,
+        'node_exporter': 9102,
+        'monitor': 9094
+    }
+
+    # Detect existing container ports and processes
+    container_patterns = {
+        'grafana': 'grafana',
+        'prometheus': 'prometheus',
+        'node_exporter': 'node-exporter',
+        'monitor': 'xrpl'  # Catch xrpl-monitor, xrpl-dashboard, etc.
+    }
+
+    for service, port in ports.items():
+        if is_port_available(port):
+            print_success(f"{service.capitalize()}: port {port} is available")
+        else:
+            print_warning(f"{service.capitalize()}: port {port} is in use")
+
+            # Show what's using related ports
+            if service in container_patterns:
+                used_ports = get_container_ports(container_patterns[service])
+                if used_ports:
+                    if service == 'monitor':
+                        print_info(f"  Existing XRPL monitor instances using ports: {', '.join(map(str, used_ports))}")
+                    else:
+                        print_info(f"  Existing {service} containers using ports: {', '.join(map(str, used_ports))}")
+
+            # Find next available port
+            suggested_port = find_next_available_port(port + 1)
+
+            if suggested_port:
+                print_info(f"  Suggested next available port: {suggested_port}")
+
+                while True:
+                    new_port = ask_input(
+                        f"Enter port for {service} (or press Enter for {suggested_port})",
+                        str(suggested_port)
+                    )
+
+                    try:
+                        new_port = int(new_port)
+                        if is_port_available(new_port):
+                            print_success(f"Port {new_port} is available")
+                            ports[service] = new_port
+                            break
+                        else:
+                            print_warning(f"Port {new_port} is in use. Try another port.")
+                    except ValueError:
+                        print_warning("Please enter a valid port number")
+            else:
+                print_error(f"Could not find available port. Please specify manually:")
+                while True:
+                    new_port = ask_input(f"Enter port for {service}", "")
+                    try:
+                        new_port = int(new_port)
+                        if is_port_available(new_port):
+                            print_success(f"Port {new_port} is available")
+                            ports[service] = new_port
+                            break
+                        else:
+                            print_warning(f"Port {new_port} is in use")
+                    except ValueError:
+                        print_warning("Please enter a valid port number")
+
+    return ports['grafana'], ports['prometheus'], ports['node_exporter'], ports['monitor']
+
+def check_python_package(package_name: str) -> bool:
+    """Check if a Python package is already installed"""
+    try:
+        if package_name == 'pyyaml':
+            import yaml
+            return True
+        elif package_name == 'prometheus-client':
+            import prometheus_client
+            return True
+        return False
+    except ImportError:
+        return False
+
+def install_python_dependencies() -> bool:
+    """Install required Python packages"""
+    print_header("Step 4: Installing Python Dependencies")
+
+    packages = ['prometheus-client', 'pyyaml']
+    package_map = {
+        'prometheus-client': 'prometheus_client',
+        'pyyaml': 'yaml'
+    }
+
+    # Check which packages are already installed
+    missing_packages = []
+    for pkg in packages:
+        if not check_python_package(pkg):
+            missing_packages.append(pkg)
+        else:
+            print_success(f"{pkg} is already installed")
+
+    if not missing_packages:
+        print_success("All required packages are already installed")
+        return True
+
+    print_info(f"Missing packages: {', '.join(missing_packages)}")
+
+    if not ask_yes_no("Install missing Python dependencies?", True):
+        print_warning("Skipping dependency installation")
+        print_info("You can install manually with: pip3 install --user " + " ".join(missing_packages))
+        return False
+
+    # Try installing with --user flag (works on externally-managed systems)
+    print_info("Installing packages to user directory (~/.local/)...")
+    try:
+        result = subprocess.run(
+            ['pip3', 'install', '--user'] + missing_packages,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode == 0:
+            print_success("Python dependencies installed successfully")
+            print_info("Packages installed to: ~/.local/lib/python*/site-packages/")
+            return True
+
+        # If --user install failed, check if it's externally-managed error
+        if 'externally-managed-environment' in result.stderr:
+            print_warning("System Python is externally managed")
+            print_info("Trying system package installation...")
+
+            # Try apt install as fallback
+            apt_packages = {
+                'prometheus-client': 'python3-prometheus-client',
+                'pyyaml': 'python3-yaml'
+            }
+
+            apt_pkgs = [apt_packages[pkg] for pkg in missing_packages if pkg in apt_packages]
+
+            if apt_pkgs:
+                print_info(f"Attempting: sudo apt install {' '.join(apt_pkgs)}")
+                result = subprocess.run(
+                    ['sudo', 'apt', 'install', '-y'] + apt_pkgs,
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+
+                if result.returncode == 0:
+                    print_success("Packages installed via apt")
+                    return True
+
+        # All methods failed
+        print_error("Could not install dependencies automatically")
+        print("\nPlease install manually using ONE of these methods:")
+        print(f"  1. User install:   pip3 install --user {' '.join(missing_packages)}")
+        print(f"  2. System install: sudo apt install python3-prometheus-client python3-yaml")
+        print(f"  3. Virtual env:    python3 -m venv venv && source venv/bin/activate && pip install {' '.join(missing_packages)}")
+        return False
+
+    except Exception as e:
+        print_error(f"Installation failed: {e}")
+        return False
+
+def generate_config(container_name: str, monitor_port: int) -> bool:
+    """Generate config.yaml"""
+    print_header("Step 5: Generating Configuration")
+
+    project_dir = Path(__file__).parent.absolute()
+    config_path = project_dir / 'config.yaml'
+
+    config_content = f"""# XRPL Monitor Configuration
+
+# Monitoring settings
+monitoring:
+  poll_interval: 3  # seconds between polls
+  container_name: {container_name}
+
+# Prometheus exporter settings
+prometheus:
+  enabled: true
+  port: {monitor_port}
+  host: 0.0.0.0  # Listen on all interfaces
+
+# Alert settings
+alerts:
+  # File-based alerts (always enabled)
+  file_enabled: true
+
+  # Email alerts - DISABLED (using Grafana alerts instead)
+  email_enabled: false
+  # Note: Email alerts are handled by Grafana
+  # Configure email in Grafana Settings -> Alerting -> Contact Points
+
+# Database settings
+database:
+  path: {project_dir}/data/monitor.db
+
+# Logging
+logging:
+  level: INFO
+  file: {project_dir}/logs/monitor.log
+"""
+
+    # Backup existing config if it exists
+    if config_path.exists():
+        backup_path = config_path.with_suffix('.yaml.backup')
+        print_info(f"Backing up existing config to {backup_path.name}")
+        shutil.copy(config_path, backup_path)
+
+    # Write new config
+    try:
+        with open(config_path, 'w') as f:
+            f.write(config_content)
+
+        print_success(f"Configuration written to {config_path}")
+
+        # Also update config/config.yaml
+        config_dir_path = project_dir / 'config' / 'config.yaml'
+        if config_dir_path.parent.exists():
+            with open(config_dir_path, 'w') as f:
+                f.write(config_content)
+            print_success(f"Also updated {config_dir_path}")
+
+        return True
+
+    except Exception as e:
+        print_error(f"Failed to write config: {e}")
+        return False
+
+def update_prometheus_config(monitor_port: int) -> bool:
+    """Update Prometheus scrape configuration"""
+    project_dir = Path(__file__).parent.absolute()
+    prom_config_path = project_dir / 'compose' / 'prometheus' / 'prometheus.yml'
+
+    if not prom_config_path.exists():
+        print_warning(f"Prometheus config not found at {prom_config_path}")
+        return False
+
+    # Update the target port in prometheus.yml
+    try:
+        with open(prom_config_path, 'r') as f:
+            content = f.read()
+
+        # Replace the target port
+        import re
+        content = re.sub(
+            r'host\.docker\.internal:\d+',
+            f'host.docker.internal:{monitor_port}',
+            content
+        )
+
+        with open(prom_config_path, 'w') as f:
+            f.write(content)
+
+        print_success("Updated Prometheus scrape target")
+        return True
+
+    except Exception as e:
+        print_error(f"Failed to update Prometheus config: {e}")
+        return False
+
+def update_docker_compose(grafana_port: int, prometheus_port: int, node_exporter_port: int) -> bool:
+    """Update docker-compose.yml port mappings"""
+    project_dir = Path(__file__).parent.absolute()
+    compose_path = project_dir / 'docker-compose.yml'
+
+    if not compose_path.exists():
+        print_warning(f"docker-compose.yml not found")
+        return False
+
+    try:
+        with open(compose_path, 'r') as f:
+            content = f.read()
+
+        # Update port mappings
+        import re
+        content = re.sub(r'"9092:9090"', f'"{prometheus_port}:9090"', content)
+        content = re.sub(r'"9102:9100"', f'"{node_exporter_port}:9100"', content)
+        content = re.sub(r'"3001:3000"', f'"{grafana_port}:3000"', content)
+
+        with open(compose_path, 'w') as f:
+            f.write(content)
+
+        print_success("Updated docker-compose.yml port mappings")
+        return True
+
+    except Exception as e:
+        print_error(f"Failed to update docker-compose.yml: {e}")
+        return False
+
+def create_directories() -> bool:
+    """Create necessary directories"""
+    project_dir = Path(__file__).parent.absolute()
+
+    dirs = [
+        project_dir / 'data',
+        project_dir / 'logs'
+    ]
+
+    for dir_path in dirs:
+        try:
+            dir_path.mkdir(exist_ok=True)
+            print_success(f"Directory ready: {dir_path.name}/")
+        except Exception as e:
+            print_error(f"Failed to create {dir_path}: {e}")
+            return False
+
+    return True
+
+def test_rippled_api_calls(container_name: str) -> Tuple[bool, List[str]]:
+    """Test the rippled API calls that the monitor will use"""
+    failed_calls = []
+
+    # Test server_info (most critical)
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', container_name, 'rippled', 'server_info'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode != 0:
+            failed_calls.append("server_info")
+        else:
+            data = json.loads(result.stdout)
+            if 'result' not in data or 'info' not in data.get('result', {}):
+                failed_calls.append("server_info (invalid response)")
+    except Exception as e:
+        failed_calls.append(f"server_info ({str(e)})")
+
+    # Test peers (used for peer details)
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', container_name, 'rippled', 'peers'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode != 0:
+            failed_calls.append("peers")
+    except Exception as e:
+        failed_calls.append(f"peers ({str(e)})")
+
+    # Test fee (used for transaction rate)
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', container_name, 'rippled', 'fee'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode != 0:
+            failed_calls.append("fee")
+    except Exception as e:
+        failed_calls.append(f"fee ({str(e)})")
+
+    return len(failed_calls) == 0, failed_calls
+
+def run_preflight_checks(container_name: str, monitor_port: int) -> bool:
+    """Run pre-flight checks"""
+    print_header("Step 6: Running Pre-Flight Checks")
+
+    all_passed = True
+
+    # Check rippled connection
+    print_info("Testing rippled connection...")
+    success, info = test_rippled_connection(container_name)
+    if success:
+        print_success("rippled is accessible")
+    else:
+        print_error("Cannot connect to rippled")
+        all_passed = False
+        return all_passed  # No point continuing if rippled isn't accessible
+
+    # Test rippled API calls
+    print_info("Testing rippled API calls...")
+    api_success, failed_calls = test_rippled_api_calls(container_name)
+    if api_success:
+        print_success("All rippled API calls working (server_info, peers, fee)")
+    else:
+        print_error(f"Some rippled API calls failed: {', '.join(failed_calls)}")
+        print_warning("The monitor may not work correctly")
+        all_passed = False
+
+    # Check monitor port availability
+    print_info(f"Checking monitor port {monitor_port}...")
+    if is_port_available(monitor_port):
+        print_success(f"Port {monitor_port} is available for metrics export")
+    else:
+        print_error(f"Port {monitor_port} is in use - monitor cannot start")
+        all_passed = False
+
+    # Check Python imports
+    print_info("Testing Python imports...")
+    try:
+        import prometheus_client
+        import yaml
+        print_success("Required Python packages are installed")
+    except ImportError as e:
+        print_error(f"Missing Python package: {e}")
+        all_passed = False
+
+    # Test Prometheus exporter initialization
+    print_info("Testing Prometheus exporter...")
+    try:
+        from prometheus_client import Gauge, Counter
+        test_gauge = Gauge('test_metric', 'Test metric')
+        test_gauge.set(1)
+        print_success("Prometheus exporter can initialize")
+    except Exception as e:
+        print_error(f"Prometheus exporter test failed: {e}")
+        all_passed = False
+
+    # Check config file
+    project_dir = Path(__file__).parent.absolute()
+    config_path = project_dir / 'config.yaml'
+    if config_path.exists():
+        print_success("Configuration file exists")
+
+        # Validate config content
+        try:
+            import yaml
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+
+            # Check essential config values
+            if config.get('monitoring', {}).get('container_name') == container_name:
+                print_success(f"Config container name matches: {container_name}")
+            else:
+                print_warning(f"Config container name mismatch")
+
+            if config.get('prometheus', {}).get('port') == monitor_port:
+                print_success(f"Config monitor port matches: {monitor_port}")
+            else:
+                print_warning(f"Config monitor port mismatch")
+
+        except Exception as e:
+            print_warning(f"Could not validate config content: {e}")
+    else:
+        print_error("Configuration file missing")
+        all_passed = False
+
+    # Check docker-compose
+    compose_path = project_dir / 'docker-compose.yml'
+    if compose_path.exists():
+        print_success("docker-compose.yml exists")
+    else:
+        print_error("docker-compose.yml missing")
+        all_passed = False
+
+    # Check database directory
+    data_dir = project_dir / 'data'
+    if data_dir.exists():
+        print_success("Data directory exists")
+    else:
+        print_warning("Data directory missing (will be created)")
+
+    # Check logs directory
+    logs_dir = project_dir / 'logs'
+    if logs_dir.exists():
+        print_success("Logs directory exists")
+    else:
+        print_warning("Logs directory missing (will be created)")
+
+    return all_passed
+
+def set_grafana_home_dashboard(grafana_port: int, dashboard_uid: str) -> bool:
+    """Set a dashboard as the home dashboard for the default org"""
+    import urllib.request
+    import urllib.error
+    import base64
+
+    try:
+        # Update org preferences to set home dashboard
+        url = f'http://127.0.0.1:{grafana_port}/api/org/preferences'
+
+        payload = {
+            "homeDashboardUID": dashboard_uid
+        }
+
+        data = json.dumps(payload).encode('utf-8')
+
+        credentials = base64.b64encode(b'admin:admin').decode('ascii')
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Basic {credentials}'
+        }
+
+        request = urllib.request.Request(url, data=data, headers=headers, method='PUT')
+        urllib.request.urlopen(request, timeout=10)
+
+        return True
+    except Exception as e:
+        return False
+
+def get_nodename_from_prometheus(prometheus_port: int) -> str:
+    """Query Prometheus to get the actual nodename from node_exporter"""
+    import urllib.request
+    import urllib.error
+
+    try:
+        # Query node_uname_info to get nodename label
+        url = f'http://127.0.0.1:{prometheus_port}/api/v1/query?query=node_uname_info'
+
+        request = urllib.request.Request(url)
+        response = urllib.request.urlopen(request, timeout=5)
+
+        if response.status == 200:
+            data = json.loads(response.read().decode('utf-8'))
+            results = data.get('data', {}).get('result', [])
+
+            if results:
+                # Get nodename from the first result's labels
+                nodename = results[0].get('metric', {}).get('nodename', '')
+                if nodename:
+                    return nodename
+
+        return ''
+    except Exception as e:
+        return ''
+
+def import_grafana_dashboard(grafana_port: int, dashboard_path: str, node_exporter_port: int, prometheus_port: int) -> Tuple[bool, str, str, str]:
+    """Import a dashboard into Grafana via API with dynamic variable defaults"""
+    import time
+    import urllib.request
+    import urllib.error
+    import base64
+
+    # Wait for Grafana and Prometheus to be fully ready
+    time.sleep(5)
+
+    # Get the actual nodename from Prometheus
+    nodename = get_nodename_from_prometheus(prometheus_port)
+    if not nodename:
+        nodename = 'localhost'  # Fallback
+
+    try:
+        # Read dashboard JSON
+        with open(dashboard_path, 'r') as f:
+            dashboard_json = json.load(f)
+
+        # Update template variable defaults to match the setup configuration
+        if 'templating' in dashboard_json and 'list' in dashboard_json['templating']:
+            for template_var in dashboard_json['templating']['list']:
+                var_name = template_var.get('name', '')
+
+                # Set default for 'job' variable
+                if var_name == 'job' or var_name.lower() == 'job':
+                    template_var['current'] = {
+                        'selected': True,
+                        'text': 'xrpl-validator',
+                        'value': 'xrpl-validator'
+                    }
+                    if 'options' not in template_var:
+                        template_var['options'] = []
+
+                # Set default for 'instance' or 'node' variable
+                elif var_name in ['instance', 'node']:
+                    instance_value = f'127.0.0.1:{node_exporter_port}'
+                    template_var['current'] = {
+                        'selected': True,
+                        'text': instance_value,
+                        'value': instance_value
+                    }
+                    if 'options' not in template_var:
+                        template_var['options'] = []
+
+                # Set default for 'nodename' - use actual nodename from Prometheus
+                elif var_name == 'nodename':
+                    template_var['multi'] = False
+                    template_var['current'] = {
+                        'selected': True,
+                        'text': nodename,
+                        'value': nodename
+                    }
+                    if 'options' not in template_var:
+                        template_var['options'] = []
+
+                # Set defaults for other variables to All
+                elif var_name in ['containergroup', 'server', 'diskdevices']:
+                    template_var['current'] = {
+                        'selected': False,
+                        'text': 'All',
+                        'value': '$__all'
+                    }
+                    if var_name != 'diskdevices':  # diskdevices is a regex, not a query
+                        template_var['includeAll'] = True
+                        template_var['allValue'] = '.*'
+
+        # Prepare the import payload
+        payload = {
+            "dashboard": dashboard_json,
+            "overwrite": True,
+            "message": "Imported by setup wizard"
+        }
+
+        # Create request with basic auth
+        url = f'http://127.0.0.1:{grafana_port}/api/dashboards/db'
+        data = json.dumps(payload).encode('utf-8')
+
+        # Add basic auth header
+        credentials = base64.b64encode(b'admin:admin').decode('ascii')
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Basic {credentials}'
+        }
+
+        request = urllib.request.Request(url, data=data, headers=headers, method='POST')
+
+        response = urllib.request.urlopen(request, timeout=10)
+
+        if response.status == 200:
+            # Parse response to get dashboard UID
+            response_data = json.loads(response.read().decode('utf-8'))
+            dashboard_uid = response_data.get('uid', '')
+            dashboard_name = dashboard_json.get('title', 'Dashboard')
+            return True, dashboard_name, dashboard_uid, nodename
+        else:
+            return False, f"HTTP {response.status}", "", ""
+
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}: {e.read().decode()}", "", ""
+    except Exception as e:
+        return False, str(e), "", ""
+
+def install_systemd_service() -> bool:
+    """Install the monitor as a systemd service"""
+    service_name = "xrpl-validator-dashboard"
+    service_file = f"/etc/systemd/system/{service_name}.service"
+    project_dir = os.getcwd()
+
+    print_info("Installing monitor as a background service (systemd)")
+    print_info("This requires sudo access to create the service file")
+    print("")
+
+    # Create service file content
+    service_content = f"""[Unit]
+Description=XRPL Validator Dashboard Monitor
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User={os.getenv('USER', 'grapedrop')}
+Group={os.getenv('USER', 'grapedrop')}
+WorkingDirectory={project_dir}
+ExecStart=/usr/bin/python3 -u {project_dir}/src/collectors/fast_poller.py
+Restart=always
+RestartSec=10
+StandardOutput=append:{project_dir}/logs/monitor.log
+StandardError=append:{project_dir}/logs/error.log
+NoNewPrivileges=true
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+    try:
+        # Write service file
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+            f.write(service_content)
+            temp_file = f.name
+
+        # Copy to systemd directory
+        result = subprocess.run(
+            ['sudo', 'cp', temp_file, service_file],
+            capture_output=True,
+            text=True
+        )
+        os.unlink(temp_file)
+
+        if result.returncode != 0:
+            print_error("Failed to create service file")
+            return False
+
+        print_success("Service file created")
+
+        # Reload systemd
+        subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True, capture_output=True)
+        print_success("Systemd reloaded")
+
+        # Enable service
+        subprocess.run(['sudo', 'systemctl', 'enable', service_name], check=True, capture_output=True)
+        print_success("Service enabled (will start on boot)")
+
+        # Start service
+        subprocess.run(['sudo', 'systemctl', 'start', service_name], check=True, capture_output=True)
+        print_success("Service started")
+
+        # Brief pause to let service start
+        import time
+        time.sleep(2)
+
+        # Check status
+        result = subprocess.run(
+            ['systemctl', 'is-active', service_name],
+            capture_output=True,
+            text=True
+        )
+
+        if result.stdout.strip() == 'active':
+            print_success(f"Monitor is running as '{service_name}' service")
+            return True
+        else:
+            print_warning("Service may not have started correctly")
+            return False
+
+    except subprocess.CalledProcessError as e:
+        print_error(f"Failed to install service: {e}")
+        return False
+    except Exception as e:
+        print_error(f"Unexpected error: {e}")
+        return False
+
+def print_next_steps(grafana_port: int, prometheus_port: int, monitor_port: int):
+    """Print next steps for the user"""
+    print_header("Setup Complete!")
+
+    print(f"{Colors.OKGREEN}{Colors.BOLD}Next Steps:{Colors.ENDC}\n")
+
+    print(f"{Colors.BOLD}1. Start the monitoring stack:{Colors.ENDC}")
+    print(f"   docker compose up -d\n")
+
+    print(f"{Colors.BOLD}2. Start the validator monitor:{Colors.ENDC}")
+    print(f"   python3 src/collectors/fast_poller.py\n")
+
+    print(f"{Colors.BOLD}3. Access your dashboards:{Colors.ENDC}")
+    print(f"   Grafana:    http://localhost:{grafana_port}")
+    print(f"               Username: admin / Password: admin")
+    print(f"   Prometheus: http://localhost:{prometheus_port}")
+    print(f"   Metrics:    http://localhost:{monitor_port}/metrics\n")
+
+    print(f"{Colors.BOLD}4. Import Grafana dashboards:{Colors.ENDC}")
+    print(f"   - Go to http://localhost:{grafana_port}")
+    print(f"   - Navigate to Dashboards → New → Import")
+    print(f"   - Click 'Upload dashboard JSON file'")
+    print(f"   - Browse to dashboards/categories/ and select 1-overview-status.json")
+    print(f"   - Select Prometheus as data source → Import")
+    print(f"   - Repeat for the other 5 dashboard files\n")
+
+    print(f"{Colors.OKBLUE}For detailed instructions, see SETUP.md{Colors.ENDC}\n")
+
+def main():
+    """Main setup wizard"""
+    print_header("XRPL Validator Dashboard - Setup Wizard")
+    print("This wizard will guide you through setting up the dashboard")
+    print("for Docker-based rippled deployments.\n")
+
+    # Step 1: Check prerequisites - Check ALL first before continuing
+    print_header("Step 1: Checking Prerequisites")
+
+    prereqs_met = {
+        'python': check_python(),
+        'pip': check_pip(),
+        'docker': check_docker(),
+        'docker_compose': check_docker_compose()
+    }
+
+    # If any prerequisite failed, show summary and exit
+    if not all(prereqs_met.values()):
+        print_error("\nPrerequisite checks failed!")
+        print("\nMissing requirements:")
+
+        if not prereqs_met['python']:
+            print(f"  ✗ Python 3.6+ is required")
+        if not prereqs_met['pip']:
+            print(f"  ✗ pip3 is required")
+        if not prereqs_met['docker']:
+            print(f"  ✗ Docker is required")
+        if not prereqs_met['docker_compose']:
+            print(f"  ✗ docker-compose is required")
+
+        print(f"\n{Colors.OKBLUE}Please install the missing prerequisites and try again.{Colors.ENDC}")
+        print(f"{Colors.OKBLUE}See README.md for detailed installation instructions.{Colors.ENDC}\n")
+        return 1
+
+    print_success("All prerequisites met!")
+
+    # Step 2: Detect rippled container
+    container_name = detect_rippled_container()
+    if not container_name:
+        print_error("Cannot proceed without a valid rippled container")
+        return 1
+
+    # Step 3: Check ports
+    grafana_port, prometheus_port, node_exporter_port, monitor_port = check_ports()
+
+    # Step 4: Install dependencies
+    if not install_python_dependencies():
+        print_warning("Some dependencies may be missing")
+        if not ask_yes_no("Continue anyway?", False):
+            return 1
+
+    # Step 5: Generate configuration
+    if not create_directories():
+        return 1
+
+    if not generate_config(container_name, monitor_port):
+        return 1
+
+    if not update_prometheus_config(monitor_port):
+        print_warning("Could not update Prometheus config")
+
+    if not update_docker_compose(grafana_port, prometheus_port, node_exporter_port):
+        print_warning("Could not update docker-compose.yml")
+
+    # Step 6: Pre-flight checks
+    if not run_preflight_checks(container_name, monitor_port):
+        print_warning("Some pre-flight checks failed")
+        if not ask_yes_no("Continue anyway?", True):
+            return 1
+
+    # Done with configuration!
+    print_header("Setup Complete!")
+    print_success("Configuration files generated successfully")
+    print("")
+
+    # Ask if user wants automatic or manual setup
+    if ask_yes_no("Automatically start services and import dashboard?", True):
+        # AUTOMATIC FLOW
+        print("")
+        print_info("Starting automated setup...")
+        print("")
+
+        # Step 1: Start Docker services
+        docker_started = False
+        print_info("Step 1/3: Starting Docker services (Grafana, Prometheus, Node Exporter)...")
+        try:
+            subprocess.run(['docker', 'compose', 'up', '-d'], check=True, capture_output=True)
+            print_success("Docker services started")
+            docker_started = True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            try:
+                subprocess.run(['docker-compose', 'up', '-d'], check=True, capture_output=True)
+                print_success("Docker services started")
+                docker_started = True
+            except:
+                print_error("Failed to start Docker services")
+                print_info("Try manually: docker compose up -d")
+
+        # Step 2: Install monitor as systemd service
+        if docker_started:
+            print("")
+            print_info("Step 2/3: Installing monitor as systemd service...")
+            print_info("(You may be prompted for sudo password)")
+            print("")
+
+            if install_systemd_service():
+                # Step 3: Import dashboard
+                print("")
+                print_info("Step 3/3: Importing dashboard...")
+                dashboard_file = Path(__file__).parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
+
+                if dashboard_file.exists():
+                    print_info("Querying Prometheus for node hostname...")
+                    success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
+
+                    if success:
+                        print_success(f"Dashboard imported: {result}")
+                        print_info(f"Configured defaults: Job=xrpl-validator, Instance=127.0.0.1:{node_exporter_port}, Nodename={detected_nodename}")
+
+                        # Set as home dashboard so it opens automatically on login
+                        if dashboard_uid and set_grafana_home_dashboard(grafana_port, dashboard_uid):
+                            print_success("Dashboard set as home page (opens automatically on login)")
+
+                        print("")
+                        print_header("All Done! Everything is Running")
+                        print("")
+                        print_success(f"Services running:")
+                        print(f"  Grafana:    http://localhost:{grafana_port}")
+                        print(f"  Prometheus: http://localhost:{prometheus_port}")
+                        print(f"  Metrics:    http://localhost:{monitor_port}/metrics")
+                        print("")
+                        print_info(f"{Colors.BOLD}You are ready to view your dashboard:{Colors.ENDC}")
+                        print(f"  {Colors.BOLD}1.{Colors.ENDC} Go to {Colors.BOLD}http://localhost:{grafana_port}{Colors.ENDC}")
+                        print(f"  {Colors.BOLD}2.{Colors.ENDC} Login with username: {Colors.BOLD}admin{Colors.ENDC} / password: {Colors.BOLD}admin{Colors.ENDC}")
+                        print(f"  {Colors.BOLD}3.{Colors.ENDC} You will be prompted to change the password")
+                        print(f"  {Colors.BOLD}4.{Colors.ENDC} Dashboard opens automatically with all metrics ready!")
+                        print("")
+                        print_info("⏳ Note: 24-hour metrics panels (Agreements %, Agreements, Missed) will")
+                        print_info("        populate after 5-10 minutes as historical data is collected.")
+                        print("")
+                        print_info("Useful commands:")
+                        print(f"  View live logs:     {Colors.BOLD}sudo journalctl -u xrpl-validator-dashboard -f{Colors.ENDC}")
+                        print(f"  Check status:       {Colors.BOLD}sudo systemctl status xrpl-validator-dashboard{Colors.ENDC}")
+                        print(f"  Restart service:    {Colors.BOLD}sudo systemctl restart xrpl-validator-dashboard{Colors.ENDC}")
+                    else:
+                        print_warning(f"Auto-import failed: {result}")
+                        print_info("Dashboard import steps:")
+                        print(f"  1. Go to http://localhost:{grafana_port}")
+                        print(f"  2. Dashboards → New → Import → Upload JSON file")
+                        print(f"  3. Select: dashboards/categories/xrpl-monitor-dashboard.json")
+            else:
+                print_warning("Service installation failed")
+                print_info("You can install it manually later with: ./install-service.sh")
+        else:
+            print_error("Cannot continue - Docker services failed to start")
+
+    else:
+        # MANUAL FLOW
+        print("")
+        print_info("Manual setup steps:")
+        print("")
+        print(f"{Colors.BOLD}1. Start Docker services:{Colors.ENDC}")
+        print(f"   cd /home/grapedrop/projects/xrpl-validator-dashboard")
+        print(f"   docker compose up -d")
+        print("")
+        print(f"{Colors.BOLD}2. Install monitor as systemd service:{Colors.ENDC}")
+        print(f"   ./install-service.sh")
+        print("")
+        print(f"{Colors.BOLD}3. Import dashboard:{Colors.ENDC}")
+        print(f"   - Go to http://localhost:{grafana_port} (admin/admin)")
+        print(f"   - Dashboards → New → Import → Upload JSON file")
+        print(f"   - Select: dashboards/categories/xrpl-monitor-dashboard.json")
+        print("")
+        print_info("Or run the monitor manually:")
+        print(f"   python3 src/collectors/fast_poller.py")
+
+    return 0
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print(f"\n\n{Colors.WARNING}Setup cancelled by user{Colors.ENDC}")
+        sys.exit(1)
+    except Exception as e:
+        print_error(f"Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

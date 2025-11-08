@@ -1,0 +1,133 @@
+groups:
+# --- Keep your XRPL txn rollups (unchanged), used by dashboards ---
+- name: xrpl_recording
+  interval: 15s
+  rules:
+  - record: xrpl:txn_rate_total:5m
+    expr: sum(rate(xrpl_txn_type_counter_total[5m]))
+  - record: xrpl:txn_rate_family:5m
+    expr: sum by (family) (rate(xrpl_txn_type_counter_total[5m]))
+  - record: xrpl:txn_rate_type:5m
+    expr: sum by (type) (rate(xrpl_txn_type_counter_total[5m]))
+  - record: xrpl:txn_share_family_pct:5m
+    expr: 100 * xrpl:txn_rate_family:5m / xrpl:txn_rate_total:5m
+
+# --- Infra/service aggregates (cheap to query in Grafana) ---
+- name: infra_aggregates
+  interval: 30s
+  rules:
+  # Map compose service label -> "service"
+  - record: cadvisor:container_cpu_rate5m_by_service
+    expr: |
+      sum by (service) (
+        label_replace(
+          rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service!=""}[5m]),
+          "service", "$1", "container_label_com_docker_compose_service", "(.*)"
+        )
+      )
+  - record: cadvisor:container_cpu_cores_used5m_by_service
+    expr: cadvisor:container_cpu_rate5m_by_service
+
+  - record: cadvisor:container_mem_working_set_bytes_by_service
+    expr: |
+      sum by (service) (
+        label_replace(
+          container_memory_working_set_bytes{container_label_com_docker_compose_service!=""},
+          "service", "$1", "container_label_com_docker_compose_service", "(.*)"
+        )
+      )
+  - record: cadvisor:container_mem_limit_bytes_by_service
+    expr: |
+      sum by (service) (
+        label_replace(
+          container_spec_memory_limit_bytes{container_label_com_docker_compose_service!=""},
+          "service", "$1", "container_label_com_docker_compose_service", "(.*)"
+        )
+      )
+  - record: cadvisor:container_cpu_cores_limit_by_service
+    expr: |
+      sum by (service) (
+        label_replace(
+          clamp_min(
+            container_spec_cpu_quota{container_label_com_docker_compose_service!=""}
+            / container_spec_cpu_period{container_label_com_docker_compose_service!=""}, 0
+          ),
+          "service", "$1", "container_label_com_docker_compose_service", "(.*)"
+        )
+      )
+
+  - record: cadvisor:container_mem_utilization_by_service
+    expr: |
+      cadvisor:container_mem_working_set_bytes_by_service
+      /
+      cadvisor:container_mem_limit_bytes_by_service
+
+  - record: cadvisor:container_cpu_utilization_by_service
+    expr: |
+      cadvisor:container_cpu_cores_used5m_by_service
+      /
+      cadvisor:container_cpu_cores_limit_by_service
+
+# --- Focused rippled aggregates + p95s for noise-free alerting ---
+- name: rippled_aggregates
+  interval: 30s
+  rules:
+  - record: rippled:cpu_cores_used5m
+    expr: sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="rippledvalidator"}[5m]))
+  - record: rippled:mem_working_set_bytes
+    expr: sum(container_memory_working_set_bytes{container_label_com_docker_compose_service="rippledvalidator"})
+  - record: rippled:mem_limit_bytes
+    expr: sum(container_spec_memory_limit_bytes{container_label_com_docker_compose_service="rippledvalidator"})
+  - record: rippled:cpu_utilization
+    expr: |
+      rippled:cpu_cores_used5m /
+      sum(
+        clamp_min(
+          container_spec_cpu_quota{container_label_com_docker_compose_service="rippledvalidator"}
+          / container_spec_cpu_period{container_label_com_docker_compose_service="rippledvalidator"}, 0
+        )
+      )
+  - record: rippled:mem_utilization
+    expr: rippled:mem_working_set_bytes / rippled:mem_limit_bytes
+
+  - record: rippled:cpu_cores:p95_24h
+    expr: quantile_over_time(0.95, rippled:cpu_cores_used5m[24h:5m])
+  - record: rippled:mem_working_set_bytes:p95_24h
+    expr: quantile_over_time(0.95, rippled:mem_working_set_bytes[24h])
+
+# --- Grafana prod/dev rollups used by SLO alerts and capacity views ---
+- name: grafana_aggregates
+  interval: 30s
+  rules:
+  # Prod
+  - record: grafana:requests_rate5m
+    expr: sum(rate(grafana_http_request_total{job="grafana-prod"}[5m]))
+  - record: grafana:errors_rate5m
+    expr: sum(rate(grafana_http_request_total{job="grafana-prod", code=~"5.."}[5m]))
+  - record: grafana:error_ratio5m
+    expr: grafana:errors_rate5m / grafana:requests_rate5m
+  - record: grafana:latency_p95_seconds
+    expr: |
+      histogram_quantile(
+        0.95,
+        sum by (le) (rate(grafana_http_request_duration_seconds_bucket{job="grafana-prod"}[5m]))
+      )
+  # Dev (parity visibility; harmless if unused)
+  - record: grafana_dev:requests_rate5m
+    expr: sum(rate(grafana_http_request_total{job="grafana-dev"}[5m]))
+  - record: grafana_dev:errors_rate5m
+    expr: sum(rate(grafana_http_request_total{job="grafana-dev", code=~"5.."}[5m]))
+  - record: grafana_dev:error_ratio5m
+    expr: grafana_dev:errors_rate5m / grafana_dev:requests_rate5m
+
+# --- Prometheus ingestion/query pressure ---
+- name: prometheus_capacity
+  interval: 30s
+  rules:
+  - record: prom:samples_appended_rate1m
+    expr: rate(prometheus_tsdb_head_samples_appended_total[1m])
+  - record: prom:active_queries
+    expr: prometheus_engine_queries
+  - record: prom:target_up
+    expr: sum by (job, instance) (up)
+

@@ -1,0 +1,6 @@
+groups:
+- name: smoketest
+  interval: 15s
+  rules:
+  - record: local:always_one
+    expr: vector(1)

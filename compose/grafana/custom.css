@@ -1,0 +1,30 @@
+.react-grid-item {
+  margin: 2px !important; /* Reduce default margin from ~10px to 2px */
+  padding: 0 !important; /* Remove padding if present */
+}
+.panel-container {
+  margin: 2px !important; /* Reduce panel container margin */
+  padding: 0 !important; /* Remove panel container padding */
+}
+.react-grid-layout {
+  margin: 0 !important; /* Ensure layout container has no extra margin */
+}
+/* Hide panel menu (kebab) & hover header affordances */
+button[aria-label="Panel menu"],
+[aria-label="Panel menu"],
+[data-testid="panel-menu-toggle"],
+[data-testid="panel-menu"],
+.panel-menu-toggle,
+.panel-header__menu,
+.panel-header .hover-header-item,
+.panel-hover-border {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Also hide the little "View" overlay that appears on hover */
+.panel-title-container__view {
+  display: none !important;
+}
+

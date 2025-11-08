@@ -1,0 +1,97 @@
+networks:
+  xrpl-dashboard:
+    driver: bridge
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: xrpl-dashboard-prometheus
+    networks:
+      - xrpl-dashboard
+    ports:
+      - "9092:9090"
+    user: "0:0"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      GOMEMLIMIT: "2GiB"
+    volumes:
+      - ./compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./compose/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - ./compose/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.wal-compression
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
+    restart: unless-stopped
+    cpus: "1.0"
+    mem_limit: "2g"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: xrpl-dashboard-node-exporter
+    networks:
+      - xrpl-dashboard
+    ports:
+      - "9102:9100"
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    restart: unless-stopped
+    cpus: "0.2"
+    mem_limit: "128m"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: xrpl-dashboard-grafana
+    networks:
+      - xrpl-dashboard
+    ports:
+      - "3003:3000"
+    user: "0"
+    environment:
+      GF_USERS_DEFAULT_THEME: "dark"
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_DASHBOARDS_MIN_REFRESH_INTERVAL: "5s"
+      GF_SERVER_ENABLE_GZIP: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./compose/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./compose/grafana/custom.css:/usr/share/grafana/public/css/custom.css:ro
+      - ./compose/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+    cpus: "0.5"
+    mem_limit: "1g"
+    depends_on:
+      - prometheus
+      - node-exporter
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5

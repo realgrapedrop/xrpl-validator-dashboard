@@ -1,0 +1,9 @@
+groups:
+- name: sanity_minimal
+  rules:
+  - alert: Watchdog_Minimal
+    expr: vector(1)
+    labels: {severity: info}
+    annotations:
+      summary: "Sanity watchdog (minimal rules file)"
+      description: "This exists solely to validate rules loading."
