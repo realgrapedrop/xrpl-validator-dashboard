@@ -1984,7 +1984,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(xrpl_ledger_sequence[5m]) * 60",
+          "expr": "increase(xrpl_ledger_sequence[1m])",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -3289,7 +3289,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rippledvalidator_transaction_rate{job=\"xrpl-validator\"}",
+          "expr": "xrpl_transaction_rate",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -3526,7 +3526,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rippledvalidator_consensus_converge_time_seconds{job=\"xrpl-validator\"}",
+          "expr": "xrpl_consensus_converge_time_seconds",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
