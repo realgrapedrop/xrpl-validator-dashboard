@@ -1756,13 +1756,18 @@ def main():
                 print("")
 
                 service_installed = install_systemd_service()
+
+                if not service_installed:
+                    print_warning("Service installation failed, but continuing with dashboard setup")
+                    print_info("You can manually start the monitor later with:")
+                    print_info("  python3 fast_poller.py &")
+                    print_info("Or install the service with: ./install-service.sh")
             else:
                 print_info("Skipping systemd service installation")
                 print_info("You can install it later with: ./install-service.sh")
-                service_installed = True  # Allow dashboard import to proceed
 
-        # Step 3: Import dashboard
-        if docker_started and service_installed:
+        # Step 3: Import dashboard (always proceed if docker started)
+        if docker_started:
             # Step 3: Import dashboard
             print("")
             print_info("Step 3/3: Importing dashboard...")
@@ -1807,9 +1812,6 @@ def main():
                     print(f"  1. Go to http://localhost:{grafana_port}")
                     print(f"  2. Dashboards → New → Import → Upload JSON file")
                     print(f"  3. Select: dashboards/categories/xrpl-monitor-dashboard.json")
-        else:
-            print_warning("Service installation failed")
-            print_info("You can install it manually later with: ./install-service.sh")
 
     else:
         # MANUAL FLOW
