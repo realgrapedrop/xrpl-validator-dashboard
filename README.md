@@ -55,10 +55,14 @@ docker compose version  # Should be v2.0+
 docker ps | grep rippled
 ```
 
-**Installation guides:**
-- Docker: https://docs.docker.com/engine/install/
-- Docker Compose: https://docs.docker.com/compose/install/
-- Python: Typically pre-installed on Ubuntu/Debian
+### Installing Docker (If Needed)
+
+**New to Docker?** We've got you covered!
+
+- **Ubuntu/Debian:** See our step-by-step guide: [DOCKER_INSTALL.md](DOCKER_INSTALL.md)
+- **Other systems:** Official Docker documentation: https://docs.docker.com/engine/install/
+
+**Note:** Python is typically pre-installed on Ubuntu/Debian. If not: `sudo apt install python3 python3-pip`
 
 ## Quick Start
 
