@@ -323,7 +323,7 @@ def test_native_rippled_connection(host: str, port: int) -> Tuple[bool, Optional
     try:
         # First check if port is reachable
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
+        sock.settimeout(3)
         result = sock.connect_ex((host, port))
         sock.close()
 
@@ -331,7 +331,7 @@ def test_native_rippled_connection(host: str, port: int) -> Tuple[bool, Optional
             print_warning(f"Port {port} is not reachable (connection refused)")
             return False, None
 
-        conn = http.client.HTTPConnection(host, port, timeout=10)
+        conn = http.client.HTTPConnection(host, port, timeout=5)
 
         # Send server_info request using JSON-RPC 2.0 format
         body = json.dumps({
@@ -641,8 +641,11 @@ def configure_native_mode(native_info: dict, detected_ports: Optional[dict]) -> 
         print_info("  • rippled service is running: systemctl status rippled")
         print_info("  • RPC port is correct in /opt/ripple/etc/rippled.cfg")
         print_info("  • RPC API is accessible on localhost")
+        print("")
+        print_info("Note: Connection test may fail even if rippled is running.")
+        print_info("The dashboard will attempt to connect when the service starts.")
 
-        if not ask_yes_no("Continue anyway?", False):
+        if not ask_yes_no("Continue anyway?", True):
             return None
         info = None
 
