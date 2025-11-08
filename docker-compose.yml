@@ -43,6 +43,7 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.8.2
     container_name: xrpl-dashboard-node-exporter
+    hostname: xrpl-validator
     networks:
       - xrpl-dashboard
     ports:

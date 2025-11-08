@@ -901,7 +901,8 @@ def import_grafana_dashboard(grafana_port: int, dashboard_path: str, node_export
     # Get the actual nodename from Prometheus
     nodename = get_nodename_from_prometheus(prometheus_port)
     if not nodename:
-        nodename = 'localhost'  # Fallback
+        # Fallback to the fixed hostname set in docker-compose.yml
+        nodename = 'xrpl-validator'
 
     try:
         # Read dashboard JSON
