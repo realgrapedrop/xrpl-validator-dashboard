@@ -1644,13 +1644,22 @@ def main():
                 print_info("Try manually: docker compose up -d")
 
         # Step 2: Install monitor as systemd service
+        service_installed = False
         if docker_started:
             print("")
-            print_info("Step 2/3: Installing monitor as systemd service...")
-            print_info("(You may be prompted for sudo password)")
-            print("")
+            if ask_yes_no("Install monitor as a systemd service? (recommended)", True):
+                print_info("Step 2/3: Installing monitor as systemd service...")
+                print_info("(You will be prompted for sudo password)")
+                print("")
 
-            if install_systemd_service():
+                service_installed = install_systemd_service()
+            else:
+                print_info("Skipping systemd service installation")
+                print_info("You can install it later with: ./install-service.sh")
+                service_installed = True  # Allow dashboard import to proceed
+
+        # Step 3: Import dashboard
+        if docker_started and service_installed:
                 # Step 3: Import dashboard
                 print("")
                 print_info("Step 3/3: Importing dashboard...")
