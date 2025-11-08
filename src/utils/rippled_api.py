@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-RippledAPI - Interface to rippled validator via Docker
+RippledAPI - Interface to rippled validator via Docker or native HTTP
 """
 
 import subprocess
 import json
 import os
+import http.client
 from typing import Dict, Any, Optional, List
 
 
@@ -16,40 +17,73 @@ class RippledAPIError(Exception):
 
 class RippledAPI:
     """
-    Interface to rippled running in Docker container
+    Interface to rippled running in Docker container or natively via HTTP API
     """
-    
-    def __init__(self, container_name: str = 'rippledvalidator'):
+
+    def __init__(self, container_name: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = None):
         """
-        Initialize API client
-        
+        Initialize API client for Docker or native mode
+
         Args:
-            container_name: Name of Docker container running rippled
+            container_name: Name of Docker container running rippled (for Docker mode)
+            host: Hostname for native rippled HTTP API (for native mode)
+            port: Port for native rippled HTTP API (for native mode)
         """
-        self.container_name = container_name
+        # Determine mode
+        if container_name:
+            self.mode = 'docker'
+            self.container_name = container_name
+            self.host = None
+            self.port = None
+        elif host and port:
+            self.mode = 'native'
+            self.container_name = None
+            self.host = host
+            self.port = port
+        else:
+            raise ValueError("Must provide either container_name (Docker mode) or host+port (native mode)")
     
     def _call(self, command: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        Call rippled API via docker exec
-        
+        Call rippled API via docker exec or HTTP based on mode
+
         Args:
             command: rippled command to execute
             params: Optional parameters dict
-            
+
         Returns:
             Result dictionary from rippled
-            
+
+        Raises:
+            RippledAPIError: If command fails
+        """
+        if self.mode == 'docker':
+            return self._call_docker(command, params)
+        else:
+            return self._call_http(command, params)
+
+    def _call_docker(self, command: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Call rippled API via docker exec
+
+        Args:
+            command: rippled command to execute
+            params: Optional parameters dict
+
+        Returns:
+            Result dictionary from rippled
+
         Raises:
             RippledAPIError: If command fails
         """
         try:
             # Build command
             cmd = ['docker', 'exec', self.container_name, 'rippled', command]
-            
+
             # Add JSON params if provided
             if params:
                 cmd.append(json.dumps(params))
-            
+
             # Execute
             result = subprocess.run(
                 cmd,
@@ -57,21 +91,68 @@ class RippledAPI:
                 text=True,
                 timeout=10
             )
-            
+
             if result.returncode != 0:
                 raise RippledAPIError(f"Command failed: {result.stderr}")
-            
+
             # Parse JSON response
             try:
                 data = json.loads(result.stdout)
                 return data.get('result', {})
             except json.JSONDecodeError as e:
                 raise RippledAPIError(f"Invalid JSON response: {e}")
-        
+
         except subprocess.TimeoutExpired:
             raise RippledAPIError("Command timed out")
         except Exception as e:
             raise RippledAPIError(f"Command failed: {e}")
+
+    def _call_http(self, command: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Call rippled API via HTTP
+
+        Args:
+            command: rippled command to execute
+            params: Optional parameters dict
+
+        Returns:
+            Result dictionary from rippled
+
+        Raises:
+            RippledAPIError: If command fails
+        """
+        try:
+            conn = http.client.HTTPConnection(self.host, self.port, timeout=10)
+
+            # Build JSON-RPC request
+            request_body = {
+                "method": command,
+                "params": [params] if params else [{}]
+            }
+
+            headers = {'Content-Type': 'application/json'}
+            conn.request('POST', '/', json.dumps(request_body), headers)
+
+            response = conn.getresponse()
+            data = response.read().decode()
+            conn.close()
+
+            if response.status != 200:
+                raise RippledAPIError(f"HTTP error {response.status}: {response.reason}")
+
+            # Parse JSON response
+            try:
+                result = json.loads(data)
+
+                if 'error' in result:
+                    raise RippledAPIError(f"rippled returned error: {result.get('error')}")
+
+                return result.get('result', {})
+            except json.JSONDecodeError as e:
+                raise RippledAPIError(f"Invalid JSON response: {e}")
+
+        except Exception as e:
+            raise RippledAPIError(f"HTTP call failed: {e}")
     
     def get_server_state(self) -> Dict[str, Any]:
         """
