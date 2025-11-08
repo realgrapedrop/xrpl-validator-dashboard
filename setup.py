@@ -203,6 +203,148 @@ def test_rippled_connection(container_name: str) -> Tuple[bool, Optional[dict]]:
         print_warning(f"Failed to connect: {e}")
         return False, None
 
+def detect_native_rippled() -> Optional[dict]:
+    """Detect native rippled installation and extract configuration"""
+    # Check if rippled binary exists
+    rippled_paths = [
+        '/opt/ripple/bin/rippled',
+        '/usr/bin/rippled',
+        '/usr/local/bin/rippled'
+    ]
+
+    rippled_bin = None
+    for path in rippled_paths:
+        if os.path.exists(path):
+            rippled_bin = path
+            break
+
+    if not rippled_bin:
+        return None
+
+    # Check if rippled service is running
+    try:
+        result = subprocess.run(
+            ['systemctl', 'is-active', 'rippled'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        is_running = result.returncode == 0
+    except:
+        is_running = False
+
+    # Try to get version
+    version = "unknown"
+    try:
+        result = subprocess.run(
+            [rippled_bin, '--version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            version = result.stdout.strip().split('\n')[0]
+    except:
+        pass
+
+    return {
+        'binary': rippled_bin,
+        'running': is_running,
+        'version': version
+    }
+
+def parse_rippled_config_ports() -> Optional[dict]:
+    """Parse rippled config to find ports"""
+    config_paths = [
+        '/opt/ripple/etc/rippled.cfg',
+        '/etc/rippled.cfg',
+        '/etc/opt/ripple/rippled.cfg'
+    ]
+
+    config_file = None
+    for path in config_paths:
+        if os.path.exists(path):
+            config_file = path
+            break
+
+    if not config_file:
+        return None
+
+    ports = {
+        'rpc': None,
+        'ws': None,
+        'peer': None
+    }
+
+    try:
+        with open(config_file, 'r') as f:
+            lines = f.readlines()
+
+        current_section = None
+        for line in lines:
+            line = line.strip()
+
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+
+            # Check for section headers
+            if line.startswith('[') and line.endswith(']'):
+                current_section = line[1:-1]
+                continue
+
+            # Parse port from current section
+            if current_section and line.startswith('port'):
+                try:
+                    port_value = line.split('=')[1].strip()
+                    port_num = int(port_value)
+
+                    if 'rpc_admin' in current_section:
+                        ports['rpc'] = port_num
+                    elif 'ws_admin' in current_section or 'ws_public' in current_section:
+                        if ports['ws'] is None:  # Use first WS port found
+                            ports['ws'] = port_num
+                    elif 'peer' in current_section:
+                        ports['peer'] = port_num
+                except:
+                    continue
+
+        return ports if any(ports.values()) else None
+
+    except Exception as e:
+        print_warning(f"Could not parse config file: {e}")
+        return None
+
+def test_native_rippled_connection(host: str, port: int) -> Tuple[bool, Optional[dict]]:
+    """Test connection to native rippled via HTTP API"""
+    import http.client
+
+    try:
+        conn = http.client.HTTPConnection(host, port, timeout=10)
+
+        # Send server_info request
+        body = json.dumps({"method": "server_info", "params": [{}]})
+        headers = {'Content-Type': 'application/json'}
+
+        conn.request('POST', '/', body, headers)
+        response = conn.getresponse()
+        data = response.read().decode()
+        conn.close()
+
+        if response.status != 200:
+            return False, None
+
+        # Parse JSON response
+        try:
+            result = json.loads(data)
+            info = result.get('result', {}).get('info', {})
+            return True, info
+        except json.JSONDecodeError:
+            return False, None
+
+    except Exception as e:
+        return False, None
+
 def detect_rippled_container() -> Optional[str]:
     """Detect and validate rippled container"""
     print_header("Step 2: Detecting rippled Container")
@@ -361,6 +503,238 @@ def get_container_ports(name_pattern: str) -> List[int]:
 
     except Exception as e:
         return []
+
+def detect_rippled_unified() -> Optional[dict]:
+    """Unified rippled detection - supports both Docker and native modes"""
+    print_header("Step 2: Detecting rippled Installation")
+
+    # Detect both modes
+    native_info = detect_native_rippled()
+    docker_containers = find_rippled_containers()
+
+    # Determine what was found
+    has_native = native_info is not None
+    has_docker = len(docker_containers) > 0
+
+    if not has_native and not has_docker:
+        print_warning("No rippled installations detected")
+        print_info("Could not find:")
+        print_info("  • Native rippled binary (/opt/ripple/bin/rippled)")
+        print_info("  • Docker containers with 'rippled' or 'xrpl' in name")
+        print("")
+
+        # Ask user what to do
+        if ask_yes_no("Do you have a rippled installation to configure?", True):
+            mode_choice = ask_input("Enter mode (docker/native)", "docker").lower()
+            if mode_choice == "native":
+                return configure_native_mode_manual()
+            else:
+                return configure_docker_mode_manual()
+        return None
+
+    # Display what was found
+    print_info("Found rippled installation(s):\n")
+
+    modes = []
+    if has_native:
+        running_status = "running" if native_info['running'] else "stopped"
+        print_success(f"Native rippled: {native_info['binary']}")
+        print_info(f"  Status: {running_status}")
+        print_info(f"  Version: {native_info['version']}")
+
+        # Try to detect ports
+        ports = parse_rippled_config_ports()
+        if ports and ports['rpc']:
+            print_info(f"  RPC Port: {ports['rpc']}")
+        modes.append(('native', native_info, ports))
+        print("")
+
+    if has_docker:
+        print_success(f"Docker rippled: {len(docker_containers)} container(s) found")
+        for container in docker_containers:
+            print_info(f"  • {container}")
+        modes.append(('docker', docker_containers, None))
+        print("")
+
+    # If both modes exist, ask user to choose
+    if len(modes) == 2:
+        print_info("Multiple rippled installations detected!")
+        print("")
+        choice = ask_input("Which would you like to monitor? (native/docker)", "native").lower()
+
+        if choice == "native":
+            return configure_native_mode(modes[0][1], modes[0][2])
+        else:
+            return configure_docker_mode(modes[1][1])
+
+    # Only one mode found - use it
+    if modes[0][0] == 'native':
+        if ask_yes_no("Monitor native rippled installation?", True):
+            return configure_native_mode(modes[0][1], modes[0][2])
+        return None
+    else:
+        if ask_yes_no("Monitor Docker rippled installation?", True):
+            return configure_docker_mode(modes[0][1])
+        return None
+
+def configure_native_mode(native_info: dict, detected_ports: Optional[dict]) -> Optional[dict]:
+    """Configure monitoring for native rippled"""
+    if not native_info['running']:
+        print_warning("Native rippled service is not running")
+        if not ask_yes_no("Continue anyway? (you'll need to start it later)", False):
+            return None
+
+    # Get or confirm RPC port
+    if detected_ports and detected_ports['rpc']:
+        default_port = str(detected_ports['rpc'])
+        port_str = ask_input(f"RPC API Port (detected: {default_port})", default_port)
+    else:
+        port_str = ask_input("RPC API Port", "5005")
+
+    try:
+        rpc_port = int(port_str)
+    except ValueError:
+        print_error(f"Invalid port: {port_str}")
+        return None
+
+    # Get host (usually localhost for native)
+    host = ask_input("RPC API Host", "localhost")
+
+    # Test connection
+    print_info(f"Testing connection to {host}:{rpc_port}...")
+    success, info = test_native_rippled_connection(host, rpc_port)
+
+    if not success:
+        print_error(f"Failed to connect to rippled at {host}:{rpc_port}")
+        print_info("Please verify:")
+        print_info("  • rippled service is running: systemctl status rippled")
+        print_info("  • RPC port is correct in /opt/ripple/etc/rippled.cfg")
+        print_info("  • RPC API is accessible on localhost")
+
+        if not ask_yes_no("Continue anyway?", False):
+            return None
+        info = None
+
+    # Display validator info if connected
+    if info:
+        print_success(f"Connected to native rippled")
+        print_info(f"  Server State: {info.get('server_state', 'unknown')}")
+        print_info(f"  Build Version: {info.get('build_version', 'unknown')}")
+
+        pubkey = info.get('pubkey_validator', '')
+        if pubkey and pubkey != 'none':
+            print_info(f"  Validator Key: {pubkey[:30]}...")
+        else:
+            print_info(f"  Mode: Standalone node (non-validator)")
+
+        ledger_seq = info.get('validated_ledger', {}).get('seq') or \
+                     info.get('closed_ledger', {}).get('seq', 'unknown')
+        print_info(f"  Ledger Seq: {ledger_seq}")
+        print("")
+
+    return {
+        'mode': 'native',
+        'host': host,
+        'port': rpc_port,
+        'version': native_info['version'],
+        'info': info
+    }
+
+def configure_docker_mode(containers: List[str]) -> Optional[dict]:
+    """Configure monitoring for Docker rippled"""
+    # Select container
+    if len(containers) == 1:
+        container_name = containers[0]
+        print_info(f"Using container: {container_name}")
+        if not ask_yes_no("Use this container?", True):
+            container_name = ask_input("Enter container name", "rippledvalidator")
+    else:
+        print_info(f"Found {len(containers)} containers:")
+        for i, c in enumerate(containers, 1):
+            print(f"  {i}. {c}")
+
+        choice = ask_input(f"Select container (1-{len(containers)}) or enter custom name", "1")
+
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(containers):
+                container_name = containers[idx]
+            else:
+                container_name = choice
+        except ValueError:
+            container_name = choice
+
+    # Test connection
+    print_info(f"Testing connection to {container_name}...")
+    success, info = test_rippled_connection(container_name)
+
+    if not success:
+        print_error(f"Failed to connect to container '{container_name}'")
+        print_info("Please verify:")
+        print_info("  • Container is running: docker ps")
+        print_info("  • rippled is accessible via: docker exec {container_name} rippled server_info")
+
+        if ask_yes_no("Try a different container?", True):
+            new_name = ask_input("Enter container name", "rippledvalidator")
+            return configure_docker_mode([new_name])
+
+        if not ask_yes_no("Continue anyway?", False):
+            return None
+        info = None
+
+    # Display validator info if connected
+    if info:
+        print_success(f"Connected to rippled in container '{container_name}'")
+        print_info(f"  Server State: {info.get('server_state', 'unknown')}")
+        print_info(f"  Build Version: {info.get('build_version', 'unknown')}")
+
+        pubkey = info.get('pubkey_validator', '')
+        if pubkey and pubkey != 'none':
+            print_info(f"  Validator Key: {pubkey[:30]}...")
+
+        ledger_seq = info.get('validated_ledger', {}).get('seq') or \
+                     info.get('closed_ledger', {}).get('seq', 'unknown')
+        print_info(f"  Ledger Seq: {ledger_seq}")
+        print("")
+
+    return {
+        'mode': 'docker',
+        'container': container_name,
+        'info': info
+    }
+
+def configure_native_mode_manual() -> Optional[dict]:
+    """Manual configuration for native rippled"""
+    print_info("Configuring native rippled manually...")
+
+    host = ask_input("RPC API Host", "localhost")
+    port_str = ask_input("RPC API Port", "5005")
+
+    try:
+        port = int(port_str)
+    except ValueError:
+        print_error(f"Invalid port: {port_str}")
+        return None
+
+    return {
+        'mode': 'native',
+        'host': host,
+        'port': port,
+        'version': 'unknown',
+        'info': None
+    }
+
+def configure_docker_mode_manual() -> Optional[dict]:
+    """Manual configuration for Docker rippled"""
+    print_info("Configuring Docker rippled manually...")
+
+    container_name = ask_input("Container name", "rippledvalidator")
+
+    return {
+        'mode': 'docker',
+        'container': container_name,
+        'info': None
+    }
 
 def check_ports() -> Tuple[int, int, int, int]:
     """Check and configure ports"""
@@ -530,21 +904,32 @@ def install_python_dependencies() -> bool:
         print_error(f"Installation failed: {e}")
         return False
 
-def generate_config(container_name: str, monitor_port: int) -> bool:
-    """Generate config.yaml"""
+def generate_config(rippled_config: dict, monitor_port: int) -> bool:
+    """Generate config.yaml for Docker or native rippled"""
     print_header("Step 5: Generating Configuration")
 
     project_dir = Path(__file__).parent.absolute()
     config_path = project_dir / 'config.yaml'
 
+    # Build monitoring section based on mode
+    if rippled_config['mode'] == 'docker':
+        monitoring_config = f"""monitoring:
+  poll_interval: 3  # seconds between polls
+  rippled_mode: docker
+  container_name: {rippled_config['container']}
+"""
+    else:  # native mode
+        monitoring_config = f"""monitoring:
+  poll_interval: 3  # seconds between polls
+  rippled_mode: native
+  rippled_host: {rippled_config['host']}
+  rippled_port: {rippled_config['port']}
+"""
+
     config_content = f"""# XRPL Monitor Configuration
 
 # Monitoring settings
-monitoring:
-  poll_interval: 3  # seconds between polls
-  rippled_mode: docker  # docker or native
-  container_name: {container_name}
-
+{monitoring_config}
 # Prometheus exporter settings
 prometheus:
   enabled: true
@@ -726,31 +1111,47 @@ def test_rippled_api_calls(container_name: str) -> Tuple[bool, List[str]]:
 
     return len(failed_calls) == 0, failed_calls
 
-def run_preflight_checks(container_name: str, monitor_port: int) -> bool:
-    """Run pre-flight checks"""
+def run_preflight_checks(rippled_config: dict, monitor_port: int) -> bool:
+    """Run pre-flight checks for Docker or native rippled"""
     print_header("Step 6: Running Pre-Flight Checks")
 
     all_passed = True
+    mode = rippled_config['mode']
 
     # Check rippled connection
-    print_info("Testing rippled connection...")
-    success, info = test_rippled_connection(container_name)
+    print_info(f"Testing rippled connection ({mode} mode)...")
+
+    if mode == 'docker':
+        container_name = rippled_config['container']
+        success, info = test_rippled_connection(container_name)
+        connection_desc = f"container '{container_name}'"
+    else:  # native mode
+        host = rippled_config['host']
+        port = rippled_config['port']
+        success, info = test_native_rippled_connection(host, port)
+        connection_desc = f"{host}:{port}"
+
     if success:
-        print_success("rippled is accessible")
+        print_success(f"rippled is accessible ({connection_desc})")
     else:
-        print_error("Cannot connect to rippled")
+        print_error(f"Cannot connect to rippled ({connection_desc})")
         all_passed = False
         return all_passed  # No point continuing if rippled isn't accessible
 
-    # Test rippled API calls
-    print_info(f"Testing rippled API calls (via docker exec {container_name})...")
-    api_success, failed_calls = test_rippled_api_calls(container_name)
-    if api_success:
-        print_success("All rippled API calls working (server_info, peers, fee)")
+    # Test rippled API calls (only for Docker mode)
+    if mode == 'docker':
+        container_name = rippled_config['container']
+        print_info(f"Testing rippled API calls (via docker exec {container_name})...")
+        api_success, failed_calls = test_rippled_api_calls(container_name)
+        if api_success:
+            print_success("All rippled API calls working (server_info, peers, fee)")
+        else:
+            print_error(f"Some rippled API calls failed: {', '.join(failed_calls)}")
+            print_warning("The monitor may not work correctly")
+            all_passed = False
     else:
-        print_error(f"Some rippled API calls failed: {', '.join(failed_calls)}")
-        print_warning("The monitor may not work correctly")
-        all_passed = False
+        print_info("Native mode: API calls will be tested via HTTP")
+        print_success("Connection successful (detailed API tests will run during monitoring)")
 
     # Check monitor port availability
     print_info(f"Checking monitor port {monitor_port}...")
@@ -793,11 +1194,27 @@ def run_preflight_checks(container_name: str, monitor_port: int) -> bool:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
 
-            # Check essential config values
-            if config.get('monitoring', {}).get('container_name') == container_name:
-                print_success(f"Config container name matches: {container_name}")
+            # Check essential config values based on mode
+            config_mode = config.get('monitoring', {}).get('rippled_mode')
+            if config_mode == mode:
+                print_success(f"Config mode matches: {mode}")
+
+                # Validate mode-specific settings
+                if mode == 'docker':
+                    container_name = rippled_config['container']
+                    if config.get('monitoring', {}).get('container_name') == container_name:
+                        print_success(f"Config container name matches: {container_name}")
+                    else:
+                        print_warning(f"Config container name mismatch")
+                else:  # native mode
+                    config_host = config.get('monitoring', {}).get('rippled_host')
+                    config_port = config.get('monitoring', {}).get('rippled_port')
+                    if config_host == rippled_config['host'] and config_port == rippled_config['port']:
+                        print_success(f"Config rippled connection matches: {config_host}:{config_port}")
+                    else:
+                        print_warning(f"Config rippled connection mismatch")
             else:
-                print_warning(f"Config container name mismatch")
+                print_warning(f"Config mode mismatch (expected {mode}, got {config_mode})")
 
             if config.get('prometheus', {}).get('port') == monitor_port:
                 print_success(f"Config monitor port matches: {monitor_port}")
@@ -1125,7 +1542,7 @@ def main():
     """Main setup wizard"""
     print_header("XRPL Validator Dashboard - Setup Wizard")
     print("This wizard will guide you through setting up the dashboard")
-    print("for Docker-based rippled deployments.\n")
+    print("for rippled deployments (Docker or native).\n")
 
     # Step 1: Check prerequisites - Check ALL first before continuing
     print_header("Step 1: Checking Prerequisites")
@@ -1157,10 +1574,10 @@ def main():
 
     print_success("All prerequisites met!")
 
-    # Step 2: Detect rippled container
-    container_name = detect_rippled_container()
-    if not container_name:
-        print_error("Cannot proceed without a valid rippled container")
+    # Step 2: Detect rippled installation (Docker or native)
+    rippled_config = detect_rippled_unified()
+    if not rippled_config:
+        print_error("Cannot proceed without a valid rippled installation")
         return 1
 
     # Step 3: Check ports
@@ -1176,7 +1593,7 @@ def main():
     if not create_directories():
         return 1
 
-    if not generate_config(container_name, monitor_port):
+    if not generate_config(rippled_config, monitor_port):
         return 1
 
     if not update_prometheus_config(monitor_port):
@@ -1186,7 +1603,7 @@ def main():
         print_warning("Could not update docker-compose.yml")
 
     # Step 6: Pre-flight checks
-    if not run_preflight_checks(container_name, monitor_port):
+    if not run_preflight_checks(rippled_config, monitor_port):
         print_warning("Some pre-flight checks failed")
         if not ask_yes_no("Continue anyway?", True):
             return 1
