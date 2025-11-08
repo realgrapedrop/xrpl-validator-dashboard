@@ -635,23 +635,73 @@ def configure_native_mode(native_info: dict, detected_ports: Optional[dict]) -> 
     # Get host (usually localhost for native)
     host = ask_input("RPC API Host", "localhost")
 
-    # Test connection
+    # Test connection with retries
     print_info(f"Testing connection to {host}:{rpc_port}...")
-    success, info = test_native_rippled_connection(host, rpc_port)
+    success = False
+    info = None
+
+    for attempt in range(3):
+        if attempt > 0:
+            print_info(f"Retry {attempt}/2...")
+            time.sleep(2)
+
+        success, info = test_native_rippled_connection(host, rpc_port)
+        if success:
+            break
 
     if not success:
-        print_error(f"Failed to connect to rippled at {host}:{rpc_port}")
-        print_info("Please verify:")
-        print_info("  • rippled service is running: systemctl status rippled")
-        print_info("  • RPC port is correct in /opt/ripple/etc/rippled.cfg")
-        print_info("  • RPC API is accessible on localhost")
+        print_warning(f"Could not connect to rippled at {host}:{rpc_port}")
         print("")
-        print_info("Note: Connection test may fail even if rippled is running.")
-        print_info("The dashboard will attempt to connect when the service starts.")
 
-        if not ask_yes_no("Continue anyway?", True):
-            return None
-        info = None
+        # Check for stuck connections (common issue)
+        print_info("Checking for stuck rippled connections...")
+        try:
+            result = subprocess.run(
+                ['ss', '-tn', '|', 'grep', f':{rpc_port}', '|', 'grep', 'CLOSE-WAIT'],
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if 'CLOSE-WAIT' in result.stdout:
+                print_warning("Found stuck connections in CLOSE-WAIT state")
+                print_info("This is a known rippled issue that prevents new connections.")
+                print("")
+
+                if ask_yes_no("Restart rippled to clear stuck connections?", True):
+                    print_info("Restarting rippled...")
+                    try:
+                        subprocess.run(['sudo', 'systemctl', 'restart', 'rippled'], check=True, timeout=10)
+                        print_info("Waiting for rippled to start...")
+                        time.sleep(10)
+
+                        # Try one more time after restart
+                        success, info = test_native_rippled_connection(host, rpc_port)
+                        if success:
+                            print_success("Connection successful after restart!")
+                        else:
+                            print_warning("Still unable to connect, but continuing with setup")
+                            print_info("The monitor will keep retrying in the background")
+                    except subprocess.TimeoutExpired:
+                        print_warning("Restart command timed out, but continuing with setup")
+                    except Exception as e:
+                        print_warning(f"Could not restart rippled: {e}")
+                        print_info("You may need to run: sudo systemctl restart rippled")
+        except:
+            pass  # Silently skip if ss command fails
+
+        if not success:
+            print("")
+            print_info("Common causes:")
+            print_info("  • rippled HTTP RPC has stuck connections (restart rippled)")
+            print_info("  • RPC port is wrong (check /opt/ripple/etc/rippled.cfg)")
+            print_info("  • rippled service is not running")
+            print("")
+            print_info("The dashboard monitor will keep trying to connect.")
+
+            if not ask_yes_no("Continue with setup anyway?", True):
+                return None
+            info = None
 
     # Display validator info if connected
     if info:
