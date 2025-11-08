@@ -15,19 +15,43 @@ def create_panel(title, panel_type, x, y, w, h, expr, refId="A", **kwargs):
         "title": title,
         "type": panel_type,
         "gridPos": {"x": x, "y": y, "w": w, "h": h},
-        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
         "targets": [{"expr": expr, "refId": refId}]
     }
-    
+
     # Merge any additional config
     for key, value in kwargs.items():
         panel[key] = value
-    
+
     return panel
 
 def create_dashboard(title, tags, panels):
-    """Create dashboard structure"""
+    """Create dashboard structure with datasource template variable"""
     return {
+        "__inputs": [
+            {
+                "name": "DS_PROMETHEUS",
+                "label": "Prometheus",
+                "description": "Select your Prometheus data source",
+                "type": "datasource",
+                "pluginId": "prometheus",
+                "pluginName": "Prometheus"
+            }
+        ],
+        "__requires": [
+            {
+                "type": "datasource",
+                "id": "prometheus",
+                "name": "Prometheus",
+                "version": "1.0.0"
+            },
+            {
+                "type": "grafana",
+                "id": "grafana",
+                "name": "Grafana",
+                "version": "8.0.0"
+            }
+        ],
         "title": title,
         "tags": tags,
         "timezone": "browser",
