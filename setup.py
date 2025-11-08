@@ -1639,22 +1639,22 @@ def main():
                         if result.returncode == 0:
                             print("")
                             print_success("Prerequisites installed successfully!")
-                            print_info("Re-checking prerequisites...")
                             print("")
-
-                            # Re-check prerequisites
-                            prereqs_met = {
-                                'python': check_python(),
-                                'pip': check_pip(),
-                                'docker': check_docker(),
-                                'docker_compose': check_docker_compose()
-                            }
-
-                            if not all(prereqs_met.values()):
-                                print_error("Some prerequisites still missing after installation")
-                                return 1
-
-                            print_success("All prerequisites are now installed!")
+                            print_header("IMPORTANT: Logout Required")
+                            print("")
+                            print_info("Docker group permissions require a fresh login session.")
+                            print("")
+                            print_info("Next steps:")
+                            print(f"  {Colors.BOLD}1.{Colors.ENDC} Log out of this session:")
+                            print(f"     {Colors.BOLD}exit{Colors.ENDC}")
+                            print("")
+                            print(f"  {Colors.BOLD}2.{Colors.ENDC} Log back in via SSH")
+                            print("")
+                            print(f"  {Colors.BOLD}3.{Colors.ENDC} Run setup again:")
+                            print(f"     {Colors.BOLD}cd ~/rippled/xrpl-validator-dashboard{Colors.ENDC}")
+                            print(f"     {Colors.BOLD}python3 setup.py{Colors.ENDC}")
+                            print("")
+                            return 0
                         else:
                             print_error("Installation script failed")
                             return 1
