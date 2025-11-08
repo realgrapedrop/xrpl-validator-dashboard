@@ -1873,22 +1873,45 @@ def main():
             dashboard_file = Path(__file__).parent.parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
 
             if dashboard_file.exists():
-                # Retry dashboard import with exponential backoff (Prometheus needs time to start)
-                print_info("Waiting for Prometheus to be ready...")
-                max_retries = 3
-                retry_delays = [5, 10, 15]  # seconds
+                # Wait for Prometheus and Grafana to be fully ready
+                print_info("Waiting for Prometheus and Grafana to be ready...")
+
+                # Wait for Prometheus to be ready (check health endpoint)
+                import urllib.request
+                import urllib.error
+                prometheus_ready = False
+                for i in range(12):  # Try for up to 60 seconds
+                    try:
+                        response = urllib.request.urlopen(f'http://127.0.0.1:{prometheus_port}/-/ready', timeout=5)
+                        if response.status == 200:
+                            print_success("Prometheus is ready")
+                            prometheus_ready = True
+                            break
+                    except:
+                        pass
+                    if i < 11:
+                        time.sleep(5)
+
+                # Wait for Grafana to be ready (check health endpoint)
+                grafana_ready = False
+                for i in range(12):  # Try for up to 60 seconds
+                    try:
+                        response = urllib.request.urlopen(f'http://127.0.0.1:{grafana_port}/api/health', timeout=5)
+                        if response.status == 200:
+                            print_success("Grafana is ready")
+                            grafana_ready = True
+                            break
+                    except:
+                        pass
+                    if i < 11:
+                        time.sleep(5)
+
+                # Attempt dashboard import if both services are ready
                 success = False
-
-                for attempt in range(max_retries):
-                    if attempt > 0:
-                        delay = retry_delays[attempt - 1]
-                        print_info(f"Retry {attempt}/{max_retries - 1} after {delay}s...")
-                        time.sleep(delay)
-
+                if prometheus_ready and grafana_ready:
+                    # Give it one more second for good measure
+                    time.sleep(2)
                     success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
-
-                    if success:
-                        break
 
                 if success:
                     print_success(f"Dashboard imported: {result}")
