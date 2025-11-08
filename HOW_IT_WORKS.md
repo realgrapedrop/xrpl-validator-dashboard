@@ -17,12 +17,14 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
 
 ```
 ┌─────────────────────────────────────────────┐
-│  XRPL Validator (rippled) - Docker          │
-│  Your existing validator container          │
+│  XRPL Validator (rippled)                   │
+│  Docker container OR native installation    │
 │  Admin API: localhost:5005                  │
 └─────────────────────────────────────────────┘
                      │
-                     │ docker exec commands every 3 seconds
+                     │ API calls every 3 seconds
+                     │ Docker: docker exec commands
+                     │ Native: HTTP to localhost:5005
                      │ (server_info, peers, etc.)
                      ▼
 ┌─────────────────────────────────────────────┐
@@ -89,8 +91,8 @@ The wizard detects conflicts and suggests alternatives.
 # Simplified view of fast_poller.py main loop
 
 while True:
-    # 1. Poll rippled
-    state_info = docker_exec("rippled server_info")
+    # 1. Poll rippled (Docker or Native)
+    state_info = api.get_server_state()  # Handles both Docker exec and HTTP
 
     # 2. Extract metrics
     server_state = state_info['server_state']      # proposing, full, etc.
@@ -165,7 +167,8 @@ Prometheus: Fast access, standard format
 
 ```
 1. fast_poller.py polls rippled
-   └─> docker exec rippledvalidator rippled server_info
+   └─> Docker: docker exec rippledvalidator rippled server_info
+   └─> Native: HTTP GET http://localhost:5005 (server_info)
 
 2. Parse JSON response
    └─> Extract 40+ metrics
