@@ -164,9 +164,12 @@ def find_rippled_containers() -> List[str]:
         all_containers = result.stdout.strip().split('\n')
 
         # Filter for containers that might be rippled
+        # Exclude dashboard monitoring containers (grafana, prometheus, node-exporter)
+        exclude_keywords = ['grafana', 'prometheus', 'node-exporter', 'node_exporter']
         rippled_containers = [
             c for c in all_containers
-            if 'rippled' in c.lower() or 'xrpl' in c.lower()
+            if ('rippled' in c.lower() or 'xrpl' in c.lower())
+            and not any(keyword in c.lower() for keyword in exclude_keywords)
         ]
 
         return rippled_containers
