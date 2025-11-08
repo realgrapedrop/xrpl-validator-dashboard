@@ -667,26 +667,12 @@ def configure_native_mode(native_info: dict, detected_ports: Optional[dict]) -> 
                 print_warning("Found stuck connections in CLOSE-WAIT state")
                 print_info("This is a known rippled issue that prevents new connections.")
                 print("")
-
-                if ask_yes_no("Restart rippled to clear stuck connections?", True):
-                    print_info("Restarting rippled...")
-                    try:
-                        subprocess.run(['sudo', 'systemctl', 'restart', 'rippled'], check=True, timeout=10)
-                        print_info("Waiting for rippled to start...")
-                        time.sleep(10)
-
-                        # Try one more time after restart
-                        success, info = test_native_rippled_connection(host, rpc_port)
-                        if success:
-                            print_success("Connection successful after restart!")
-                        else:
-                            print_warning("Still unable to connect, but continuing with setup")
-                            print_info("The monitor will keep retrying in the background")
-                    except subprocess.TimeoutExpired:
-                        print_warning("Restart command timed out, but continuing with setup")
-                    except Exception as e:
-                        print_warning(f"Could not restart rippled: {e}")
-                        print_info("You may need to run: sudo systemctl restart rippled")
+                print_info("To fix this, restart rippled in a separate terminal:")
+                print(f"  {Colors.BOLD}sudo systemctl restart rippled{Colors.ENDC}")
+                print("")
+                print_info("After restarting, the monitor will automatically connect.")
+                print_info("No need to re-run the installation.")
+                print("")
         except:
             pass  # Silently skip if ss command fails
 
