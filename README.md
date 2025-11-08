@@ -10,6 +10,37 @@ A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) valid
 
 *Real-time monitoring of XRPL validator performance, consensus state, and network metrics*
 
+## Why Use This Dashboard?
+
+Running an XRPL validator is critical infrastructure - but manually checking health metrics is tedious and error-prone. This dashboard provides:
+
+**Continuous Monitoring:**
+- Catches state transitions instantly (proposing → tracking → syncing)
+- Detects validation misses and network issues in real-time
+- Tracks 24-hour validation agreement rates automatically
+
+**Historical Analysis:**
+- 30-day metric retention for troubleshooting
+- Validation history stored in SQLite database
+- State transition tracking with duration accounting
+
+**Proactive Alerts:**
+- Automatic alerts for state changes and validation issues
+- Logged to file (`data/alerts.log`) and displayed in service logs
+- Severity levels: INFO, WARNING, CRITICAL
+
+**Minimal Overhead:**
+Running the entire dashboard adds negligible load to your system:
+- **CPU:** ~1% (barely noticeable)
+- **Memory:** ~280 MB (out of typical 16-32GB servers)
+- **Disk I/O:** ~20 KB/s (minimal)
+- **Storage:** ~50-100 MB/month
+
+**Compare this to:**
+- Manual checking: Time-consuming, error-prone, no history
+- SSH + rippled commands: No visualization, no historical trends
+- Custom scripts: Requires maintenance, no standardized dashboard
+
 ## Features
 
 - 🎯 **One-Command Setup** - Interactive wizard handles everything automatically
@@ -23,12 +54,36 @@ A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) valid
 
 ## What You Get
 
-- **Grafana Dashboard** (port 3003) - Beautiful visualizations and metrics
-- **Prometheus** (port 9092) - 30-day metric retention
+The setup wizard (`setup.py`) automatically creates and configures:
+
+**Docker Containers:**
+- **Grafana** (port 3003) - Dashboard UI with beautiful visualizations
+- **Prometheus** (port 9092) - Time-series database with 30-day retention
 - **Node Exporter** (port 9102) - System metrics (CPU, RAM, Disk, Network)
-- **Metrics Exporter** (port 9094) - XRPL validator state and performance
-- **SQLite Database** - Historical data storage and analysis
-- **Systemd Service** - Automatic startup and monitoring
+
+**Systemd Service:**
+- **XRPL Monitor** (fast_poller.py) - Polls rippled every 3 seconds, exports metrics on port 9094
+
+**Local Storage:**
+- **SQLite Database** (`data/monitor.db`) - Historical data and validation tracking
+- **Alert Logs** (`data/alerts.log`) - State changes and validation issues
+
+### Why Dedicated Services?
+
+**This dashboard uses its own Prometheus and Grafana instances** rather than sharing with existing monitoring infrastructure. Here's why:
+
+✅ **Simplicity** - No configuration conflicts with existing monitoring
+✅ **Isolation** - Dashboard issues won't affect other services
+✅ **Clean Uninstall** - One command removes everything, no orphaned data
+✅ **Port Flexibility** - Setup wizard detects conflicts and suggests alternatives
+✅ **Minimal Overhead** - Dedicated instances add only ~280 MB RAM and ~1% CPU
+
+**Resource footprint per container:**
+- Grafana: ~100 MB RAM, 0.2% CPU, 1GB limit
+- Prometheus: ~100 MB RAM, 0.3% CPU, 2GB limit
+- Node Exporter: ~30 MB RAM, <0.1% CPU, 128MB limit
+
+If you already run Prometheus elsewhere, the ~280 MB overhead is negligible on validator servers (typically 16-32GB RAM). The benefit of simplified management far outweighs the small resource cost.
 
 ## Prerequisites
 
@@ -498,11 +553,46 @@ For real-time monitoring:
 
 ### Alert Configuration
 
-Set up Grafana alerts for critical events:
+**Built-in Alerts (Automatic):**
+
+The monitor service automatically detects and logs alerts for:
+
+**State Changes:**
+- 🚨 CRITICAL: Validator enters `disconnected` or `syncing` state
+- ⚠️  WARNING: Validator drops to `tracking` state
+- ℹ️  INFO: Validator returns to `proposing` state
+- Includes duration in previous state and current ledger
+
+**Validation Issues:**
+- 🚨 CRITICAL: Validation disagreement (voted against network consensus)
+- ⚠️  WARNING: Missed validation opportunity
+
+**Alert Storage:**
+- Written to `data/alerts.log` with timestamps
+- Displayed in service logs: `sudo journalctl -u xrpl-validator-dashboard -f`
+- Color-coded output with emojis for easy identification
+
+**View Recent Alerts:**
+```bash
+# Last 20 alerts
+tail -20 data/alerts.log
+
+# Watch alerts in real-time
+tail -f data/alerts.log
+
+# Service logs (includes alerts + metrics)
+sudo journalctl -u xrpl-validator-dashboard -f
+```
+
+**Optional: Grafana Alerts**
+
+You can also configure Grafana's alerting system for additional notifications:
 - Validator state != proposing for >5 minutes
 - Validation agreement rate <95%
 - Peer count <10
 - High CPU/memory usage
+
+Configure in Grafana: Settings → Alerting → Contact Points (supports email, Slack, Discord, PagerDuty, etc.)
 
 ### Performance Tuning
 
