@@ -1722,7 +1722,7 @@ def main():
 
             if ask_yes_no("Install missing prerequisites now?", True):
                 # Run the install.sh script
-                install_script = Path(__file__).parent / 'install.sh'
+                install_script = Path(__file__).parent.parent / 'install.sh'
 
                 if install_script.exists():
                     print("")
@@ -1733,7 +1733,7 @@ def main():
                     try:
                         result = subprocess.run(
                             ['bash', str(install_script)],
-                            cwd=Path(__file__).parent,
+                            cwd=Path(__file__).parent.parent,
                             timeout=600  # 10 minute timeout
                         )
 
@@ -1869,7 +1869,7 @@ def main():
             # Step 3: Import dashboard
             print("")
             print_info("Step 3/3: Importing dashboard...")
-            dashboard_file = Path(__file__).parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
+            dashboard_file = Path(__file__).parent.parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
 
             if dashboard_file.exists():
                 print_info("Querying Prometheus for node hostname...")
