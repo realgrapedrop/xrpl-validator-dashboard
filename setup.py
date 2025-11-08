@@ -318,12 +318,26 @@ def parse_rippled_config_ports() -> Optional[dict]:
 def test_native_rippled_connection(host: str, port: int) -> Tuple[bool, Optional[dict]]:
     """Test connection to native rippled via HTTP API"""
     import http.client
+    import socket
 
     try:
+        # First check if port is reachable
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+
+        if result != 0:
+            print_warning(f"Port {port} is not reachable (connection refused)")
+            return False, None
+
         conn = http.client.HTTPConnection(host, port, timeout=10)
 
-        # Send server_info request
-        body = json.dumps({"method": "server_info", "params": [{}]})
+        # Send server_info request using JSON-RPC 2.0 format
+        body = json.dumps({
+            "method": "server_info",
+            "params": [{}]
+        })
         headers = {'Content-Type': 'application/json'}
 
         conn.request('POST', '/', body, headers)
@@ -332,17 +346,34 @@ def test_native_rippled_connection(host: str, port: int) -> Tuple[bool, Optional
         conn.close()
 
         if response.status != 200:
+            print_warning(f"HTTP error {response.status}: {response.reason}")
+            print_warning(f"Response: {data[:200]}")
             return False, None
 
         # Parse JSON response
         try:
             result = json.loads(data)
+
+            # Check for error in response
+            if 'error' in result:
+                print_warning(f"rippled returned error: {result.get('error')}")
+                return False, None
+
             info = result.get('result', {}).get('info', {})
             return True, info
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            print_warning(f"Invalid JSON response: {e}")
+            print_warning(f"Response: {data[:200]}")
             return False, None
 
+    except socket.timeout:
+        print_warning(f"Connection timeout to {host}:{port}")
+        return False, None
+    except ConnectionRefusedError:
+        print_warning(f"Connection refused to {host}:{port}")
+        return False, None
     except Exception as e:
+        print_warning(f"Connection error: {type(e).__name__}: {e}")
         return False, None
 
 def detect_rippled_container() -> Optional[str]:
