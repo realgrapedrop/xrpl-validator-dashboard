@@ -56,9 +56,18 @@ echo ""
 # Stop and remove Docker containers
 echo -e "${BLUE}Step 2: Stopping and removing Docker containers...${NC}"
 cd "${PROJECT_DIR}"
-if docker compose ps 2>/dev/null | grep -q "xrpl-dashboard"; then
+
+# Check for running containers by name (more reliable than docker compose ps)
+if docker ps --filter "name=xrpl-dashboard" --format "{{.Names}}" | grep -q "xrpl-dashboard"; then
     echo -e "${YELLOW}Stopping containers...${NC}"
-    docker compose down
+
+    # Try docker compose down first
+    docker compose down 2>/dev/null || true
+
+    # Ensure all dashboard containers are stopped (in case compose down failed)
+    docker stop xrpl-dashboard-grafana xrpl-dashboard-prometheus xrpl-dashboard-node-exporter 2>/dev/null || true
+    docker rm xrpl-dashboard-grafana xrpl-dashboard-prometheus xrpl-dashboard-node-exporter 2>/dev/null || true
+
     echo -e "${GREEN}✓ Containers stopped and removed${NC}"
     # Wait for ports to be fully released from TIME_WAIT
     echo -e "${YELLOW}Waiting 8 seconds for ports to release...${NC}"
