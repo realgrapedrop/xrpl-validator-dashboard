@@ -908,6 +908,13 @@ def import_grafana_dashboard(grafana_port: int, dashboard_path: str, node_export
         with open(dashboard_path, 'r') as f:
             dashboard_json = json.load(f)
 
+        # Remove UID and ID to avoid conflicts with existing dashboards
+        # Grafana will generate new ones on import
+        if 'uid' in dashboard_json:
+            del dashboard_json['uid']
+        if 'id' in dashboard_json:
+            del dashboard_json['id']
+
         # Update template variable defaults to match the setup configuration
         if 'templating' in dashboard_json and 'list' in dashboard_json['templating']:
             for template_var in dashboard_json['templating']['list']:
