@@ -1908,10 +1908,18 @@ def main():
 
                 # Attempt dashboard import if both services are ready
                 success = False
+                result = "Services not ready"
+                dashboard_uid = ""
+                detected_nodename = ""
+
                 if prometheus_ready and grafana_ready:
                     # Give it one more second for good measure
                     time.sleep(2)
                     success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
+                elif not prometheus_ready:
+                    result = "Prometheus failed to start within 60 seconds"
+                elif not grafana_ready:
+                    result = "Grafana failed to start within 60 seconds"
 
                 if success:
                     print_success(f"Dashboard imported: {result}")
