@@ -10,6 +10,7 @@ import subprocess
 import json
 import socket
 import shutil
+import time
 from typing import Optional, Tuple, List
 from pathlib import Path
 
@@ -1872,8 +1873,22 @@ def main():
             dashboard_file = Path(__file__).parent.parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
 
             if dashboard_file.exists():
-                print_info("Querying Prometheus for node hostname...")
-                success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
+                # Retry dashboard import with exponential backoff (Prometheus needs time to start)
+                print_info("Waiting for Prometheus to be ready...")
+                max_retries = 3
+                retry_delays = [5, 10, 15]  # seconds
+                success = False
+
+                for attempt in range(max_retries):
+                    if attempt > 0:
+                        delay = retry_delays[attempt - 1]
+                        print_info(f"Retry {attempt}/{max_retries - 1} after {delay}s...")
+                        time.sleep(delay)
+
+                    success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
+
+                    if success:
+                        break
 
                 if success:
                     print_success(f"Dashboard imported: {result}")
