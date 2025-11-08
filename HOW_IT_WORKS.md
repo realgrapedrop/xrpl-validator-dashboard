@@ -44,7 +44,8 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
 │  └─────────────────────────────────────┘   │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
-│  │ Prometheus Exporter (port 9094)     │   │
+│  │ Prometheus Exporter                 │   │
+│  │ Default port: 9094 (configurable)   │   │
 │  │ - In-memory gauges/counters         │   │
 │  │ - HTTP /metrics endpoint            │   │
 │  │ Used for: Real-time dashboards      │   │
@@ -54,16 +55,18 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
                      │ HTTP scrape every 5-15s
                      ▼
 ┌─────────────────────────────────────────────┐
-│  Prometheus (Docker) - Port 9092            │
-│  - Scrapes :9094/metrics endpoint           │
-│  - Scrapes node-exporter:9100 (system)      │
+│  Prometheus (Docker)                        │
+│  Default port: 9092 (configurable)          │
+│  - Scrapes monitor metrics endpoint         │
+│  - Scrapes node-exporter (default: 9102)    │
 │  - 30-day time-series retention             │
 └─────────────────────────────────────────────┘
                      │
                      │ PromQL queries
                      ▼
 ┌─────────────────────────────────────────────┐
-│  Grafana (Docker) - Port 3003               │
+│  Grafana (Docker)                           │
+│  Default port: 3003 (configurable)          │
 │  - Pre-configured dashboard                 │
 │  - Real-time visualization                  │
 │  - Alert management                         │
@@ -71,6 +74,9 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
                      │
                      ▼
                   You!
+
+Note: Ports shown are setup.py defaults.
+The wizard detects conflicts and suggests alternatives.
 ```
 
 ---
@@ -174,7 +180,7 @@ Prometheus: Fast access, standard format
    └─> In-memory, fast access
 
 5. Prometheus scrapes
-   └─> HTTP GET http://host.docker.internal:9094/metrics
+   └─> HTTP GET http://host.docker.internal:<monitor_port>/metrics
    └─> Every 5-15 seconds
 
 6. Grafana queries Prometheus
@@ -182,7 +188,7 @@ Prometheus: Fast access, standard format
    └─> Renders graphs in real-time
 
 7. User views dashboard
-   └─> http://localhost:3003
+   └─> http://localhost:<grafana_port>
 ```
 
 ---
