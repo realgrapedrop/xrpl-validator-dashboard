@@ -193,7 +193,7 @@ echo -e "1. ${YELLOW}Log out and log back in${NC} for group changes to take effe
 echo -e "   ${YELLOW}exit${NC}"
 echo ""
 echo -e "2. To reinstall prerequisites:"
-echo -e "   ${YELLOW}./test/install-prerequisites.sh${NC}"
+echo -e "   ${YELLOW}./install-prerequisites.sh${NC}"
 echo ""
 echo -e "3. To verify complete removal:"
 echo -e "   ${YELLOW}docker --version${NC} (should show 'command not found')"
