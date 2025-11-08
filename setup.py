@@ -1065,11 +1065,11 @@ def update_docker_compose(grafana_port: int, prometheus_port: int, node_exporter
         with open(compose_path, 'r') as f:
             content = f.read()
 
-        # Update port mappings
+        # Update port mappings (match any existing port number)
         import re
-        content = re.sub(r'"9092:9090"', f'"{prometheus_port}:9090"', content)
-        content = re.sub(r'"9102:9100"', f'"{node_exporter_port}:9100"', content)
-        content = re.sub(r'"3001:3000"', f'"{grafana_port}:3000"', content)
+        content = re.sub(r'"\d+:9090"', f'"{prometheus_port}:9090"', content)
+        content = re.sub(r'"\d+:9100"', f'"{node_exporter_port}:9100"', content)
+        content = re.sub(r'"\d+:3000"', f'"{grafana_port}:3000"', content)
 
         with open(compose_path, 'w') as f:
             f.write(content)
