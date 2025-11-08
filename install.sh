@@ -19,12 +19,30 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}================================================================================================${NC}"
-echo -e "${BLUE}XRPL Validator Dashboard - Prerequisites Installation${NC}"
+echo -e "${BLUE}XRPL Validator Dashboard - Installation${NC}"
 echo -e "${BLUE}================================================================================================${NC}"
 echo ""
 
-# Get current user
+# Get current user and project directory
 CURRENT_USER=$(whoami)
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Check if prerequisites are already installed
+PREREQS_INSTALLED=true
+command -v python3 &> /dev/null || PREREQS_INSTALLED=false
+command -v pip3 &> /dev/null || PREREQS_INSTALLED=false
+command -v docker &> /dev/null || PREREQS_INSTALLED=false
+docker compose version &> /dev/null 2>&1 || PREREQS_INSTALLED=false
+
+if [ "$PREREQS_INSTALLED" = true ]; then
+    echo -e "${GREEN}✓ Prerequisites already installed${NC}"
+    echo -e "${BLUE}Running dashboard setup...${NC}"
+    echo ""
+    cd "${PROJECT_DIR}"
+    exec python3 setup.py
+    exit 0
+fi
+
 echo -e "${BLUE}Installing prerequisites for user: ${YELLOW}${CURRENT_USER}${NC}"
 echo ""
 
@@ -134,7 +152,7 @@ fi
 
 echo ""
 echo -e "${GREEN}================================================================================================${NC}"
-echo -e "${GREEN}Installation Complete!${NC}"
+echo -e "${GREEN}Prerequisites Installed Successfully!${NC}"
 echo -e "${GREEN}================================================================================================${NC}"
 echo ""
 
@@ -144,17 +162,11 @@ echo -e "${BLUE}Next Steps:${NC}"
 echo ""
 echo -e "1. ${YELLOW}Log out and log back in${NC} for Docker group permissions to take effect:"
 echo -e "   ${YELLOW}exit${NC}"
-echo -e "   ${YELLOW}ssh <your-connection-command>${NC}"
 echo ""
-echo -e "2. Verify Docker works without sudo:"
-echo -e "   ${YELLOW}docker ps${NC}"
-echo ""
-echo -e "3. Run the dashboard setup wizard:"
-echo -e "   ${YELLOW}cd ~/xrpl-validator-dashboard${NC}"
+echo -e "2. After logging back in, run the setup wizard:"
+echo -e "   ${YELLOW}cd $(dirname "${BASH_SOURCE[0]}")${NC}"
 echo -e "   ${YELLOW}python3 setup.py${NC}"
 echo ""
-echo -e "${BLUE}Configuration for native rippled:${NC}"
-echo -e "  - rippled_mode: ${YELLOW}native${NC}"
-echo -e "  - rippled_host: ${YELLOW}localhost${NC}"
-echo -e "  - rippled_port: ${YELLOW}5015${NC} (or your custom port)"
+echo -e "   Or simply run:"
+echo -e "   ${YELLOW}./install.sh${NC} (this script will run setup.py automatically)"
 echo ""
