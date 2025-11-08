@@ -1066,11 +1066,56 @@ def update_docker_compose(grafana_port: int, prometheus_port: int, node_exporter
         with open(compose_path, 'r') as f:
             content = f.read()
 
-        # Update port mappings (match any existing port number)
+        # Update ports for host networking mode
         import re
-        content = re.sub(r'"\d+:9090"', f'"{prometheus_port}:9090"', content)
-        content = re.sub(r'"\d+:9100"', f'"{node_exporter_port}:9100"', content)
-        content = re.sub(r'"\d+:3000"', f'"{grafana_port}:3000"', content)
+
+        # Grafana port (environment variable)
+        content = re.sub(r'GF_SERVER_HTTP_PORT: "\d+"', f'GF_SERVER_HTTP_PORT: "{grafana_port}"', content)
+        # Update Grafana comment
+        content = re.sub(
+            r'# Grafana will be available on host\'s port \d+ \(configured via GF_SERVER_HTTP_PORT\)',
+            f'# Grafana will be available on host\'s port {grafana_port} (configured via GF_SERVER_HTTP_PORT)',
+            content
+        )
+        # Update Grafana healthcheck
+        content = re.sub(
+            r'http://localhost:\d+/api/health',
+            f'http://localhost:{grafana_port}/api/health',
+            content,
+            count=1
+        )
+
+        # Prometheus port (command line argument without quotes)
+        content = re.sub(r'- --web\.listen-address=:\d+', f'- --web.listen-address=:{prometheus_port}', content)
+        # Update Prometheus comment
+        content = re.sub(
+            r'# Prometheus will be available on host\'s port \d+ \(configured via --web\.listen-address\)',
+            f'# Prometheus will be available on host\'s port {prometheus_port} (configured via --web.listen-address)',
+            content
+        )
+        # Update Prometheus healthcheck
+        content = re.sub(
+            r'http://localhost:\d+/-/ready',
+            f'http://localhost:{prometheus_port}/-/ready',
+            content,
+            count=1
+        )
+
+        # Node exporter port (command line argument with single quotes)
+        content = re.sub(r"- '--web\.listen-address=:\d+'", f"- '--web.listen-address=:{node_exporter_port}'", content)
+        # Update Node Exporter comment
+        content = re.sub(
+            r'# Node exporter will be available on host\'s port \d+ \(configured via --web\.listen-address\)',
+            f'# Node exporter will be available on host\'s port {node_exporter_port} (configured via --web.listen-address)',
+            content
+        )
+        # Update Node Exporter healthcheck
+        content = re.sub(
+            r'http://localhost:\d+/metrics',
+            f'http://localhost:{node_exporter_port}/metrics',
+            content,
+            count=1
+        )
 
         with open(compose_path, 'w') as f:
             f.write(content)
