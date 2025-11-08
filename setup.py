@@ -743,7 +743,7 @@ def run_preflight_checks(container_name: str, monitor_port: int) -> bool:
         return all_passed  # No point continuing if rippled isn't accessible
 
     # Test rippled API calls
-    print_info("Testing rippled API calls...")
+    print_info(f"Testing rippled API calls (via docker exec {container_name})...")
     api_success, failed_calls = test_rippled_api_calls(container_name)
     if api_success:
         print_success("All rippled API calls working (server_info, peers, fee)")
