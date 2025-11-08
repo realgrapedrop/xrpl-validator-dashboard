@@ -1660,55 +1660,53 @@ def main():
 
         # Step 3: Import dashboard
         if docker_started and service_installed:
-                # Step 3: Import dashboard
-                print("")
-                print_info("Step 3/3: Importing dashboard...")
-                dashboard_file = Path(__file__).parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
+            # Step 3: Import dashboard
+            print("")
+            print_info("Step 3/3: Importing dashboard...")
+            dashboard_file = Path(__file__).parent / 'dashboards' / 'categories' / 'xrpl-monitor-dashboard.json'
 
-                if dashboard_file.exists():
-                    print_info("Querying Prometheus for node hostname...")
-                    success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
+            if dashboard_file.exists():
+                print_info("Querying Prometheus for node hostname...")
+                success, result, dashboard_uid, detected_nodename = import_grafana_dashboard(grafana_port, str(dashboard_file), node_exporter_port, prometheus_port)
 
-                    if success:
-                        print_success(f"Dashboard imported: {result}")
-                        print_info(f"Configured defaults: Job=xrpl-validator, Instance=127.0.0.1:{node_exporter_port}, Nodename={detected_nodename}")
+                if success:
+                    print_success(f"Dashboard imported: {result}")
+                    print_info(f"Configured defaults: Job=xrpl-validator, Instance=127.0.0.1:{node_exporter_port}, Nodename={detected_nodename}")
 
-                        # Set as home dashboard so it opens automatically on login
-                        if dashboard_uid and set_grafana_home_dashboard(grafana_port, dashboard_uid):
-                            print_success("Dashboard set as home page (opens automatically on login)")
+                    # Set as home dashboard so it opens automatically on login
+                    if dashboard_uid and set_grafana_home_dashboard(grafana_port, dashboard_uid):
+                        print_success("Dashboard set as home page (opens automatically on login)")
 
-                        print("")
-                        print_header("All Done! Everything is Running")
-                        print("")
-                        print_success(f"Services running:")
-                        print(f"  Grafana:    http://localhost:{grafana_port}")
-                        print(f"  Prometheus: http://localhost:{prometheus_port}")
-                        print(f"  Metrics:    http://localhost:{monitor_port}/metrics")
-                        print("")
-                        print_info(f"{Colors.BOLD}You are ready to view your dashboard:{Colors.ENDC}")
-                        print(f"  {Colors.BOLD}1.{Colors.ENDC} Go to {Colors.BOLD}http://localhost:{grafana_port}{Colors.ENDC}")
-                        print(f"  {Colors.BOLD}2.{Colors.ENDC} Login with username: {Colors.BOLD}admin{Colors.ENDC} / password: {Colors.BOLD}admin{Colors.ENDC}")
-                        print(f"  {Colors.BOLD}3.{Colors.ENDC} You will be prompted to change the password")
-                        print(f"  {Colors.BOLD}4.{Colors.ENDC} Dashboard opens automatically with all metrics ready!")
-                        print("")
-                        print_info("⏳ Note: 24-hour metrics panels (Agreements %, Agreements, Missed) will")
-                        print_info("        populate after 5-10 minutes as historical data is collected.")
-                        print("")
-                        print_info("Useful commands:")
-                        print(f"  View live logs:     {Colors.BOLD}sudo journalctl -u xrpl-validator-dashboard -f{Colors.ENDC}")
-                        print(f"  Check status:       {Colors.BOLD}sudo systemctl status xrpl-validator-dashboard{Colors.ENDC}")
-                        print(f"  Restart service:    {Colors.BOLD}sudo systemctl restart xrpl-validator-dashboard{Colors.ENDC}")
-                    else:
-                        print_warning(f"Auto-import failed: {result}")
-                        print_info("Dashboard import steps:")
-                        print(f"  1. Go to http://localhost:{grafana_port}")
-                        print(f"  2. Dashboards → New → Import → Upload JSON file")
-                        print(f"  3. Select: dashboards/categories/xrpl-monitor-dashboard.json")
-            else:
-                print_warning("Service installation failed")
-                print_info("You can install it manually later with: ./install-service.sh")
+                    print("")
+                    print_header("All Done! Everything is Running")
+                    print("")
+                    print_success(f"Services running:")
+                    print(f"  Grafana:    http://localhost:{grafana_port}")
+                    print(f"  Prometheus: http://localhost:{prometheus_port}")
+                    print(f"  Metrics:    http://localhost:{monitor_port}/metrics")
+                    print("")
+                    print_info(f"{Colors.BOLD}You are ready to view your dashboard:{Colors.ENDC}")
+                    print(f"  {Colors.BOLD}1.{Colors.ENDC} Go to {Colors.BOLD}http://localhost:{grafana_port}{Colors.ENDC}")
+                    print(f"  {Colors.BOLD}2.{Colors.ENDC} Login with username: {Colors.BOLD}admin{Colors.ENDC} / password: {Colors.BOLD}admin{Colors.ENDC}")
+                    print(f"  {Colors.BOLD}3.{Colors.ENDC} You will be prompted to change the password")
+                    print(f"  {Colors.BOLD}4.{Colors.ENDC} Dashboard opens automatically with all metrics ready!")
+                    print("")
+                    print_info("⏳ Note: 24-hour metrics panels (Agreements %, Agreements, Missed) will")
+                    print_info("        populate after 5-10 minutes as historical data is collected.")
+                    print("")
+                    print_info("Useful commands:")
+                    print(f"  View live logs:     {Colors.BOLD}sudo journalctl -u xrpl-validator-dashboard -f{Colors.ENDC}")
+                    print(f"  Check status:       {Colors.BOLD}sudo systemctl status xrpl-validator-dashboard{Colors.ENDC}")
+                    print(f"  Restart service:    {Colors.BOLD}sudo systemctl restart xrpl-validator-dashboard{Colors.ENDC}")
+                else:
+                    print_warning(f"Auto-import failed: {result}")
+                    print_info("Dashboard import steps:")
+                    print(f"  1. Go to http://localhost:{grafana_port}")
+                    print(f"  2. Dashboards → New → Import → Upload JSON file")
+                    print(f"  3. Select: dashboards/categories/xrpl-monitor-dashboard.json")
         else:
-            print_error("Cannot continue - Docker services failed to start")
+            print_warning("Service installation failed")
+            print_info("You can install it manually later with: ./install-service.sh")
 
     else:
         # MANUAL FLOW
