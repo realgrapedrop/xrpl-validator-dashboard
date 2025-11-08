@@ -71,21 +71,44 @@ class Config:
     def get(self, key_path: str, default=None):
         """
         Get configuration value by dot-separated path
-        
+
+        Environment variables can override config values.
+        For example, 'monitoring.rippled_host' can be overridden with
+        XRPL_MONITORING_RIPPLED_HOST environment variable.
+
         Args:
             key_path: Dot-separated path (e.g., 'prometheus.port')
             default: Default value if key not found
-            
+
         Returns:
             Configuration value
         """
+        # Check for environment variable override
+        env_key = 'XRPL_' + key_path.replace('.', '_').upper()
+        env_value = os.getenv(env_key)
+        if env_value is not None:
+            # Try to convert to appropriate type
+            if env_value.lower() in ('true', 'false'):
+                return env_value.lower() == 'true'
+            try:
+                # Try integer
+                return int(env_value)
+            except ValueError:
+                try:
+                    # Try float
+                    return float(env_value)
+                except ValueError:
+                    # Return as string
+                    return env_value
+
+        # Otherwise, get from config file
         keys = key_path.split('.')
         value = self.config
-        
+
         for key in keys:
             if isinstance(value, dict) and key in value:
                 value = value[key]
             else:
                 return default
-        
+
         return value

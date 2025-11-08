@@ -17,13 +17,13 @@ scrape_configs:
   - job_name: prometheus
     scheme: http
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['localhost:9092']
     enable_compression: true
     enable_http2: true
     scrape_timeout: 10s
 
   # Node Exporter - System metrics (CPU, RAM, Disk, Network, etc.)
-  # Runs as a container, provides server stats for the dashboard
+  # Runs with host networking, scraped on localhost
   - job_name: 'xrpl-validator'
     scrape_interval: 5s
     scrape_timeout: 4s
@@ -32,9 +32,8 @@ scrape_configs:
     enable_compression: true
     enable_http2: true
     static_configs:
-      - targets: ['node-exporter:9100']
-        labels:
-          instance: '127.0.0.1:9102'  # External port for clarity
+      - targets: ['127.0.0.1:9102']
+        # Note: Using 127.0.0.1:9102 for dashboard compatibility
     metric_relabel_configs:
       # Drop ALL xrpl_* metrics from node_exporter to avoid duplicates
       # (xrpl_* metrics come from xrpl-monitor job below)
@@ -43,7 +42,7 @@ scrape_configs:
         regex: ^xrpl_.*
 
   # XRPL Validator Monitor - State tracking, validation monitoring, alerts
-  # Scrapes metrics from xrpl-monitor service running on host
+  # Scrapes metrics from xrpl-monitor running on host with host networking
   - job_name: 'xrpl-monitor'
     scrape_interval: 5s
     scrape_timeout: 4s
@@ -52,9 +51,8 @@ scrape_configs:
     enable_compression: true
     enable_http2: true
     static_configs:
-      # Use host.docker.internal to reach host from container
-      # Or use the actual host IP address
-      - targets: ['host.docker.internal:9094']
+      # Both monitor and Prometheus use host networking, so use localhost
+      - targets: ['localhost:9094']
         labels:
           instance: 'xrpl-validator'
           service: 'xrpl-monitor'

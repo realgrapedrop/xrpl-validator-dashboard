@@ -1459,8 +1459,109 @@ def import_grafana_dashboard(grafana_port: int, dashboard_path: str, node_export
     except Exception as e:
         return False, str(e), "", ""
 
+def stop_systemd_service_if_running() -> None:
+    """Stop and disable systemd service if it exists (migration to Docker)"""
+    service_name = "xrpl-validator-dashboard"
+
+    try:
+        # Check if service exists
+        result = subprocess.run(
+            ['systemctl', 'list-unit-files', f'{service_name}.service'],
+            capture_output=True,
+            text=True
+        )
+
+        if service_name in result.stdout:
+            print_info(f"Found existing systemd service '{service_name}'")
+            print_info("Stopping and disabling (monitor now runs in Docker)...")
+
+            # Stop service
+            try:
+                subprocess.run(['sudo', 'systemctl', 'stop', service_name],
+                             capture_output=True, check=False)
+                print_success("Service stopped")
+            except:
+                pass
+
+            # Disable service
+            try:
+                subprocess.run(['sudo', 'systemctl', 'disable', service_name],
+                             capture_output=True, check=False)
+                print_success("Service disabled")
+            except:
+                pass
+
+            print("")
+    except:
+        pass
+
+def start_containerized_monitor() -> bool:
+    """Build Docker image and start monitor container with docker-compose"""
+    print_info("Starting containerized monitor...")
+    print("")
+
+    try:
+        # Stop systemd service if running
+        stop_systemd_service_if_running()
+
+        # Build the monitor Docker image
+        print_info("Building monitor Docker image...")
+        result = subprocess.run(
+            ['docker', 'compose', 'build', 'xrpl-monitor'],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode != 0:
+            print_error(f"Failed to build monitor image: {result.stderr}")
+            return False
+
+        print_success("Monitor image built successfully")
+
+        # Start the monitor container
+        print_info("Starting monitor container...")
+        result = subprocess.run(
+            ['docker', 'compose', 'up', '-d', 'xrpl-monitor'],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        if result.returncode != 0:
+            print_error(f"Failed to start monitor container: {result.stderr}")
+            return False
+
+        print_success("Monitor container started")
+
+        # Wait a moment for containers to initialize
+        import time
+        time.sleep(3)
+
+        # Check if monitor container is running
+        result = subprocess.run(
+            ['docker', 'ps', '--filter', 'name=xrpl-dashboard-monitor', '--format', '{{.Status}}'],
+            capture_output=True,
+            text=True
+        )
+
+        if 'Up' in result.stdout:
+            print_success("Monitor container is running")
+            return True
+        else:
+            print_warning("Monitor container may not have started correctly")
+            print_info("Check logs with: docker logs xrpl-dashboard-monitor")
+            return False
+
+    except subprocess.TimeoutExpired:
+        print_error("Docker operation timed out")
+        return False
+    except Exception as e:
+        print_error(f"Unexpected error: {e}")
+        return False
+
 def install_systemd_service() -> bool:
-    """Install the monitor as a systemd service"""
+    """Install the monitor as a systemd service (DEPRECATED - now using Docker)"""
     service_name = "xrpl-validator-dashboard"
     service_file = f"/etc/systemd/system/{service_name}.service"
     project_dir = os.getcwd()
@@ -1730,41 +1831,38 @@ def main():
         print_info("Starting automated setup...")
         print("")
 
-        # Step 1: Start Docker services
+        # Step 1: Start base Docker services (Grafana, Prometheus, Node Exporter)
+        # Note: Monitor will be started separately in Step 2 after building
         docker_started = False
-        print_info("Step 1/3: Starting Docker services (Grafana, Prometheus, Node Exporter)...")
+        print_info("Step 1/3: Starting base Docker services (Grafana, Prometheus, Node Exporter)...")
         try:
-            subprocess.run(['docker', 'compose', 'up', '-d'], check=True, capture_output=True)
-            print_success("Docker services started")
+            subprocess.run(['docker', 'compose', 'up', '-d', 'grafana', 'prometheus', 'node-exporter'],
+                         check=True, capture_output=True)
+            print_success("Base Docker services started")
             docker_started = True
         except (subprocess.CalledProcessError, FileNotFoundError):
             try:
-                subprocess.run(['docker-compose', 'up', '-d'], check=True, capture_output=True)
-                print_success("Docker services started")
+                subprocess.run(['docker-compose', 'up', '-d', 'grafana', 'prometheus', 'node-exporter'],
+                             check=True, capture_output=True)
+                print_success("Base Docker services started")
                 docker_started = True
             except:
                 print_error("Failed to start Docker services")
-                print_info("Try manually: docker compose up -d")
+                print_info("Try manually: docker compose up -d grafana prometheus node-exporter")
 
-        # Step 2: Install monitor as systemd service
-        service_installed = False
+        # Step 2: Start containerized monitor
+        monitor_started = False
         if docker_started:
             print("")
-            if ask_yes_no("Install monitor as a systemd service? (recommended)", True):
-                print_info("Step 2/3: Installing monitor as systemd service...")
-                print_info("(You will be prompted for sudo password)")
-                print("")
+            print_info("Step 2/3: Starting monitor as Docker container...")
+            print("")
 
-                service_installed = install_systemd_service()
+            monitor_started = start_containerized_monitor()
 
-                if not service_installed:
-                    print_warning("Service installation failed, but continuing with dashboard setup")
-                    print_info("You can manually start the monitor later with:")
-                    print_info("  python3 fast_poller.py &")
-                    print_info("Or install the service with: ./install-service.sh")
-            else:
-                print_info("Skipping systemd service installation")
-                print_info("You can install it later with: ./install-service.sh")
+            if not monitor_started:
+                print_warning("Monitor container failed to start, but continuing with dashboard setup")
+                print_info("You can check logs with:")
+                print_info("  docker logs xrpl-dashboard-monitor")
 
         # Step 3: Import dashboard (always proceed if docker started)
         if docker_started:

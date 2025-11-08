@@ -10,13 +10,10 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: xrpl-dashboard-prometheus
-    networks:
-      - xrpl-dashboard
-    ports:
-      - "9092:9090"
+    network_mode: "host"
+    # Note: host networking allows Prometheus to scrape localhost:9094 (monitor)
+    # Prometheus will be available on host's port 9092 (configured via --web.listen-address)
     user: "0:0"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
       GOMEMLIMIT: "2GiB"
     volumes:
@@ -31,11 +28,12 @@ services:
       - --storage.tsdb.wal-compression
       - --web.enable-lifecycle
       - --web.enable-admin-api
+      - --web.listen-address=:9092
     restart: unless-stopped
     cpus: "1.0"
     mem_limit: "2g"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:9092/-/ready"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -44,15 +42,15 @@ services:
     image: prom/node-exporter:v1.8.2
     container_name: xrpl-dashboard-node-exporter
     hostname: xrpl-validator
-    networks:
-      - xrpl-dashboard
-    ports:
-      - "9102:9100"
+    network_mode: "host"
+    # Note: host networking allows Prometheus to scrape on localhost
+    # Node exporter will be available on host's port 9102 (configured via --web.listen-address)
     command:
       - '--path.rootfs=/host'
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--web.listen-address=:9102'
     volumes:
       - /:/host:ro,rslave
       - /proc:/host/proc:ro
@@ -61,7 +59,30 @@ services:
     cpus: "0.2"
     mem_limit: "128m"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9100/metrics"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:9102/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  xrpl-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xrpl-monitor:latest
+    container_name: xrpl-dashboard-monitor
+    network_mode: "host"
+    # Note: host networking means container shares host's network stack
+    # This allows direct access to localhost:5015 (rippled) without firewall issues
+    # Port 9094 (metrics) will be exposed on the host automatically
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    cpus: "0.3"
+    mem_limit: "256m"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9094/metrics"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -69,10 +90,9 @@ services:
   grafana:
     image: grafana/grafana:11.2.0
     container_name: xrpl-dashboard-grafana
-    networks:
-      - xrpl-dashboard
-    ports:
-      - "3003:3000"
+    network_mode: "host"
+    # Note: host networking bypasses OCI firewall restrictions
+    # Grafana will be available on host's port 3003 (configured via GF_SERVER_HTTP_PORT)
     user: "0"
     environment:
       GF_USERS_DEFAULT_THEME: "dark"
@@ -80,6 +100,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "admin"
       GF_DASHBOARDS_MIN_REFRESH_INTERVAL: "5s"
       GF_SERVER_ENABLE_GZIP: "true"
+      GF_SERVER_HTTP_PORT: "3003"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./compose/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
@@ -88,11 +109,8 @@ services:
     restart: unless-stopped
     cpus: "0.5"
     mem_limit: "1g"
-    depends_on:
-      - prometheus
-      - node-exporter
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/api/health"]
       interval: 30s
       timeout: 5s
       retries: 5
