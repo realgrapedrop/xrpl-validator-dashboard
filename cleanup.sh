@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-PROJECT_DIR="/home/grapedrop/projects/xrpl-validator-dashboard"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_NAME="xrpl-validator-dashboard"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
