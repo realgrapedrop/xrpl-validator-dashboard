@@ -542,6 +542,7 @@ def generate_config(container_name: str, monitor_port: int) -> bool:
 # Monitoring settings
 monitoring:
   poll_interval: 3  # seconds between polls
+  rippled_mode: docker  # docker or native
   container_name: {container_name}
 
 # Prometheus exporter settings
