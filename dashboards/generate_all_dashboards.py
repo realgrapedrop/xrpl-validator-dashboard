@@ -5,7 +5,8 @@ Generate 6 category dashboards for XRPL Validator Monitoring
 import json
 import os
 
-DASH_DIR = "/home/grapedrop/monitoring/xrpl-monitor/dashboards/categories"
+# Use relative path within this project
+DASH_DIR = os.path.join(os.path.dirname(__file__), "categories")
 os.makedirs(DASH_DIR, exist_ok=True)
 
 def create_panel(title, panel_type, x, y, w, h, expr, refId="A", **kwargs):
