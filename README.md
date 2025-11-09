@@ -21,9 +21,10 @@ A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) valid
 Running an XRPL validator is critical infrastructure - but manually checking health metrics is tedious and error-prone. This dashboard provides:
 
 **Continuous Monitoring:**
-- Catches state transitions instantly (proposing → tracking → syncing)
+- Catches state transitions across 6 states (unreachable → connected → syncing → tracking → full → proposing)
 - Detects validation misses and network issues in real-time
 - Tracks 24-hour validation agreement rates automatically
+- Monitors server metrics (CPU load, I/O latency, job queue depth)
 
 **Historical Analysis:**
 - 30-day metric retention for troubleshooting
@@ -32,6 +33,7 @@ Running an XRPL validator is critical infrastructure - but manually checking hea
 
 **Proactive Alerts:**
 - Automatic alerts for state changes and validation issues
+- Insane peers detection (peers on different ledger chain)
 - Logged to file (`data/alerts.log`) and displayed in service logs
 - Severity levels: INFO, WARNING, CRITICAL
 
