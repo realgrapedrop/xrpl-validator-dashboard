@@ -101,6 +101,8 @@ If you already run Prometheus elsewhere, the ~280 MB overhead is negligible on v
 
 ### Quick Check
 
+**Note:** If Docker or Python are missing, `./install.sh` (Part 1) will install them automatically. This check is optional.
+
 ```bash
 # Check software versions
 python3 --version  # Should be 3.6+
