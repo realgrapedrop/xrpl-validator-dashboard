@@ -1701,7 +1701,10 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "auto",
+        "text": {
+          "valueSize": 40
+        },
+        "textMode": "value_and_name",
         "wideLayout": true
       },
       "pluginVersion": "11.2.0",
@@ -1745,7 +1748,7 @@
           "refId": "C"
         }
       ],
-      "title": "XRP Fees (USD)",
+      "title": "XRP Fees",
       "type": "stat"
     },
     {
