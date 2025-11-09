@@ -114,10 +114,10 @@ After installation completes:
 
 ## What's Preserved
 
-✅ **Your rippled installation** - Completely untouched
-✅ **rippled configuration** - `/etc/opt/ripple/rippled.cfg` unchanged
-✅ **rippled data** - All ledger history preserved
-✅ **Validator keys** - No changes to validator setup
+- ✅ **Your rippled installation** - Completely untouched
+- ✅ **rippled configuration** - `/etc/opt/ripple/rippled.cfg` unchanged
+- ✅ **rippled data** - All ledger history preserved
+- ✅ **Validator keys** - No changes to validator setup
 
 ## Troubleshooting Migration
 
