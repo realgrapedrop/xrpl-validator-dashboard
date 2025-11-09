@@ -1,4 +1,4 @@
-# XRPL Validator Dashboard
+# XRPL Validator Dashboard v2.0
 
 A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) validator nodes with automated setup wizard. Designed for Mainnet validators, also works for non-validator nodes (with limited validation metrics).
 
