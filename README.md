@@ -10,6 +10,12 @@ A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) valid
 
 *Real-time monitoring of XRPL validator performance, consensus state, and network metrics*
 
+---
+
+**⚠️ Upgrading from an older version?** This is a complete rewrite with a modern Docker-based architecture. See **[MIGRATION.md](MIGRATION.md)** for upgrade instructions.
+
+---
+
 ## Why Use This Dashboard?
 
 Running an XRPL validator is critical infrastructure - but manually checking health metrics is tedious and error-prone. This dashboard provides:
