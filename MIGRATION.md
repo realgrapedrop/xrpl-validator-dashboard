@@ -9,7 +9,7 @@ The dashboard has been completely rewritten with a modern architecture:
 | v1.0 | v2.0 |
 |------|------|
 | Manual port configuration | Auto port detection |
-| Installation required more manual effort | Auto-install in easy two steps |
+| Installation required more manual effort | Auto-install in two easy steps |
 | Docker manual installation | Docker optional auto-install during setup |
 | Uninstallation basic, non-interactive | Prompted uninstall removes individual components step-by-step |
 | Used Docker for Grafana dashboard | Uses Docker best practice variables in dashboard |
