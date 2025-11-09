@@ -25,10 +25,10 @@ The XRPL Validator Dashboard provides real-time and historical monitoring of you
 
 ### Prerequisites
 
-- XRPL Validator Monitor installed and running (`xrpl-monitor.service`)
-- Prometheus scraping metrics from `localhost:9091`
+- XRPL Validator Monitor running in Docker (`xrpl-monitor` container)
+- Prometheus scraping metrics (default port: 9094, check your config)
 - Grafana connected to Prometheus data source
-- rippled validator running and accessible
+- rippled validator running and accessible (Docker or Native installation)
 
 ### How to Use This Document
 
@@ -1468,18 +1468,23 @@ The XRPL Validator Dashboard provides real-time and historical monitoring of you
 ### Panel Shows "No Data"
 
 **Possible causes:**
-1. **xrpl-monitor service not running**
+1. **xrpl-monitor container not running**
    ```bash
-   sudo systemctl status xrpl-monitor
-   sudo systemctl start xrpl-monitor
+   docker ps | grep xrpl-monitor
+   docker logs xrpl-monitor
+
+   # If not running, start it:
+   docker compose up -d xrpl-monitor
    ```
 
 2. **Prometheus not scraping metrics**
-   - Check Prometheus targets: http://localhost:9090/targets
-   - Verify scrape config includes `localhost:9091`
+   - Check Prometheus targets: http://localhost:<prometheus-port>/targets
+   - Verify scrape config includes correct monitor port (check `prometheus.yml`)
+   - Check: `docker logs xrpl-dashboard-prometheus`
 
 3. **Metric name incorrect**
-   - Check available metrics: `curl http://localhost:9091/metrics`
+   - Check available metrics: `curl http://localhost:<monitor-port>/metrics`
+   - Default monitor port is 9094 (check your `config.yml`)
    - Verify spelling in query
 
 4. **Time range issue**

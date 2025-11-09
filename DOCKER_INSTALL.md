@@ -2,6 +2,8 @@
 
 This guide walks you through installing Docker and Docker Compose on Ubuntu, step by step.
 
+**Note:** The XRPL Validator Dashboard installer (`./install.sh`) automates this entire process in Part 1. This guide is provided for reference or manual installation.
+
 ## What is Docker?
 
 Docker is a platform that runs applications in isolated containers. The XRPL Validator Dashboard uses Docker to run:
@@ -224,13 +226,19 @@ Then follow the installation steps above.
 
 Once Docker is installed and verified, you're ready to install the XRPL Validator Dashboard!
 
-Return to [README.md](README.md) and continue with:
+**Important:** Log out and log back in first to activate Docker group permissions.
+
+Then continue with:
 
 ```bash
 git clone https://github.com/realgrapedrop/xrpl-validator-dashboard.git
 cd xrpl-validator-dashboard
-python3 setup.py
+./install.sh
 ```
+
+The installer will detect that Docker is already installed (Part 1 complete) and proceed directly to Part 2 (Dashboard Setup).
+
+For detailed installation instructions, see: [docs/INSTALL.md](docs/INSTALL.md)
 
 ---
 

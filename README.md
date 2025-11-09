@@ -43,45 +43,46 @@ Running the entire dashboard adds negligible load to your system:
 
 ## Features
 
-- 🎯 **One-Command Setup** - Interactive wizard handles everything automatically
+- 🎯 **One-Command Setup** - Automated installation with `./install.sh`
 - 📊 **Real-time Monitoring** - 3-second polling captures rapid state transitions
 - 🐳 **Self-Contained** - Grafana, Prometheus, and metrics exporter in one package
-- 🔧 **Smart Configuration** - Auto-detects validator, checks ports, configures services
+- 🔧 **Smart Configuration** - Auto-detects rippled (Docker or native), checks ports, configures services
 - 📈 **Pre-built Dashboard** - Production-ready Grafana dashboard with 40+ metrics
-- 🚀 **Systemd Integration** - Run as background service with automatic startup
-- 🧹 **Easy Cleanup** - One-command removal of all services and data
+- 🔄 **Automatic Updates** - Containerized monitor with host networking
+- 🧹 **Easy Cleanup** - One-command removal with `./uninstall.sh`
 - ⚡ **Fast Deployment** - From zero to dashboard in under 5 minutes
 
 ## What You Get
 
-The setup wizard (`setup.py`) automatically creates and configures:
+The installation automatically creates and configures:
 
 **Docker Containers:**
-- **Grafana** (port 3003) - Dashboard UI with beautiful visualizations
-- **Prometheus** (port 9092) - Time-series database with 30-day retention
-- **Node Exporter** (port 9102) - System metrics (CPU, RAM, Disk, Network)
-
-**Systemd Service:**
-- **XRPL Monitor** (fast_poller.py) - Polls rippled every 3 seconds, exports metrics on port 9094
+- **Grafana** - Dashboard UI with beautiful visualizations
+- **Prometheus** - Time-series database with 30-day retention
+- **Node Exporter** - System metrics (CPU, RAM, Disk, Network)
+- **XRPL Monitor** - Polls rippled every 3 seconds, exports metrics
 
 **Local Storage:**
 - **SQLite Database** (`data/monitor.db`) - Historical data and validation tracking
 - **Alert Logs** (`data/alerts.log`) - State changes and validation issues
 
+**Note:** All services run in Docker containers using host networking mode to avoid firewall issues (especially on OCI).
+
 ### Why Dedicated Services?
 
 **This dashboard uses its own Prometheus and Grafana instances** rather than sharing with existing monitoring infrastructure. Here's why:
 
-✅ **Simplicity** - No configuration conflicts with existing monitoring
-✅ **Isolation** - Dashboard issues won't affect other services
-✅ **Clean Uninstall** - One command removes everything, no orphaned data
-✅ **Port Flexibility** - Setup wizard detects conflicts and suggests alternatives
-✅ **Minimal Overhead** - Dedicated instances add only ~280 MB RAM and ~1% CPU
+- ✅ **Simplicity** - No configuration conflicts with existing monitoring
+- ✅ **Isolation** - Dashboard issues won't affect other services
+- ✅ **Clean Uninstall** - One command removes everything, no orphaned data
+- ✅ **Port Flexibility** - Setup wizard detects conflicts and suggests alternatives
+- ✅ **Minimal Overhead** - Dedicated instances add only ~280 MB RAM and ~1% CPU
 
 **Resource footprint per container:**
 - Grafana: ~100 MB RAM, 0.2% CPU, 1GB limit
 - Prometheus: ~100 MB RAM, 0.3% CPU, 2GB limit
 - Node Exporter: ~30 MB RAM, <0.1% CPU, 128MB limit
+- XRPL Monitor: ~50 MB RAM, <0.1% CPU, 256MB limit
 
 If you already run Prometheus elsewhere, the ~280 MB overhead is negligible on validator servers (typically 16-32GB RAM). The benefit of simplified management far outweighs the small resource cost.
 
@@ -91,12 +92,12 @@ If you already run Prometheus elsewhere, the ~280 MB overhead is negligible on v
 
 - **Docker** (v20.10+) - Container runtime
 - **Docker Compose** (v2.0+) - Container orchestration
-- **Python 3.6+** - For setup wizard and monitor service
+- **Python 3.6+** - For setup wizard
 - **pip3** - Python package manager
 
 ### Required Services
 
-- **XRPL Validator (rippled)** running in Docker container
+- **XRPL Node (rippled)** - Running in Docker container OR as native installation
 
 ### Quick Check
 
@@ -106,15 +107,18 @@ python3 --version  # Should be 3.6+
 docker --version   # Should be 20.10+
 docker compose version  # Should be v2.0+
 
-# Verify rippled is running
+# Verify rippled is running (Docker)
 docker ps | grep rippled
+
+# OR verify rippled is running (Native)
+systemctl status rippled
 ```
 
-### Installing Docker (If Needed)
+### Installing Prerequisites
 
-**New to Docker?** We've got you covered!
+**New to Docker?** See our installation guide:
 
-- **Ubuntu/Debian:** See our step-by-step guide: [DOCKER_INSTALL.md](DOCKER_INSTALL.md)
+- **Ubuntu/Debian:** [Installation Guide - Part 1](docs/INSTALL.md#part-1-prerequisites)
 - **Other systems:** Official Docker documentation: https://docs.docker.com/engine/install/
 
 **Note:** Python is typically pre-installed on Ubuntu/Debian. If not: `sudo apt install python3 python3-pip`
@@ -161,125 +165,341 @@ If you run this dashboard on a **standalone/stock rippled node** (non-validator)
 
 ## Quick Start
 
-### 1. Clone Repository
+See detailed installation guides:
+- **[Installation Guide](docs/INSTALL.md)** - Complete step-by-step instructions for Docker and Native rippled
+
+### Summary
 
 ```bash
+# 1. Clone repository
 git clone https://github.com/realgrapedrop/xrpl-validator-dashboard.git
 cd xrpl-validator-dashboard
+
+# 2. Run installation (handles prerequisites and dashboard setup)
+./install.sh
+
+# 3. Access dashboard
+# Open browser to http://localhost:<port shown in setup>
+# Login: admin / admin
 ```
 
-### 2. Run Setup Wizard
-
-```bash
-python3 setup.py
-```
-
-The wizard will guide you through:
-- ✓ Prerequisite checks (Docker, Python, pip)
-- ✓ Rippled container detection and connectivity test
-- ✓ Port availability and conflict resolution
-- ✓ Python dependency installation
-- ✓ Configuration file generation
-- ✓ Pre-flight validation
-- ✓ Optional automatic service deployment
-
-### 3. Choose Deployment
-
-The wizard will ask: **"Automatically start services and import dashboard?"**
-
-**Option A: Automatic (Recommended)**
-- ✓ Starts Docker services (Grafana + Prometheus)
-- ✓ Installs and starts systemd service
-- ✓ Imports dashboard automatically
-- ✓ Sets dashboard as home page
-
-**Option B: Manual**
-- Shows clear step-by-step commands to run
-- Useful for custom deployments or troubleshooting
-
-### 4. Access Dashboard
-
-After automatic setup completes, the wizard shows:
-
-```
-================================================================================================
-All Done! Everything is Running
-================================================================================================
-
-Services running:
-  Grafana:    http://localhost:3003
-  Prometheus: http://localhost:9092
-  Metrics:    http://localhost:9094/metrics
-
-You are ready to view your dashboard:
-  1. Go to http://localhost:3003
-  2. Login with username: admin / password: admin
-  3. You will be prompted to change the password
-  4. Dashboard opens automatically with all metrics ready!
-
-⏳ Note: 24-hour metrics panels (Agreements %, Agreements, Missed) will
-        populate after 5-10 minutes as historical data is collected.
-```
+**That's it!** The installer handles everything automatically.
 
 ## Architecture
 
+The dashboard supports both Docker and Native rippled installations:
+
+### Docker Mode Architecture
+
 ```
 ┌──────────────────────────────────────────────────┐
-│     XRPL Validator (rippled) - Docker            │
-│     Listens on: localhost:5005 (admin API)       │
+│   XRPL Validator (rippled) - Docker Container    │
+│   Exposes: Admin RPC via docker exec             │
 └──────────────────────────────────────────────────┘
                       │
-                      │ Docker exec commands
+                      │ docker exec rippled server_info
                       ▼
 ┌──────────────────────────────────────────────────┐
-│     XRPL Monitor Service (fast_poller.py)        │
-│     - Polls every 3 seconds                      │
-│     - Tracks validator state transitions         │
-│     - Monitors validation performance            │
-│     - Exports Prometheus metrics (port 9094)     │
-│     - Stores data in SQLite                      │
+│   XRPL Monitor (Containerized - Host Network)    │
+│   - Polls every 3 seconds via docker exec        │
+│   - Tracks validator state transitions           │
+│   - Exports Prometheus metrics (port 9094)       │
+│   - Stores data in SQLite                        │
 └──────────────────────────────────────────────────┘
                       │
                       │ HTTP scrape (every 5s)
                       ▼
 ┌──────────────────────────────────────────────────┐
-│     Prometheus (port 9092)                       │
-│     - Time-series database                       │
-│     - 30-day retention                           │
-│     - Scrapes node-exporter for system metrics   │
+│   Prometheus (Containerized - Host Network)      │
+│   - Time-series database (port 9092)             │
+│   - 30-day retention                             │
+│   - Scrapes monitor + node-exporter              │
 └──────────────────────────────────────────────────┘
                       │
                       │ PromQL queries
                       ▼
 ┌──────────────────────────────────────────────────┐
-│     Grafana (port 3003)                          │
-│     - Pre-configured dashboard                   │
-│     - Auto-imports on setup                      │
-│     - Real-time visualization                    │
+│   Grafana (Containerized - Host Network)         │
+│   - Pre-configured dashboard (port 3003)         │
+│   - Auto-imports on setup                        │
+│   - Real-time visualization                      │
 └──────────────────────────────────────────────────┘
 ```
 
+### Native Mode Architecture
+
+```
+┌──────────────────────────────────────────────────┐
+│   XRPL Validator (rippled) - Native Install      │
+│   Listens on: localhost:5015 (HTTP RPC)          │
+└──────────────────────────────────────────────────┘
+                      │
+                      │ HTTP JSON-RPC (POST localhost:5015)
+                      ▼
+┌──────────────────────────────────────────────────┐
+│   XRPL Monitor (Containerized - Host Network)    │
+│   - Polls every 3 seconds via HTTP API           │
+│   - Tracks validator state transitions           │
+│   - Exports Prometheus metrics (port 9094)       │
+│   - Stores data in SQLite                        │
+└──────────────────────────────────────────────────┘
+                      │
+                      │ (Same as Docker mode from here)
+                      ▼
+              Prometheus → Grafana
+```
+
+**Key Difference:** Docker mode uses `docker exec` commands, Native mode uses HTTP JSON-RPC API.
+
+**Why Host Networking?** All containers use `network_mode: "host"` to bypass Docker bridge networking and avoid firewall issues (especially critical on Oracle Cloud Infrastructure).
+
 ## Port Configuration
 
-The dashboard uses non-conflicting ports:
+The dashboard uses the following default ports (auto-detected and configurable):
 
-| Service | Port | Purpose | Access |
-|---------|------|---------|--------|
-| Grafana | 3003 | Dashboard UI | http://localhost:3003 |
-| Prometheus | 9092 | Metrics storage | http://localhost:9092 |
-| Node Exporter | 9102 | System metrics | http://localhost:9102/metrics |
-| XRPL Monitor | 9094 | Validator metrics | http://localhost:9094/metrics |
+| Service | Default Port | Purpose | Access |
+|---------|-------------|---------|--------|
+| Grafana | 3001-3003 | Dashboard UI | http://localhost:PORT |
+| Prometheus | 9090-9092 | Metrics storage | http://localhost:PORT |
+| Node Exporter | 9100-9102 | System metrics | http://localhost:PORT/metrics |
+| XRPL Monitor | 9094 | Validator metrics | http://localhost:PORT/metrics |
+
+**Note:** The installer detects available ports automatically. Your actual ports may differ if defaults are in use.
 
 **Smart Port Detection:**
-- Wizard checks if ports are in use
-- Shows existing containers using those ports
+- Installer checks if ports are in use
+- Shows existing services using those ports
 - Suggests next available port automatically
 - Updates all configs consistently
+
+## Configuration
+
+### Main Config: `config.yaml`
+
+Generated automatically by installer. Example for **Native Mode**:
+
+```yaml
+monitoring:
+  poll_interval: 3
+  mode: native
+  rippled:
+    host: localhost
+    port: 5015
+
+prometheus:
+  enabled: true
+  port: 9094
+  host: 0.0.0.0
+
+database:
+  path: ./data/monitor.db
+
+logging:
+  level: INFO
+  file: ./logs/monitor.log
+```
+
+Example for **Docker Mode**:
+
+```yaml
+monitoring:
+  poll_interval: 3
+  mode: docker
+  rippled:
+    container_name: rippledvalidator
+
+prometheus:
+  enabled: true
+  port: 9094
+  host: 0.0.0.0
+
+database:
+  path: ./data/monitor.db
+
+logging:
+  level: INFO
+  file: ./logs/monitor.log
+```
+
+### Environment Variable Overrides
+
+You can override any config value with environment variables:
+
+```bash
+# Format: XRPL_<section>_<key> (uppercase, underscores)
+export XRPL_MONITORING_RIPPLED_HOST=192.168.1.100
+export XRPL_MONITORING_RIPPLED_PORT=5005
+export XRPL_PROMETHEUS_PORT=9095
+```
+
+Useful for containerized deployments where you can't easily edit config.yaml.
+
+### Docker Compose Config
+
+Automatically configured for your environment:
+- `docker-compose.yml` - Main service definitions
+- `compose/prometheus/prometheus.yml` - Prometheus scrape config
+- `compose/grafana/provisioning/` - Grafana data sources
+
+## Service Management
+
+All services run as Docker containers. No systemd service needed!
+
+### Check Status
+
+```bash
+# View all dashboard containers
+docker ps --filter name=xrpl-dashboard
+
+# Check specific container
+docker logs xrpl-dashboard-monitor
+docker logs xrpl-dashboard-grafana
+docker logs xrpl-dashboard-prometheus
+```
+
+### Control Services
+
+```bash
+# Start all services
+docker compose up -d
+
+# Stop all services
+docker compose down
+
+# Restart specific service
+docker restart xrpl-dashboard-monitor
+
+# View logs
+docker logs -f xrpl-dashboard-monitor
+```
+
+### Check Metrics Endpoint
+
+```bash
+curl http://localhost:9094/metrics | grep xrpl
+```
+
+## Cleanup & Removal
+
+The uninstall script removes all services and data:
+
+```bash
+./uninstall.sh
+```
+
+**What it does:**
+1. Stops and removes Docker containers
+2. Optionally removes Docker volumes (Prometheus & Grafana data)
+3. Optionally removes database and logs
+4. Optionally removes Docker Engine entirely
+
+**Safe defaults:**
+- Prompts before removing volumes
+- Prompts before removing database/logs
+- Press Enter for defaults, or choose custom options
+
+After cleanup, you can run `./install.sh` again for a fresh installation.
+
+## Directory Structure
+
+```
+xrpl-validator-dashboard/
+├── install.sh                  # Automated installer (Part 1 & 2)
+├── uninstall.sh                # Cleanup script
+├── config.yaml                 # Main configuration (generated)
+├── docker-compose.yml          # Container orchestration
+├── Dockerfile                  # Monitor container build
+├── requirements.txt            # Python dependencies
+├── src/                        # Python source code
+│   ├── collectors/             # Data collection
+│   │   └── fast_poller.py      # Main monitoring loop
+│   ├── exporters/              # Prometheus exporter
+│   ├── storage/                # Database layer
+│   ├── utils/                  # API clients & config
+│   └── alerts/                 # Alert handlers
+├── scripts/                    # Helper scripts
+│   ├── setup.py                # Interactive setup wizard (called by install.sh)
+│   └── import-dashboard.sh     # Manual dashboard import
+├── compose/                    # Docker service configs
+│   ├── grafana/                # Grafana settings & dashboard
+│   └── prometheus/             # Prometheus configuration
+├── data/                       # Runtime data (SQLite, created on install)
+├── logs/                       # Application logs (created on install)
+├── dashboards/                 # Dashboard JSON templates
+└── docs/                       # Documentation
+    └── INSTALL.md              # Detailed installation guide
+```
+
+## Advanced Usage
+
+### Manual Dashboard Import
+
+If the automatic import failed during setup:
+
+```bash
+./scripts/import-dashboard.sh
+```
+
+### Re-running Setup
+
+Safe to run multiple times:
+```bash
+./install.sh
+```
+
+The installer will:
+- Detect existing Docker installation
+- Detect existing rippled
+- Offer to reconfigure if needed
+- Update ports if conflicts detected
+- Preserve existing data
+
+### Database Queries
+
+Access historical data:
+
+```bash
+# View record count
+sqlite3 data/monitor.db "SELECT COUNT(*) FROM validator_metrics;"
+
+# Recent validator states
+sqlite3 data/monitor.db "SELECT datetime(timestamp, 'unixepoch'), server_state, ledger_seq FROM validator_metrics ORDER BY timestamp DESC LIMIT 10;"
+
+# Validation statistics
+sqlite3 data/monitor.db "SELECT * FROM validation_stats ORDER BY timestamp DESC LIMIT 5;"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Dashboard shows "No data"**
+- Wait 30-60 seconds for initial data collection
+- Check monitor is running: `docker logs xrpl-dashboard-monitor`
+- Check Prometheus targets: http://localhost:9092/targets (should show "UP")
+
+**2. Can't connect to rippled**
+- **Native mode:** Rippled HTTP RPC may have stuck connections. Restart: `sudo systemctl restart rippled`
+- **Docker mode:** Check container name is correct: `docker ps | grep rippled`
+
+**3. Port conflicts**
+- The installer detects these automatically
+- To manually check: `ss -tlnp | grep -E ':(3000|9090|9100|9094)'`
+
+**4. Dashboard import failed**
+- Run manually: `./scripts/import-dashboard.sh`
+- Ensure Grafana is running: `docker ps | grep grafana`
+
+**5. Validation metrics showing zero**
+- This is normal for non-validator nodes
+- See [Dashboard Compatibility](#dashboard-compatibility) section
+
+For more troubleshooting, see: [docs/INSTALL.md](docs/INSTALL.md)
 
 ## Dashboard Metrics
 
 ### Validator State Tracking
-- Current state (proposing, full, tracking, syncing, etc.)
+- Current state (proposing, full, tracking, syncing, connected, disconnected)
 - Time in current state
 - State transition history
 - State duration accounting
@@ -309,279 +529,6 @@ The dashboard uses non-conflicting ports:
 - Network I/O
 - Load factor
 
-## Configuration
-
-### Main Config: `config.yaml`
-
-Generated automatically by setup wizard:
-
-```yaml
-monitoring:
-  poll_interval: 3              # Seconds between polls
-  container_name: rippledvalidator  # Your rippled container
-
-prometheus:
-  enabled: true
-  port: 9094                    # Metrics export port
-  host: 0.0.0.0
-
-database:
-  path: ./data/monitor.db       # SQLite database
-
-logging:
-  level: INFO
-  file: ./logs/monitor.log
-```
-
-### Docker Compose Config
-
-Automatically configured for your environment:
-- `docker-compose.yml` - Main service definitions
-- `compose/prometheus/prometheus.yml` - Prometheus scrape config
-- `compose/grafana/provisioning/` - Grafana data sources
-
-## Service Management
-
-The monitor runs as a systemd service for reliability and automatic startup.
-
-### Check Status
-
-```bash
-sudo systemctl status xrpl-validator-dashboard
-```
-
-### View Logs
-
-```bash
-# Real-time logs
-sudo journalctl -u xrpl-validator-dashboard -f
-
-# Application log
-tail -f logs/monitor.log
-```
-
-### Control Service
-
-```bash
-# Start
-sudo systemctl start xrpl-validator-dashboard
-
-# Stop
-sudo systemctl stop xrpl-validator-dashboard
-
-# Restart
-sudo systemctl restart xrpl-validator-dashboard
-```
-
-### Check Metrics Endpoint
-
-```bash
-curl http://localhost:9094/metrics | grep xrpl
-```
-
-## Cleanup & Removal
-
-The cleanup script removes all services and data:
-
-```bash
-./cleanup.sh
-```
-
-**What it does:**
-1. Stops and removes systemd service
-2. Stops and removes Docker containers
-3. Optionally removes Docker volumes (Prometheus & Grafana data)
-4. Optionally removes database and logs
-5. Waits for ports to fully release (15 seconds total)
-
-**Safe defaults:**
-- Prompts before removing volumes
-- Prompts before removing database/logs
-- Press Enter to remove, or 'n' to keep
-
-After cleanup, you can run `python3 setup.py` again for a fresh installation.
-
-## Directory Structure
-
-```
-xrpl-validator-dashboard/
-├── setup.py                    # Interactive setup wizard
-├── cleanup.sh                  # Cleanup script
-├── install-service.sh          # Systemd service installer
-├── config.yaml                 # Main configuration (generated)
-├── docker-compose.yml          # Container orchestration
-├── src/                        # Python source code
-│   ├── collectors/             # Data collection
-│   │   └── fast_poller.py      # Main monitoring loop
-│   ├── exporters/              # Prometheus exporter
-│   ├── storage/                # Database layer
-│   ├── utils/                  # API clients & config
-│   └── alerts/                 # Alert handlers
-├── compose/                    # Docker service configs
-│   ├── grafana/                # Grafana settings & dashboard
-│   └── prometheus/             # Prometheus configuration
-├── data/                       # Runtime data (SQLite)
-├── logs/                       # Application logs
-└── dashboards/                 # Dashboard JSON templates
-```
-
-## Advanced Usage
-
-### Manual Service Installation
-
-If you skipped automatic setup:
-
-```bash
-# Start Docker services
-docker compose up -d
-
-# Install systemd service
-./install-service.sh
-
-# Verify everything is running
-docker compose ps
-sudo systemctl status xrpl-validator-dashboard
-curl http://localhost:9094/metrics
-```
-
-### Re-running Setup
-
-Safe to run multiple times:
-```bash
-python3 setup.py
-```
-
-The wizard will:
-- Detect existing configuration
-- Offer to reconfigure if needed
-- Update ports if conflicts detected
-- Preserve existing data
-
-### Custom Port Configuration
-
-If you need different ports, edit before setup:
-1. Edit `docker-compose.yml` - External port mappings
-2. Edit `config.yaml` - Metrics exporter port
-3. Run setup wizard to validate
-
-### Database Queries
-
-Access historical data:
-
-```bash
-# View record count
-sqlite3 data/monitor.db "SELECT COUNT(*) FROM validator_metrics;"
-
-# Recent validator states
-sqlite3 data/monitor.db "SELECT datetime(timestamp, 'unixepoch'), server_state, ledger_seq FROM validator_metrics ORDER BY timestamp DESC LIMIT 10;"
-
-# Validation statistics
-sqlite3 data/monitor.db "SELECT * FROM validation_stats ORDER BY timestamp DESC LIMIT 5;"
-```
-
-## Troubleshooting
-
-### Setup Wizard Issues
-
-**Python not found:**
-```bash
-sudo apt update
-sudo apt install python3 python3-pip
-```
-
-**Docker not found:**
-```bash
-# See: https://docs.docker.com/engine/install/
-```
-
-**Rippled container not detected:**
-```bash
-# Verify container is running
-docker ps | grep rippled
-
-# Test connectivity
-docker exec <container_name> rippled server_info
-```
-
-### Port Conflicts
-
-The wizard detects port conflicts automatically. If manual resolution needed:
-
-```bash
-# Find what's using a port
-sudo lsof -i :3003
-sudo netstat -tulpn | grep 3003
-
-# Kill process or change port in config
-```
-
-### Service Won't Start
-
-```bash
-# Check service status
-sudo systemctl status xrpl-validator-dashboard
-
-# View detailed logs
-sudo journalctl -u xrpl-validator-dashboard -n 50
-
-# Check Python dependencies
-pip3 list | grep prometheus
-```
-
-### No Metrics in Dashboard
-
-1. **Check monitor is running:**
-   ```bash
-   sudo systemctl status xrpl-validator-dashboard
-   curl http://localhost:9094/metrics
-   ```
-
-2. **Check Prometheus is scraping:**
-   - Visit http://localhost:9092/targets
-   - Look for `xrpl-monitor` job
-   - Should show "UP" status
-
-3. **Check Grafana datasource:**
-   - Grafana → Settings → Data Sources → Prometheus
-   - Test connection
-   - Verify URL: `http://prometheus:9090`
-
-### Dashboard Variables Not Working
-
-The setup wizard automatically configures dashboard variables. If manually importing:
-
-1. Ensure nodename matches your container
-2. Check instance port matches Node Exporter port (9102)
-3. Refresh dashboard variables (Dashboard settings → Variables)
-
-## Development
-
-### Project Structure
-
-See [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for detailed architecture documentation.
-
-### Running Tests
-
-```bash
-# Test rippled API connectivity
-python3 tests/manual/test_api.py
-
-# Test database operations
-python3 tests/manual/test_database.py
-
-# 5-minute integration test
-python3 tests/manual/test_poller_5min.py
-```
-
-### Customizing the Dashboard
-
-1. Access Grafana at http://localhost:3003
-2. Navigate to dashboard
-3. Click panel title → Edit
-4. Modify queries, visualizations, thresholds
-5. Save dashboard
-6. Export JSON to `dashboards/` directory
-
 ## Tips & Best Practices
 
 ### Optimal Refresh Rate
@@ -609,7 +556,7 @@ The monitor service automatically detects and logs alerts for:
 
 **Alert Storage:**
 - Written to `data/alerts.log` with timestamps
-- Displayed in service logs: `sudo journalctl -u xrpl-validator-dashboard -f`
+- Displayed in container logs: `docker logs xrpl-dashboard-monitor`
 - Color-coded output with emojis for easy identification
 
 **View Recent Alerts:**
@@ -620,8 +567,8 @@ tail -20 data/alerts.log
 # Watch alerts in real-time
 tail -f data/alerts.log
 
-# Service logs (includes alerts + metrics)
-sudo journalctl -u xrpl-validator-dashboard -f
+# Container logs (includes alerts + metrics)
+docker logs -f xrpl-dashboard-monitor
 ```
 
 **Optional: Grafana Alerts**
@@ -662,14 +609,15 @@ Contributions are welcome! Please:
 ### Areas for Contribution
 - Additional metrics and panels
 - Dashboard improvements
-- Setup wizard enhancements
+- Installation wizard enhancements
 - Documentation updates
 - Bug fixes and optimizations
 
 ## Support
 
-- **Documentation**: See [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for architecture details
-- **Dashboard Details**: See [GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md) for panel reference
+- **Installation Guide**: See [docs/INSTALL.md](docs/INSTALL.md) for step-by-step instructions
+- **Architecture Details**: See [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
+- **Dashboard Reference**: See [GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md)
 - **Issues**: https://github.com/realgrapedrop/xrpl-validator-dashboard/issues
 - **XRPL Documentation**: https://xrpl.org/docs.html
 - **Author**: [Grapedrop](https://xrp-validator.grapedrop.xyz) | [@realGrapedrop](https://x.com/realGrapedrop)
@@ -683,7 +631,7 @@ Contributions are welcome! Please:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ## Acknowledgments
 
