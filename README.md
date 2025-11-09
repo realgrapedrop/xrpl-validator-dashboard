@@ -104,17 +104,13 @@ If you already run Prometheus elsewhere, the ~280 MB overhead is negligible on v
 **Note:** If Docker or Python are missing, `./install.sh` (Part 1) will install them automatically. This check is optional.
 
 ```bash
-# Check software versions
+# Check software versions (optional - installer will install if missing)
 python3 --version  # Should be 3.6+
 docker --version   # Should be 20.10+
 docker compose version  # Should be v2.0+
-
-# Verify rippled is running (Docker)
-docker ps | grep rippled
-
-# OR verify rippled is running (Native)
-systemctl status rippled
 ```
+
+**Note:** You don't need to have your XRPL node running to start the installation. The installer will detect it automatically during Part 2, whether it's Docker or Native, local or remote.
 
 ### Installing Prerequisites
 
