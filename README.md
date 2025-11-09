@@ -1,6 +1,6 @@
 # XRPL Validator Dashboard
 
-A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) validator nodes with automated setup wizard.
+A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) validator nodes with automated setup wizard. Designed for Mainnet validators, also works for non-validator nodes (with limited validation metrics).
 
 **Created by:** [Grapedrop](https://xrp-validator.grapedrop.xyz) | [@realGrapedrop](https://x.com/realGrapedrop)
 
@@ -118,6 +118,46 @@ docker ps | grep rippled
 - **Other systems:** Official Docker documentation: https://docs.docker.com/engine/install/
 
 **Note:** Python is typically pre-installed on Ubuntu/Debian. If not: `sudo apt install python3 python3-pip`
+
+## Dashboard Compatibility
+
+### Designed For: Mainnet Validators
+
+This dashboard is **primarily designed for XRPL validator nodes on Mainnet** that actively participate in consensus and validation.
+
+### What Works on Different Node Types
+
+| Metric Category | Validator | Non-Validator | Testnet/Devnet |
+|----------------|-----------|---------------|----------------|
+| **Server Metrics** (CPU, RAM, Disk, Network) | ✅ Full | ✅ Full | ✅ Full |
+| **Node State & Uptime** | ✅ Full | ✅ Full | ✅ Full |
+| **Ledger Tracking** (Current Ledger, Age) | ✅ Full | ✅ Full | ✅ Full |
+| **Network Metrics** (Peers, Latency, Traffic) | ✅ Full | ✅ Full | ✅ Full |
+| **Validation Metrics** (Rate, Agreements) | ✅ Full | ⚠️ Always 0% | ✅ Full |
+| **Validator Pubkey** | ✅ Shows key | ⚠️ Shows "none" | ✅ Shows key |
+| **Consensus Metrics** (Proposers, Quorum) | ✅ Full | ✅ Full | ✅ Full |
+
+### Expected Behavior for Non-Validators
+
+If you run this dashboard on a **standalone/stock rippled node** (non-validator), the following panels will show **zero or "none"** - this is normal:
+
+**Always Zero/Empty:**
+- **Pubkey**: Shows "none"
+- **Validation Rate**: 0%
+- **Agreements % (1h & 24h)**: 0%
+- **Agreements (1h & 24h)**: 0
+- **Missed (1h & 24h)**: 0
+- **Validations Checked**: 0.0
+
+**Will Still Work:**
+- ✅ All server metrics (CPU, RAM, Disk, Network)
+- ✅ Server State (connected → syncing → tracking → full)
+- ✅ Ledger tracking (Current Ledger, Age, Ledgers/min)
+- ✅ Network metrics (Peers, Latency, Consensus time)
+- ✅ Network consensus view (Proposers, Quorum)
+- ✅ System performance metrics
+
+**Bottom Line:** The dashboard works on non-validators but validation-specific panels will be empty. This is expected and not an error.
 
 ## Quick Start
 
