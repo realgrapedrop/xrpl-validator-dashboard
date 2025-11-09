@@ -12,7 +12,7 @@ A comprehensive, self-contained monitoring dashboard for XRP Ledger (XRPL) valid
 
 ---
 
-**⚠️ Upgrading from an older version?** This is a complete rewrite with a modern Docker-based architecture. See **[MIGRATION.md](MIGRATION.md)** for upgrade instructions.
+**⚠️ Upgrading from an older version?** This is a complete rewrite with a modern Docker-based architecture. See **[MIGRATION.md](docs/MIGRATION.md)** for upgrade instructions.
 
 ---
 
@@ -626,8 +626,8 @@ Contributions are welcome! Please:
 ## Support
 
 - **Installation Guide**: See [docs/INSTALL.md](docs/INSTALL.md) for step-by-step instructions
-- **Architecture Details**: See [HOW_IT_WORKS.md](HOW_IT_WORKS.md)
-- **Dashboard Reference**: See [GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md)
+- **Architecture Details**: See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
+- **Dashboard Reference**: See [docs/GRAFANA_DASHBOARD.md](docs/GRAFANA_DASHBOARD.md)
 - **Issues**: https://github.com/realgrapedrop/xrpl-validator-dashboard/issues
 - **XRPL Documentation**: https://xrpl.org/docs.html
 - **Author**: [Grapedrop](https://xrp-validator.grapedrop.xyz) | [@realGrapedrop](https://x.com/realGrapedrop)

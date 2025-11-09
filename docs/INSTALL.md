@@ -627,8 +627,8 @@ docker exec xrpl-dashboard-grafana grafana-cli admin reset-admin-password newpas
 ### 5. Review Documentation
 
 - [README.md](../README.md) - Overview and quick reference
-- [HOW_IT_WORKS.md](../HOW_IT_WORKS.md) - Technical architecture details
-- [GRAFANA_DASHBOARD.md](../GRAFANA_DASHBOARD.md) - Dashboard customization guide
+- [HOW_IT_WORKS.md](HOW_IT_WORKS.md) - Technical architecture details
+- [GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md) - Dashboard customization guide
 
 ---
 

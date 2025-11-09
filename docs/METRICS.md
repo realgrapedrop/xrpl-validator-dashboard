@@ -564,8 +564,8 @@ Use this checklist to verify your validator is healthy:
 
 ## Related Documentation
 
-- **[GRAFANA_DASHBOARD.md](../GRAFANA_DASHBOARD.md)** - Detailed panel configuration and PromQL queries
-- **[HOW_IT_WORKS.md](../HOW_IT_WORKS.md)** - Architecture and data flow
+- **[GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md)** - Detailed panel configuration and PromQL queries
+- **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** - Architecture and data flow
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[TIPS.md](TIPS.md)** - Optimization and best practices
 

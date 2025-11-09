@@ -491,6 +491,6 @@ The XRPL Validator Dashboard is a **containerized monitoring solution** that:
 **Latency:** <10 seconds typical from rippled state change to dashboard update
 
 For more details, see:
-- [README.md](README.md) - Quick start and overview
-- [docs/INSTALL.md](docs/INSTALL.md) - Detailed installation guide
+- [README.md](../README.md) - Quick start and overview
+- [INSTALL.md](INSTALL.md) - Detailed installation guide
 - [GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md) - Dashboard panel reference
