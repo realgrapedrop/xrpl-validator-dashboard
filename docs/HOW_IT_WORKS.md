@@ -50,8 +50,8 @@ The dashboard uses a hybrid architecture:
 │  Prometheus (Docker container)               │
 │  network_mode: host                          │
 │  Port: 9090-9092 (auto-detected)             │
-│  - Scrapes xrpl-monitor on localhost:9094   │
-│  - Scrapes node-exporter on localhost:9100  │
+│  - Scrapes xrpl-monitor on localhost:9094    │
+│  - Scrapes node-exporter on localhost:9100   │
 │  - 15-day time-series retention              │
 └──────────────────────────────────────────────┘
                      │
