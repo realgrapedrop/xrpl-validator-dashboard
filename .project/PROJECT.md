@@ -663,6 +663,7 @@ To maintain clean git history and proper project ownership:
 ## Future Enhancements
 
 ### Planned
+- WebSocket ledger stream integration (hybrid approach for instant ledger notifications + reduced polling frequency)
 - Native rippled HTTP API support (eliminate Docker exec overhead)
 - Configurable SQLite retention policy
 - Additional Grafana dashboards (network-wide view)
