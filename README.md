@@ -197,7 +197,11 @@ cd xrpl-validator-dashboard
 
 ## Architecture
 
-The dashboard supports both Docker and Native rippled installations:
+**Hybrid Architecture:** systemd service for monitor + Docker containers for infrastructure
+
+The dashboard uses a hybrid architecture combining the efficiency of systemd with the ease of Docker containers:
+- **XRPL Monitor:** systemd service (efficient, native Python process)
+- **Infrastructure:** Docker containers (Prometheus, Grafana, Node Exporter)
 
 ### Docker Mode Architecture
 
@@ -210,17 +214,18 @@ The dashboard supports both Docker and Native rippled installations:
                       │ docker exec rippled server_info
                       ▼
 ┌──────────────────────────────────────────────────┐
-│   XRPL Monitor (Containerized - Host Network)    │
+│   XRPL Monitor (systemd service)                 │
 │   - Polls every 3 seconds via docker exec        │
 │   - Tracks validator state transitions           │
 │   - Exports Prometheus metrics (port 9094)       │
 │   - Stores data in SQLite                        │
+│   - Service: xrpl-monitor.service                │
 └──────────────────────────────────────────────────┘
                       │
                       │ HTTP scrape (every 5s)
                       ▼
 ┌──────────────────────────────────────────────────┐
-│   Prometheus (Containerized - Host Network)      │
+│   Prometheus (Docker - Host Network)             │
 │   - Time-series database (port 9092)             │
 │   - 30-day retention                             │
 │   - Scrapes monitor + node-exporter              │
@@ -229,7 +234,7 @@ The dashboard supports both Docker and Native rippled installations:
                       │ PromQL queries
                       ▼
 ┌──────────────────────────────────────────────────┐
-│   Grafana (Containerized - Host Network)         │
+│   Grafana (Docker - Host Network)                │
 │   - Pre-configured dashboard (port 3003)         │
 │   - Auto-imports on setup                        │
 │   - Real-time visualization                      │
@@ -247,11 +252,12 @@ The dashboard supports both Docker and Native rippled installations:
                       │ HTTP JSON-RPC (POST localhost:5015)
                       ▼
 ┌──────────────────────────────────────────────────┐
-│   XRPL Monitor (Containerized - Host Network)    │
+│   XRPL Monitor (systemd service)                 │
 │   - Polls every 3 seconds via HTTP API           │
 │   - Tracks validator state transitions           │
 │   - Exports Prometheus metrics (port 9094)       │
 │   - Stores data in SQLite                        │
+│   - Service: xrpl-monitor.service                │
 └──────────────────────────────────────────────────┘
                       │
                       │ (Same as Docker mode from here)
@@ -261,7 +267,10 @@ The dashboard supports both Docker and Native rippled installations:
 
 **Key Difference:** Docker mode uses `docker exec` commands, Native mode uses HTTP JSON-RPC API.
 
-**Why Host Networking?** All containers use `network_mode: "host"` to bypass Docker bridge networking and avoid firewall issues (especially critical on Oracle Cloud Infrastructure).
+**Why Hybrid Architecture?**
+- **systemd monitor:** Lower resource overhead (0.1% CPU, 30 MB RAM), better logging (journalctl), native process management
+- **Docker infrastructure:** Easy deployment and updates for Prometheus/Grafana stack
+- **Host networking:** Docker containers use `network_mode: "host"` to bypass bridge networking and avoid firewall issues (critical on Oracle Cloud Infrastructure)
 
 ## Port Configuration
 

@@ -6,8 +6,8 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
 
 **Key Design Principles:**
 - **Non-invasive**: Read-only access via Docker exec or HTTP JSON-RPC, zero impact on validator
-- **Real-time**: 5-second polling captures rapid state transitions
-- **Containerized**: All components run in Docker with host networking
+- **Real-time**: 3-second polling captures rapid state transitions
+- **Hybrid Architecture**: systemd monitor (efficient) + Docker infrastructure (easy management)
 - **Flexible**: Supports both Docker and Native rippled installations
 - **Auto-configured**: Installer detects available ports and rippled setup
 
@@ -15,7 +15,9 @@ The XRPL Validator Dashboard is a lightweight monitoring system that continuousl
 
 ## System Architecture
 
-The dashboard supports both Docker and Native rippled installations. All monitoring components run in Docker containers using host networking mode.
+The dashboard uses a hybrid architecture:
+- **XRPL Monitor:** systemd service (native Python process for efficiency)
+- **Infrastructure:** Docker containers (Prometheus, Grafana, Node Exporter)
 
 ### Docker Mode Architecture
 
@@ -31,11 +33,11 @@ The dashboard supports both Docker and Native rippled installations. All monitor
                      │
                      ▼
 ┌──────────────────────────────────────────────┐
-│  XRPL Monitor (Docker container)             │
-│  network_mode: host                          │
-│  Port: 9094 (auto-detected)                  │
+│  XRPL Monitor (systemd service)              │
+│  Service: xrpl-monitor.service               │
+│  Port: 9094                                  │
 │                                              │
-│  Every 5 seconds:                            │
+│  Every 3 seconds:                            │
 │  1. Poll rippled via docker exec             │
 │  2. Parse JSON response                      │
 │  3. Update Prometheus metrics                │
@@ -90,11 +92,11 @@ The dashboard supports both Docker and Native rippled installations. All monitor
                      │
                      ▼
 ┌──────────────────────────────────────────────┐
-│  XRPL Monitor (Docker container)             │
-│  network_mode: host                          │
-│  Port: 9094 (auto-detected)                  │
+│  XRPL Monitor (systemd service)              │
+│  Service: xrpl-monitor.service               │
+│  Port: 9094                                  │
 │                                              │
-│  Every 5 seconds:                            │
+│  Every 3 seconds:                            │
 │  1. Poll rippled via HTTP JSON-RPC           │
 │  2. Parse JSON response                      │
 │  3. Update Prometheus metrics                │
@@ -108,11 +110,10 @@ The dashboard supports both Docker and Native rippled installations. All monitor
 
 **Key Difference:** Docker mode uses `docker exec` commands, Native mode uses HTTP JSON-RPC API.
 
-**Why Host Networking?**
-- All containers use `network_mode: "host"` to bypass Docker bridge networking
-- Avoids firewall issues (critical on Oracle Cloud Infrastructure)
-- Allows containers to communicate via localhost
-- No port mapping needed (containers use host ports directly)
+**Why Hybrid Architecture?**
+- **systemd monitor:** Lower resource overhead (0.1% CPU, 30 MB RAM), better logging (journalctl), native process management
+- **Docker infrastructure:** Easy deployment and updates for Prometheus/Grafana stack
+- **Host networking:** Docker containers use `network_mode: "host"` to bypass Docker bridge networking, avoiding firewall issues (critical on Oracle Cloud Infrastructure)
 
 **Port Auto-Detection:**
 - Installer scans for available ports in ranges (e.g., 3001-3003 for Grafana)
@@ -314,12 +315,54 @@ rate(xrpl_validations_checked_total[5m]) * 60
 
 ## Service Management
 
+### XRPL Monitor (systemd service)
+
+The XRPL Monitor runs as a systemd service for efficiency and native integration.
+
+**Check Status:**
+```bash
+# View service status
+systemctl status xrpl-monitor.service
+
+# Check if service is active
+systemctl is-active xrpl-monitor
+```
+
+**View Logs:**
+```bash
+# Monitor logs (follow mode)
+journalctl -u xrpl-monitor.service -f
+
+# View last 100 lines
+journalctl -u xrpl-monitor.service -n 100
+
+# View logs since today
+journalctl -u xrpl-monitor.service --since today
+```
+
+**Restart Service:**
+```bash
+# Restart monitor
+sudo systemctl restart xrpl-monitor.service
+
+# Stop monitor
+sudo systemctl stop xrpl-monitor.service
+
+# Start monitor
+sudo systemctl start xrpl-monitor.service
+```
+
+**Service Configuration:**
+- **Auto-restart policy**: Automatic restart on failure
+- **Start on boot**: Enabled by default
+- **User**: Runs as system user (not root)
+- **Logs**: Managed by systemd journal (journalctl)
+
 ### Docker Container Management
 
-All monitoring components run as Docker containers managed by Docker Compose. The containers auto-start on boot and auto-restart on failure.
+Infrastructure components run as Docker containers managed by Docker Compose.
 
 **Container Names:**
-- `xrpl-monitor` - XRPL metrics collector
 - `xrpl-dashboard-prometheus` - Metrics storage
 - `xrpl-dashboard-grafana` - Dashboard UI
 - `xrpl-dashboard-node-exporter` - System metrics
@@ -330,30 +373,27 @@ All monitoring components run as Docker containers managed by Docker Compose. Th
 docker ps
 
 # View specific container
-docker ps | grep xrpl-monitor
+docker ps | grep xrpl-dashboard
 ```
 
 **View Logs:**
 ```bash
-# Monitor logs (follow mode)
-docker logs -f xrpl-monitor
-
-# View last 100 lines
-docker logs --tail 100 xrpl-monitor
-
 # View Grafana logs
 docker logs -f xrpl-dashboard-grafana
 
 # View Prometheus logs
 docker logs -f xrpl-dashboard-prometheus
+
+# View Node Exporter logs
+docker logs -f xrpl-dashboard-node-exporter
 ```
 
 **Restart Services:**
 ```bash
 # Restart specific container
-docker restart xrpl-monitor
+docker restart xrpl-dashboard-grafana
 
-# Restart all monitoring containers
+# Restart all Docker containers
 docker compose restart
 
 # Stop all
@@ -377,11 +417,11 @@ docker compose up -d
 
 | Component | CPU | Memory | Disk I/O | Network |
 |-----------|-----|--------|----------|---------|
-| XRPL Monitor | 0.3-0.5% | 50-80 MB | minimal | 10 KB/s |
-| Prometheus | 0.3-0.5% | 150-200 MB | 10-20 KB/s | 5 KB/s |
-| Grafana | 0.2-0.4% | 100-150 MB | minimal | 5 KB/s |
-| Node Exporter | 0.1% | 10-20 MB | minimal | 2 KB/s |
-| **Total** | **~1-2%** | **~310-450 MB** | **~10-20 KB/s** | **~22 KB/s** |
+| XRPL Monitor (systemd) | 0.1% | 30 MB (RSS) | minimal | 10 KB/s |
+| Prometheus (Docker) | 0.3-0.5% | 150-200 MB | 10-20 KB/s | 5 KB/s |
+| Grafana (Docker) | 0.2-0.4% | 100-150 MB | minimal | 5 KB/s |
+| Node Exporter (Docker) | 0.1% | 10-20 MB | minimal | 2 KB/s |
+| **Total** | **~0.7-1.1%** | **~290-400 MB** | **~10-20 KB/s** | **~22 KB/s** |
 
 **Validator impact:** Effectively zero - all monitoring is read-only
 
