@@ -379,10 +379,9 @@ if [ "$REMOVE_DOCKER" = true ] || [ "$REMOVE_SERVICE" = true ]; then
         echo ""
         echo -e "2. To reinstall:"
         echo -e "   ${YELLOW}./install.sh${NC}"
-        echo -e "   ${YELLOW}python3 setup.py${NC}"
     else
         echo -e "To restart the dashboard:"
-        echo -e "   ${YELLOW}python3 setup.py${NC}"
+        echo -e "   ${YELLOW}./install.sh${NC}"
     fi
     echo ""
 fi
