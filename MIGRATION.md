@@ -6,8 +6,8 @@ This guide is for users upgrading from the **old systemd-based version** to the 
 
 The dashboard has been completely rewritten with a modern architecture:
 
-| v1 | v2.0 |
-|----|------|
+| v1.0 | v2.0 |
+|------|------|
 | Manual port configuration | Auto port detection |
 | Installation required more manual effort | Auto-install in easy two steps |
 | Docker manual installation | Docker optional auto-install during setup |
