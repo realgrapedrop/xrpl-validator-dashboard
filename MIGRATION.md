@@ -6,13 +6,13 @@ This guide is for users upgrading from the **old systemd-based version** to the 
 
 The dashboard has been completely rewritten with a modern architecture:
 
-| Old Version | New GA Version |
-|-------------|----------------|
-| Systemd service | Docker Compose containers |
-| SQLite database | Prometheus time-series DB |
-| Manual port configuration | Auto-detection with smart defaults |
-| Complex setup | One-command installation |
-| Limited monitoring | Full metrics with 30-day retention |
+| v1 | v2.0 |
+|----|------|
+| Manual port configuration | Auto port detection |
+| Installation required more manual effort | Auto-install in easy two steps |
+| Docker manual installation | Docker optional auto-install during setup |
+| Uninstallation basic, non-interactive | Prompted uninstall removes individual components step-by-step |
+| Used Docker for Grafana dashboard | Uses Docker best practice variables in dashboard |
 
 ## Migration Steps
 
