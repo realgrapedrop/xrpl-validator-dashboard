@@ -179,6 +179,22 @@ def find_rippled_containers() -> List[str]:
         print_warning(f"Could not list containers: {e}")
         return []
 
+def get_docker_rippled_version(container_name: str) -> str:
+    """Get rippled version from Docker container"""
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', container_name, 'rippled', '--version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode == 0:
+            return result.stdout.strip()
+        return "unknown"
+    except Exception:
+        return "unknown"
+
 def test_rippled_connection(container_name: str) -> Tuple[bool, Optional[dict]]:
     """Test connection to rippled via docker exec"""
     try:
@@ -587,7 +603,10 @@ def detect_rippled_unified() -> Optional[dict]:
     if has_docker:
         print_success(f"Docker rippled: {len(docker_containers)} container(s) found")
         for container in docker_containers:
+            version = get_docker_rippled_version(container)
             print_info(f"  • {container}")
+            if version != "unknown":
+                print_info(f"    Version: {version}")
         modes.append(('docker', docker_containers, None))
         print("")
 
