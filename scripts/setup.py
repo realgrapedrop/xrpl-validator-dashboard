@@ -595,7 +595,20 @@ def detect_rippled_unified() -> Optional[dict]:
     if len(modes) == 2:
         print_info("Multiple rippled installations detected!")
         print("")
-        choice = ask_input("Which would you like to monitor? (native/docker)", "native").lower()
+
+        # Smart default: prefer running installation, prefer docker if both running
+        native_running = native_info['running'] if has_native else False
+        docker_running = len(docker_containers) > 0  # docker ps only shows running containers
+
+        if docker_running and not native_running:
+            default_choice = "docker"
+        elif native_running and not docker_running:
+            default_choice = "native"
+        else:
+            # Both running or both stopped - prefer docker (easier to monitor)
+            default_choice = "docker"
+
+        choice = ask_input("Which would you like to monitor? (native/docker)", default_choice).lower()
 
         if choice == "native":
             return configure_native_mode(modes[0][1], modes[0][2])
