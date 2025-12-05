@@ -188,7 +188,7 @@
                 "result": {
                   "color": "dark-red",
                   "index": 2,
-                  "text": "Disconnected"
+                  "text": "WebSocket: Disconnected"
                 }
               },
               "type": "special"
