@@ -2284,8 +2284,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "dark-red",
                 "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -2483,7 +2487,9 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "valueSize": 45
+        },
         "textMode": "auto",
         "wideLayout": true
       },
@@ -3021,8 +3027,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "dark-red",
                 "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -3083,7 +3093,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Ledgers your validator should have validated but missed in the last hour. Ideally 0. Even 1-2 missed validations warrant investigation if it's a pattern. High counts indicate connectivity, sync, or performance issues.\n\nNo thresholds - lower is always better.",
+      "description": "Ledgers your validator should have validated but missed in the last hour. Ideally 0. Even 1-2 missed validations warrant investigation if it's a pattern. High counts indicate connectivity, sync, or performance issues.\n\nThresholds: Green=0, Yellow=1-5, Red=>5",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3097,8 +3107,20 @@
             "mode": "absolute",
             "steps": [
               {
+                "color": "dark-red",
+                "value": null
+              },
+              {
                 "color": "green",
                 "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "dark-red",
+                "value": 5
               }
             ]
           },
@@ -3669,8 +3691,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "dark-red",
                 "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -3731,7 +3757,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Ledgers your validator should have validated but missed in the last 24 hours. Ideally near 0. Values >50 indicate persistent connectivity, sync, or performance issues requiring investigation.\n\nNo thresholds - lower is always better.",
+      "description": "Ledgers your validator should have validated but missed in the last 24 hours. Ideally near 0. Values >50 indicate persistent connectivity, sync, or performance issues requiring investigation.\n\nThresholds: Green=0-10, Yellow=11-50, Red=>50",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3744,8 +3770,20 @@
             "mode": "absolute",
             "steps": [
               {
+                "color": "dark-red",
+                "value": null
+              },
+              {
                 "color": "green",
                 "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 11
+              },
+              {
+                "color": "dark-red",
+                "value": 50
               }
             ]
           },

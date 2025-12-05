@@ -277,6 +277,28 @@ async def run_monitor(config: MonitorConfig):
 
         logger.info("✓ Connected to rippled WebSocket")
 
+        # Auto-detect validator key if not configured
+        # Do this BEFORE creating handlers so they have the correct key
+        if not config.our_validator_key:
+            try:
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        config.rippled_http_url,
+                        json={"method": "server_info", "params": [{}]},
+                        headers={"Content-Type": "application/json"}
+                    )
+                    if response.status_code == 200:
+                        data = response.json()
+                        result = data.get('result', {})
+                        if "info" in result and result["info"].get("pubkey_validator"):
+                            config.our_validator_key = result["info"]["pubkey_validator"]
+                            logger.info(f"✓ Auto-detected validator key: {config.our_validator_key}")
+                        else:
+                            logger.info("No validator key configured and rippled has no pubkey_validator - running in stock node mode")
+            except Exception as e:
+                logger.warning(f"Could not auto-detect validator key: {e}")
+
         # Initialize handlers
         logger.info("Initializing stream handlers...")
 
@@ -304,7 +326,7 @@ async def run_monitor(config: MonitorConfig):
         logger.info("Recovering validation history from VictoriaMetrics...")
         await validations_handler.recover_from_victoria_metrics()
 
-        # Get server info
+        # Get server info for logging
         server_info = await xrpl_client.get_server_info()
         if server_info:
             server_state = server_info.get('server_state', 'unknown')
@@ -312,30 +334,6 @@ async def run_monitor(config: MonitorConfig):
             logger.info(
                 f"✓ rippled info: state={server_state}, version={build_version}"
             )
-
-            # If validator key not configured, try to get it from server_info
-            # Use HTTP JSON-RPC endpoint which returns pubkey_validator more reliably
-            if not config.our_validator_key:
-                try:
-                    import httpx
-                    import json
-
-                    async with httpx.AsyncClient() as client:
-                        response = await client.post(
-                            config.rippled_http_url,
-                            json={"method": "server_info", "params": [{}]},
-                            headers={"Content-Type": "application/json"}
-                        )
-                        if response.status_code == 200:
-                            data = response.json()
-                            result = data.get('result', {})
-                            if "info" in result and "pubkey_validator" in result["info"]:
-                                config.our_validator_key = result["info"]["pubkey_validator"]
-                                logger.info(f"✓ Detected validator key: {config.our_validator_key}")
-                            else:
-                                logger.warning("pubkey_validator not found in server_info - validation metrics will not be collected")
-                except Exception as e:
-                    logger.warning(f"Could not fetch validator key from HTTP endpoint: {e}")
 
         # Initialize HTTP poller
         logger.info("Initializing HTTP poller...")
