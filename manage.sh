@@ -130,18 +130,17 @@ get_service_status() {
 }
 
 # Auto-detect rippled ports by scanning
+# Checks common rippled ports first, then scans all listening ports
 detect_rippled_ports() {
     local detected_http=""
     local detected_ws=""
 
-    # Get listening ports
-    local ports=$(ss -tuln 2>/dev/null | grep -E '127\.0\.0\.1:|localhost:|\*:' | awk '{print $5}' | grep -oE '[0-9]+$' | sort -nu)
+    # Common rippled ports to check first (native and Docker variants)
+    local common_http_ports="5005 5205 5105 5305"
+    local common_ws_ports="6006 6206 6106 6306"
 
-    # Scan for HTTP RPC
-    for port in $ports; do
-        case $port in
-            22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
-        esac
+    # Try common HTTP RPC ports first
+    for port in $common_http_ports; do
         if timeout 1 curl -s "http://localhost:$port" \
             -d '{"method":"server_info"}' \
             -H "Content-Type: application/json" 2>/dev/null | grep -q '"result"'; then
@@ -150,12 +149,9 @@ detect_rippled_ports() {
         fi
     done
 
-    # Scan for WebSocket
-    for port in $ports; do
-        case $port in
-            22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
-        esac
-        # Skip HTTP port we found
+    # Try common WebSocket ports first
+    for port in $common_ws_ports; do
+        # Skip if same as HTTP port we found
         if [ -n "$detected_http" ] && [[ "$detected_http" == *":$port" ]]; then
             continue
         fi
@@ -164,6 +160,43 @@ detect_rippled_ports() {
             break
         fi
     done
+
+    # If common ports didn't work, scan all listening ports
+    if [ -z "$detected_http" ] || [ -z "$detected_ws" ]; then
+        local ports=$(ss -tuln 2>/dev/null | grep -E '0\.0\.0\.0:|127\.0\.0\.1:|\*:' | awk '{print $5}' | grep -oE '[0-9]+$' | sort -nu)
+
+        # Scan for HTTP RPC if not found
+        if [ -z "$detected_http" ]; then
+            for port in $ports; do
+                case $port in
+                    22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
+                esac
+                if timeout 1 curl -s "http://localhost:$port" \
+                    -d '{"method":"server_info"}' \
+                    -H "Content-Type: application/json" 2>/dev/null | grep -q '"result"'; then
+                    detected_http="http://localhost:$port"
+                    break
+                fi
+            done
+        fi
+
+        # Scan for WebSocket if not found
+        if [ -z "$detected_ws" ]; then
+            for port in $ports; do
+                case $port in
+                    22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
+                esac
+                # Skip HTTP port we found
+                if [ -n "$detected_http" ] && [[ "$detected_http" == *":$port" ]]; then
+                    continue
+                fi
+                if timeout 1 curl -s "http://localhost:$port" 2>/dev/null | grep -qi "ripple"; then
+                    detected_ws="ws://localhost:$port"
+                    break
+                fi
+            done
+        fi
+    fi
 
     echo "$detected_http|$detected_ws"
 }
