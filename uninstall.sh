@@ -361,8 +361,16 @@ review_and_confirm() {
                 case "$confirm" in
                     yes)
                         # Select all components for removal
-                        CONTAINERS_TO_REMOVE=("${FOUND_CONTAINERS[@]%%|*}")
-                        VOLUMES_TO_REMOVE=("${FOUND_VOLUMES[@]%%|*}")
+                        # Extract container names (strip status after |)
+                        CONTAINERS_TO_REMOVE=()
+                        for item in "${FOUND_CONTAINERS[@]}"; do
+                            CONTAINERS_TO_REMOVE+=("${item%%|*}")
+                        done
+                        # Extract volume names (strip size after |)
+                        VOLUMES_TO_REMOVE=()
+                        for item in "${FOUND_VOLUMES[@]}"; do
+                            VOLUMES_TO_REMOVE+=("${item%%|*}")
+                        done
                         REMOVE_NETWORKS=true
                         REMOVE_FILES=true
 
