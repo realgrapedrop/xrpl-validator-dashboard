@@ -1,0 +1,39 @@
+# vmagent scrape configuration
+# Scrapes node-exporter, uptime-exporter, state-exporter and pushes to VictoriaMetrics
+#
+# NOTE: This is a TEMPLATE file. Do not edit scrape.yml directly.
+# Edit scrape.yml.template and run ./manage.sh update to regenerate.
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    cluster: 'xrpl-monitor-v3'
+    env: 'production'
+
+scrape_configs:
+  # Node Exporter - System metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:${NODE_EXPORTER_PORT}']
+        labels:
+          instance: 'xrpl-validator'
+          job: 'node'
+
+  # Uptime Exporter - rippled uptime metrics
+  - job_name: 'uptime-exporter'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['localhost:${UPTIME_EXPORTER_PORT}']
+        labels:
+          instance: 'validator'
+          job: 'rippled-uptime'
+
+  # State Exporter - Real-time rippled state metrics
+  - job_name: 'state-exporter'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:${STATE_EXPORTER_PORT}']
+        labels:
+          instance: 'validator'
+          job: 'rippled-state'

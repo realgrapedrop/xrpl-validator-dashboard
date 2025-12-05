@@ -1,0 +1,812 @@
+apiVersion: 1
+groups:
+- name: Network Monitoring
+  folder: XRPL Network Alerts
+  interval: 10s
+  rules:
+  - uid: df3s82tk4i29sb
+    title: Peer Count Dropping
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: (xrpl_peer_count offset 30s - xrpl_peer_count) / xrpl_peer_count offset 30s * 100
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 10
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 30s
+    annotations:
+      description: Peer count dropped by {{ $values.A.Value | printf "%.1f" }}% in last 30 seconds
+      summary: Peer count dropping - potential network issue
+    labels:
+      severity: warning
+  - uid: df3s82tkth1q8f
+    title: Peer Count Critical Drop
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: (xrpl_peer_count offset 30s - xrpl_peer_count) / xrpl_peer_count offset 30s * 100
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 30
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 30s
+    annotations:
+      description: Peer count dropped by {{ $values.A.Value | printf "%.1f" }}% in last 30 seconds - severe connectivity loss
+      summary: Critical peer count drop - immediate attention required
+    labels:
+      severity: critical
+  - uid: cf3s82tlfy4u8e
+    title: Network Connectivity Issues
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_peer_count_realtime
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 5
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: Alerting
+    execErrState: Error
+    for: 1m
+    annotations:
+      description: Peer count is {{ $values.A.Value }}, critically low (below 5)
+      summary: Critical network connectivity issue - validator nearly isolated
+    labels:
+      severity: critical
+- name: Critical Monitoring
+  folder: XRPL Critical Alerts
+  interval: 10s
+  rules:
+  - uid: cf3s7mtaisqo0c
+    title: Validation Agreement Below 90%
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: xrpl_validation_agreement_pct_24h
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 90
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: Alerting
+    execErrState: Error
+    for: 30s
+    annotations:
+      description: Validation agreement is {{ $values.A.Value | printf "%.1f" }}%, below 90% threshold
+      summary: Validator agreement rate degraded - check validator health
+    labels:
+      severity: critical
+  - uid: ef3s78scaqdc0e
+    title: Validator Not Proposing
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_state_realtime_value
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 5
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: Alerting
+    execErrState: Error
+    for: 10s
+    annotations:
+      description: Validator state is {{ $values.A.Value }} (expected 5=full or 7=proposing)
+      summary: Validator is not in proposing state
+    labels:
+      severity: critical
+  - uid: vf3s82tk9j30sb
+    title: Validator State Unhealthy
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_state_realtime_value
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 5
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: Alerting
+    execErrState: Error
+    for: 10s
+    annotations:
+      description: Server state value is {{ $values.A.Value }} (unhealthy, expected >= 5 for full/proposing)
+      summary: Validator server state is unhealthy
+    labels:
+      severity: critical
+  - uid: wf3s82tk0k41tc
+    title: WebSocket Unhealthy
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: xrpl_websocket_healthy
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: Alerting
+    execErrState: Error
+    for: 30s
+    annotations:
+      description: WebSocket connection to rippled is unhealthy (value={{ $values.A.Value }})
+      summary: WebSocket connection to rippled failed
+    labels:
+      severity: critical
+  - uid: xf3s82tk1l52ud
+    title: HTTP RPC Unhealthy
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: clamp_max(xrpl_validator_uptime_seconds > bool 0, 1)
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: Alerting
+    execErrState: Error
+    for: 30s
+    annotations:
+      description: HTTP RPC endpoint is not responding or returning valid data
+      summary: HTTP RPC connection to rippled failed
+    labels:
+      severity: critical
+- name: Performance Monitoring
+  folder: XRPL Performance Alerts
+  interval: 10s
+  rules:
+  - uid: af3s82th7mbr4b
+    title: High IO Latency (Trending Up)
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: xrpl_io_latency_ms
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 50
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 1m
+    annotations:
+      description: IO latency is {{ $values.A.Value }}ms, above 50ms threshold
+      summary: High IO latency detected - disk performance may be degraded
+    labels:
+      severity: warning
+  - uid: af3s82thz37k0b
+    title: High Load Factor
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_load_factor_realtime
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1000
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 1m
+    annotations:
+      description: Load factor is {{ $values.A.Value }}, above 1000 threshold
+      summary: High load factor detected - server under heavy load
+    labels:
+      severity: warning
+  - uid: cf3s82tit1zpca
+    title: Peer Latency Degradation
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_peer_latency_p90_realtime
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 500
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      description: P90 peer latency is {{ $values.A.Value }}ms, above 500ms threshold
+      summary: High peer latency detected - network performance degraded
+    labels:
+      severity: warning
+  - uid: af3s82tjfj2tcf
+    title: Memory Usage Critical
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 90
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 1m
+    annotations:
+      description: Memory usage is {{ $values.A.Value | printf "%.1f" }}%, above 90% threshold
+      summary: Critical memory usage - system may become unstable
+    labels:
+      severity: critical
+  - uid: bf3s82tk2m63ve
+    title: Disk Space Warning
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 85
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      description: Disk usage is {{ $values.A.Value | printf "%.1f" }}%, above 85% threshold
+      summary: Disk space running low - investigate and free up space
+    labels:
+      severity: warning
+  - uid: cf3s82tk3n74wf
+    title: Validator CPU High
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: xrpl_rippled_cpu_percent
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 90
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 10s
+    annotations:
+      description: Validator CPU usage is {{ $values.A.Value | printf "%.1f" }}%, above 90% threshold
+      summary: Validator CPU usage critical - rippled may be resource constrained
+    labels:
+      severity: warning

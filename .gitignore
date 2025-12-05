@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Logs
+*.log
+logs/*.log
+data/*.log
+
+# Data directories
+data/victoria-metrics/
+data/grafana/
+data/*.db
+data/*.sqlite
+
+# Docker
+.env
+docker-compose.override.yml
+
+# Grafana
+dashboards/provisioning/datasources/secrets.yaml
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+config/secrets.yaml
+config/local.yaml
+alerts/*.state
+
+# Generated config files (generated from .template files)
+config/vmagent/scrape.yml
+config/grafana/provisioning/datasources/datasource.yml
+
+# Documentation build
+docs/_build/
+
+# Coverage
+.coverage.*
+data/grafana-backups/
+
+# Backup files
+*.backup*
+
+# Dashboard template (not a backup, it's the source template)
+!config/grafana/provisioning/dashboards/*.template
+
+# Generated dashboard JSON (generated from .template by install.sh)
+config/grafana/provisioning/dashboards/xrpl-validator-main.json
+
+# Claude Code project files (local development context)
+.CLAUDE
+.project/

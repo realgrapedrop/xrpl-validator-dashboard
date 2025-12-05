@@ -1,0 +1,26 @@
+# XRPL Validator Dashboard v4.0 - Production Dependencies
+
+# XRPL Client Library
+xrpl-py>=4.3.0
+
+# Async HTTP client (included with xrpl-py but explicit for clarity)
+httpx>=0.28.0
+
+# Async HTTP server (for health endpoint)
+aiohttp>=3.9.0
+
+# WebSocket client (included with xrpl-py but explicit for clarity)
+websockets>=15.0
+
+# Configuration management
+pyyaml>=6.0
+
+# Logging
+python-json-logger>=2.0.7
+
+# Type hints for older Python versions
+typing-extensions>=4.13.0
+
+# System metrics (optional, for monitor self-monitoring)
+psutil>=5.9.0
+prometheus-client==0.20.0

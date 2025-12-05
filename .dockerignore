@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Development
+.claude/
+docs/dev/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Logs and data
+logs/
+data/
+*.log
+
+# Backups
+*.backup*
+_backup-dashboards/
+
+# Environment (use .env.example as template)
+.env
+
+# Test files
+tests/
+pytest.ini
+.coverage
+htmlcov/
+
+# Documentation source (README included in image for reference)
+docs/*.md
+
+# Build artifacts
+*.tar.gz
+*.zip

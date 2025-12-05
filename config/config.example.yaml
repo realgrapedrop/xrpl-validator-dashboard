@@ -1,0 +1,77 @@
+# XRPL Validator Dashboard v4.0 Configuration
+# Copy this file to config.yaml and customize for your environment
+
+# Rippled connection settings
+rippled:
+  # WebSocket API endpoint
+  websocket_url: "ws://localhost:6006"
+
+  # HTTP JSON-RPC API endpoint
+  http_url: "http://localhost:5005"
+
+  # Connection timeouts (seconds)
+  websocket_timeout: 30
+  http_timeout: 10
+
+  # Reconnection settings
+  reconnect_delay: 5  # seconds
+  max_reconnect_attempts: 0  # 0 = infinite
+
+# VictoriaMetrics settings
+victoria_metrics:
+  # VictoriaMetrics URL
+  url: "http://victoria-metrics:8428"
+
+  # Write batch size
+  batch_size: 100
+
+  # Flush interval (seconds)
+  flush_interval: 10
+
+  # Metric label (identifies this validator)
+  labels:
+    validator: "validator1"
+    instance: "main"
+
+# Monitoring settings
+monitoring:
+  # HTTP polling intervals (seconds)
+  poll_intervals:
+    server_info: 30
+    peers: 60
+    server_state: 300  # 5 minutes
+
+  # WebSocket streams to subscribe to
+  websocket_streams:
+    - ledger
+    - server
+    - peer_status
+    - consensus
+    - validations
+
+  # Validation tracking
+  validation_tracking:
+    enabled: true
+    track_history_hours: 24
+
+# Logging settings
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: json  # json or text
+  output: stdout  # stdout, stderr, or file path
+
+  # Log rotation (if using file output)
+  rotation:
+    max_size_mb: 100
+    max_files: 10
+
+# Alerting settings (future)
+alerting:
+  enabled: false
+  # Future: webhook, email, etc.
+
+# Health check settings
+health:
+  enabled: true
+  port: 8000
+  endpoint: /health

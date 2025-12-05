@@ -1,0 +1,1748 @@
+#!/bin/bash
+#
+# XRPL Monitor v3.0 - Management Script
+# Interactive service management with command-line support
+#
+# Version: 3.0.0
+# Last Updated: 2025-11-16
+#
+
+# Note: Don't use 'set -e' for interactive menu (allows errors to be handled gracefully)
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Service names
+SERVICES=("collector" "grafana" "victoria-metrics" "vmagent" "node-exporter" "uptime-exporter" "state-exporter" "autoheal")
+
+# Load ports from .env file (with defaults)
+if [ -f .env ]; then
+    source .env
+fi
+GRAFANA_PORT=${GRAFANA_PORT:-3000}
+VICTORIA_PORT=${VICTORIA_METRICS_PORT:-8428}
+NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT:-9100}
+UPTIME_EXPORTER_PORT=${UPTIME_EXPORTER_PORT:-9101}
+STATE_EXPORTER_PORT=${STATE_EXPORTER_PORT:-9102}
+COLLECTOR_PORT=${COLLECTOR_PORT:-8090}
+
+# Print functions
+print_status() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+# Banner
+show_banner() {
+    echo -e "${BLUE}"
+    cat << "EOF"
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║            XRPL Monitor v3.0 - Management Console             ║
+║               Real-time validator monitoring                  ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+EOF
+    echo -e "${NC}"
+}
+
+# Show help
+show_help() {
+    cat << EOF
+XRPL Monitor v3.0 - Management Script
+
+Usage:
+  ./manage.sh                    Interactive menu (default)
+  ./manage.sh [COMMAND] [SERVICE]
+
+Commands:
+  start                 Start all services
+  stop                  Stop all services
+  restart [SERVICE]     Restart all or specific service
+  status                Show service status
+  logs [SERVICE]        View logs (default: collector)
+  rebuild [SERVICE]     Rebuild and restart service
+  --help, -h            Show this help message
+
+Services:
+  collector, grafana, victoria-metrics, vmagent, node-exporter,
+  uptime-exporter, state-exporter, autoheal
+
+Examples:
+  ./manage.sh start                # Start all services
+  ./manage.sh restart collector    # Restart only collector
+  ./manage.sh logs                 # View collector logs (default)
+  ./manage.sh logs grafana         # View grafana logs
+
+Update:
+  To update after pulling latest code, run './manage.sh' and select
+  option 10 "Update Dashboard (after git pull)"
+
+EOF
+}
+
+# Get service status
+get_service_status() {
+    local service=$1
+    local container_name
+
+    # Map service names to container names
+    case "$service" in
+        "victoria-metrics")
+            container_name="xrpl-monitor-victoria"
+            ;;
+        "node-exporter")
+            container_name="xrpl-monitor-node-exporter"
+            ;;
+        "uptime-exporter")
+            container_name="xrpl-monitor-uptime-exporter"
+            ;;
+        *)
+            container_name="xrpl-monitor-${service}"
+            ;;
+    esac
+
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${container_name}$"; then
+        echo -e "${GREEN}Running${NC}"
+        return 0
+    elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${container_name}$"; then
+        echo -e "${RED}Stopped${NC}"
+        return 1
+    else
+        echo -e "${YELLOW}Not found${NC}"
+        return 2
+    fi
+}
+
+# Auto-detect rippled ports by scanning
+detect_rippled_ports() {
+    local detected_http=""
+    local detected_ws=""
+
+    # Get listening ports
+    local ports=$(ss -tuln 2>/dev/null | grep -E '127\.0\.0\.1:|localhost:|\*:' | awk '{print $5}' | grep -oE '[0-9]+$' | sort -nu)
+
+    # Scan for HTTP RPC
+    for port in $ports; do
+        case $port in
+            22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
+        esac
+        if timeout 1 curl -s "http://localhost:$port" \
+            -d '{"method":"server_info"}' \
+            -H "Content-Type: application/json" 2>/dev/null | grep -q '"result"'; then
+            detected_http="http://localhost:$port"
+            break
+        fi
+    done
+
+    # Scan for WebSocket
+    for port in $ports; do
+        case $port in
+            22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
+        esac
+        # Skip HTTP port we found
+        if [ -n "$detected_http" ] && [[ "$detected_http" == *":$port" ]]; then
+            continue
+        fi
+        if timeout 1 curl -s "http://localhost:$port" 2>/dev/null | grep -qi "ripple"; then
+            detected_ws="ws://localhost:$port"
+            break
+        fi
+    done
+
+    echo "$detected_http|$detected_ws"
+}
+
+# Show current status
+show_status() {
+    echo ""
+    echo "rippled Connection:"
+
+    # Check HTTP RPC connectivity and get state
+    local http_url="${RIPPLED_HTTP_URL:-http://localhost:5005}"
+    local ws_url="${RIPPLED_WS_URL:-ws://localhost:6006}"
+    local rippled_state
+
+    rippled_state=$(curl -s -m 2 -X POST -H 'Content-Type: application/json' \
+        -d '{"method":"server_info"}' "$http_url" 2>/dev/null | \
+        grep -o '"server_state":"[^"]*"' | cut -d'"' -f4)
+
+    # If configured URL doesn't work, try auto-detection
+    if [ -z "$rippled_state" ]; then
+        local detected=$(detect_rippled_ports)
+        local detected_http="${detected%|*}"
+        local detected_ws="${detected#*|}"
+
+        if [ -n "$detected_http" ]; then
+            http_url="$detected_http"
+            rippled_state=$(curl -s -m 2 -X POST -H 'Content-Type: application/json' \
+                -d '{"method":"server_info"}' "$http_url" 2>/dev/null | \
+                grep -o '"server_state":"[^"]*"' | cut -d'"' -f4)
+        fi
+        if [ -n "$detected_ws" ]; then
+            ws_url="$detected_ws"
+        fi
+    fi
+
+    printf "  %-20s " "HTTP RPC:"
+    if [ -n "$rippled_state" ]; then
+        # Color based on state
+        case "$rippled_state" in
+            proposing|full)
+                printf "${GREEN}%-12s${NC} (%s)\n" "$rippled_state" "$http_url"
+                ;;
+            connected|syncing|tracking)
+                printf "${YELLOW}%-12s${NC} (%s)\n" "$rippled_state" "$http_url"
+                ;;
+            *)
+                printf "${RED}%-12s${NC} (%s)\n" "$rippled_state" "$http_url"
+                ;;
+        esac
+    else
+        printf "${RED}%-12s${NC} (%s)\n" "unreachable" "$http_url"
+    fi
+
+    # Check WebSocket connectivity
+    local ws_port=$(echo "$ws_url" | grep -oE '[0-9]+$')
+    local ws_check
+    ws_check=$(curl -s -m 2 "http://localhost:$ws_port" 2>/dev/null)
+
+    printf "  %-20s " "WebSocket:"
+    if echo "$ws_check" | grep -qi "ripple"; then
+        printf "${GREEN}%-12s${NC} (%s)\n" "healthy" "$ws_url"
+    else
+        printf "${RED}%-12s${NC} (%s)\n" "unreachable" "$ws_url"
+    fi
+    echo ""
+    echo "Monitor Services:"
+
+    # Services with web interfaces (show URLs)
+    # Grafana
+    printf "  %-20s " "Grafana:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-grafana$"; then
+        echo -e "${GREEN}Running${NC} (http://localhost:${GRAFANA_PORT})"
+    else
+        get_service_status "grafana" || true
+    fi
+
+    # VictoriaMetrics
+    printf "  %-20s " "VictoriaMetrics:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-victoria$"; then
+        echo -e "${GREEN}Running${NC} (http://localhost:${VICTORIA_PORT})"
+    else
+        get_service_status "victoria-metrics" || true
+    fi
+
+    # Collector
+    printf "  %-20s " "Collector:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-collector$"; then
+        echo -e "${GREEN}Running${NC} (http://localhost:${COLLECTOR_PORT})"
+    else
+        get_service_status "collector" || true
+    fi
+
+    # State Exporter
+    printf "  %-20s " "State Exporter:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-state-exporter$"; then
+        echo -e "${GREEN}Running${NC} (http://localhost:${STATE_EXPORTER_PORT})"
+    else
+        get_service_status "state-exporter" || true
+    fi
+
+    # Uptime Exporter
+    printf "  %-20s " "Uptime Exporter:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-uptime-exporter$"; then
+        echo -e "${GREEN}Running${NC} (http://localhost:${UPTIME_EXPORTER_PORT})"
+    else
+        get_service_status "uptime-exporter" || true
+    fi
+
+    # Node Exporter
+    printf "  %-20s " "Node Exporter:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-node-exporter$"; then
+        echo -e "${GREEN}Running${NC} (http://localhost:${NODE_EXPORTER_PORT})"
+    else
+        get_service_status "node-exporter" || true
+    fi
+
+    # vmagent (internal, no web UI)
+    printf "  %-20s " "vmagent:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-vmagent$"; then
+        echo -e "${GREEN}Running${NC} (Metrics scraper)"
+    else
+        get_service_status "vmagent" || true
+    fi
+
+    # Autoheal (internal, no web UI)
+    printf "  %-20s " "Autoheal:"
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-autoheal$"; then
+        echo -e "${GREEN}Running${NC} (Container recovery)"
+    else
+        get_service_status "autoheal" || true
+    fi
+
+    echo ""
+}
+
+# Check if dashboard is installed
+is_dashboard_installed() {
+    # Check if .env exists and has required settings
+    if [ ! -f .env ]; then
+        return 1
+    fi
+
+    # Check if at least one container exists (even if stopped)
+    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-"; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Prompt to run installer
+prompt_install() {
+    echo ""
+    print_warning "XRPL Monitor dashboard is not installed."
+    echo ""
+    echo "Please run the installer first:"
+    echo "  sudo ./install.sh"
+}
+
+# Start services
+start_services() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    print_info "Starting all services..."
+    docker compose up -d
+    sleep 3
+    print_status "All services started"
+    show_status
+}
+
+# Stop services
+stop_services() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    print_info "Stopping all services..."
+    docker compose stop
+    print_status "All services stopped"
+}
+
+# Restart services
+restart_services() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    local service=$1
+
+    if [ -z "$service" ]; then
+        print_info "Restarting all services..."
+        docker compose restart
+        sleep 3
+        print_status "All services restarted"
+    else
+        print_info "Restarting ${service}..."
+        docker compose restart "$service"
+        sleep 2
+        print_status "${service} restarted"
+    fi
+    show_status
+}
+
+# View logs
+view_logs() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    local service=${1:-collector}  # Default to collector
+
+    print_info "Viewing logs for ${service}... (Press Ctrl+C to exit)"
+    echo ""
+    docker compose logs -f --tail=100 "$service"
+}
+
+# Rebuild service
+rebuild_service() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    local service=$1
+
+    if [ -z "$service" ]; then
+        print_error "Please specify a service to rebuild"
+        echo "Available services: ${SERVICES[*]}"
+        return 1
+    fi
+
+    print_info "Rebuilding ${service}..."
+    docker compose stop "$service"
+    docker compose build "$service"
+    docker compose up -d "$service"
+    sleep 3
+    print_status "${service} rebuilt and restarted"
+    show_status
+}
+
+# Service management submenu
+manage_single_service() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    clear
+    echo ""
+    echo "Manage Single Service"
+    echo ""
+    echo "Available services:"
+    echo "  1) Grafana"
+    echo "  2) VictoriaMetrics"
+    echo "  3) Collector"
+    echo "  4) vmagent"
+    echo "  5) Node Exporter"
+    echo "  6) Uptime Exporter"
+    echo "  7) Back to main menu"
+    echo ""
+
+    read -p "Select service [1-7]: " service_choice
+
+    local selected_service
+    case $service_choice in
+        1) selected_service="grafana" ;;
+        2) selected_service="victoria-metrics" ;;
+        3) selected_service="collector" ;;
+        4) selected_service="vmagent" ;;
+        5) selected_service="node-exporter" ;;
+        6) selected_service="uptime-exporter" ;;
+        7) return ;;
+        *)
+            print_error "Invalid choice"
+            sleep 2
+            return
+            ;;
+    esac
+
+    echo ""
+    echo "What would you like to do with ${selected_service}?"
+    echo ""
+    echo "  1) Start"
+    echo "  2) Stop"
+    echo "  3) Restart"
+    echo "  4) View logs"
+    echo "  5) Rebuild"
+    echo "  6) Back"
+    echo ""
+
+    read -p "Select action [1-6]: " action_choice
+
+    case $action_choice in
+        1)
+            echo ""
+            print_info "Starting ${selected_service}..."
+            docker compose start "$selected_service"
+            sleep 2
+            print_status "${selected_service} started"
+            show_status
+            ;;
+        2)
+            echo ""
+            print_info "Stopping ${selected_service}..."
+            docker compose stop "$selected_service"
+            print_status "${selected_service} stopped"
+            show_status
+            ;;
+        3)
+            echo ""
+            restart_services "$selected_service"
+            ;;
+        4)
+            echo ""
+            view_logs "$selected_service"
+            ;;
+        5)
+            echo ""
+            rebuild_service "$selected_service"
+            ;;
+        6)
+            return
+            ;;
+        *)
+            print_error "Invalid choice"
+            sleep 2
+            ;;
+    esac
+}
+
+# Get current retention from docker-compose.yml
+get_current_retention() {
+    grep "retentionPeriod" docker-compose.yml | grep -oP '\d+[dmy]' || echo "30d"
+}
+
+# Update retention in docker-compose.yml
+update_retention() {
+    local new_retention=$1
+
+    # Backup docker-compose.yml
+    cp docker-compose.yml docker-compose.yml.bak
+
+    # Update retention using sed
+    sed -i "s/--retentionPeriod=[0-9]*[dmy]/--retentionPeriod=${new_retention}/" docker-compose.yml
+
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        # Restore backup on failure
+        mv docker-compose.yml.bak docker-compose.yml
+        return 1
+    fi
+}
+
+# Convert retention to days for comparison
+retention_to_days() {
+    local retention=$1
+    local number=${retention//[^0-9]/}
+    local unit=${retention//[0-9]/}
+
+    case $unit in
+        d) echo $number ;;
+        m) echo $((number * 30)) ;;
+        y) echo $((number * 365)) ;;
+        *) echo 30 ;;
+    esac
+}
+
+# Adjust data retention
+adjust_retention() {
+    local current_retention
+    current_retention=$(get_current_retention)
+    local current_days
+    current_days=$(retention_to_days "$current_retention")
+
+    echo ""
+    echo "Data Retention Configuration"
+    echo ""
+    echo "Current retention: ${current_retention}"
+    echo ""
+    echo "Select retention period:"
+    echo ""
+
+    # Mark current selection
+    if [ "$current_days" -eq 30 ]; then
+        echo "  1) 30 days   (~325 MB)  [CURRENT]"
+    else
+        echo "  1) 30 days   (~325 MB)"
+    fi
+
+    if [ "$current_days" -eq 90 ]; then
+        echo "  2) 90 days   (~974 MB)  [CURRENT]"
+    else
+        echo "  2) 90 days   (~974 MB)"
+    fi
+
+    if [ "$current_days" -eq 365 ]; then
+        echo "  3) 1 year    (~3.9 GB)  [CURRENT]"
+    else
+        echo "  3) 1 year    (~3.9 GB)"
+    fi
+
+    if [ "$current_days" -eq 730 ]; then
+        echo "  4) 2 years   (~7.8 GB)  [CURRENT]"
+    else
+        echo "  4) 2 years   (~7.8 GB)"
+    fi
+
+    echo "  5) Custom (enter days)"
+    echo "  6) Back"
+    echo ""
+
+    read -p "Select option [1-6]: " retention_choice
+
+    local new_retention=""
+    local new_days=0
+
+    case $retention_choice in
+        1)
+            new_retention="30d"
+            new_days=30
+            ;;
+        2)
+            new_retention="90d"
+            new_days=90
+            ;;
+        3)
+            new_retention="365d"
+            new_days=365
+            ;;
+        4)
+            new_retention="730d"
+            new_days=730
+            ;;
+        5)
+            echo ""
+            read -p "Enter retention in days [30-730]: " custom_days
+            if [[ "$custom_days" =~ ^[0-9]+$ ]] && [ "$custom_days" -ge 30 ] && [ "$custom_days" -le 730 ]; then
+                new_retention="${custom_days}d"
+                new_days=$custom_days
+            else
+                print_error "Invalid input. Must be between 30 and 730 days."
+                sleep 2
+                return
+            fi
+            ;;
+        6)
+            return
+            ;;
+        *)
+            print_error "Invalid choice"
+            sleep 2
+            return
+            ;;
+    esac
+
+    # Show impact screen
+    echo ""
+    echo "You selected: ${new_retention}"
+    echo "Current setting: ${current_retention}"
+    echo ""
+    echo "Impact:"
+
+    # Warn about data loss if reducing retention
+    if [ "$new_days" -lt "$current_days" ]; then
+        echo -e "${YELLOW}⚠ WARNING: Reducing retention from ${current_retention} to ${new_retention}${NC}"
+        echo -e "${YELLOW}This will DELETE data older than ${new_retention}!${NC}"
+    fi
+
+    echo "- VictoriaMetrics will restart (~2-3 seconds downtime)"
+    echo "- Brief gap in metric collection during restart"
+    if [ "$new_days" -lt "$current_days" ]; then
+        echo "- Data older than ${new_retention} will be permanently deleted"
+    else
+        echo "- All existing data will be preserved"
+    fi
+    echo "- Other services will continue running"
+    echo ""
+    echo "What would you like to do?"
+    echo "  1) Continue with change"
+    echo "  2) Go back"
+    echo ""
+
+    read -p "Enter your choice [1-2]: " confirm_choice
+
+    if [ "$confirm_choice" != "1" ]; then
+        print_info "Change cancelled"
+        sleep 2
+        return
+    fi
+
+    # Apply the change
+    echo ""
+    print_info "Updating retention to ${new_retention}..."
+
+    if update_retention "$new_retention"; then
+        print_status "Configuration updated"
+
+        print_info "Restarting VictoriaMetrics..."
+        docker compose restart victoria-metrics
+
+        sleep 3
+
+        print_status "Retention period changed to ${new_retention}"
+
+        # Clean up backup
+        rm -f docker-compose.yml.bak
+    else
+        print_error "Failed to update configuration"
+    fi
+
+    sleep 2
+}
+
+# Restore default dashboard
+restore_default_dashboard() {
+    local grafana_port=${GRAFANA_PORT:-3003}
+    local template_file="config/grafana/provisioning/dashboards/xrpl-validator-main.json.template"
+    local max_attempts=3
+    local attempt=0
+
+    clear
+    echo ""
+    echo "Restore Default Dashboard"
+    echo ""
+    echo -e "${YELLOW}⚠ WARNING: This will replace your current dashboard with the default template.${NC}"
+    echo -e "${YELLOW}All customizations will be LOST.${NC}"
+    echo ""
+
+    read -p "Type 'yes' to confirm (or anything else to cancel): " confirm
+
+    if [ "$confirm" != "yes" ]; then
+        print_info "Restore cancelled"
+        sleep 2
+        return
+    fi
+
+    # Check if template exists
+    if [ ! -f "$template_file" ]; then
+        print_error "Template file not found: $template_file"
+        sleep 3
+        return
+    fi
+
+    # Check if Grafana is running
+    if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^xrpl-monitor-grafana$"; then
+        print_error "Grafana is not running. Please start the stack first."
+        sleep 3
+        return
+    fi
+
+    # Password retry loop
+    while [ $attempt -lt $max_attempts ]; do
+        attempt=$((attempt + 1))
+
+        echo ""
+        if [ $attempt -gt 1 ]; then
+            echo -e "${YELLOW}⚠ Attempt $attempt of $max_attempts${NC}"
+            if [ $attempt -eq $max_attempts ]; then
+                echo -e "${YELLOW}WARNING: This is your last attempt. Too many failed attempts may lock your account.${NC}"
+            fi
+        fi
+        echo "Enter Grafana admin password (or press Ctrl+C to cancel):"
+        echo "(Password not stored, only used for this API call)"
+        read -s -p "Password: " grafana_password
+        echo ""
+
+        if [ -z "$grafana_password" ]; then
+            print_error "Password cannot be empty"
+            continue
+        fi
+
+        echo ""
+        print_info "Restoring default dashboard..."
+
+        # Prepare import payload (remove id, set version to 0, wrap for import)
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$template_file" 2>&1)
+
+        if [ $? -ne 0 ]; then
+            print_error "Failed to prepare dashboard payload"
+            echo "$import_payload"
+            sleep 3
+            return
+        fi
+
+        # Import dashboard via Grafana API
+        local response
+        response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
+            -u "admin:${grafana_password}" \
+            -H "Content-Type: application/json" \
+            -d @- 2>&1)
+
+        local http_code=$(echo "$response" | tail -n1)
+        local body=$(echo "$response" | head -n-1)
+
+        if [ "$http_code" = "200" ]; then
+            if echo "$body" | grep -q '"status":"success"'; then
+                print_status "Dashboard restored successfully"
+                echo ""
+                print_info "Access your dashboard at: http://localhost:${grafana_port}"
+                sleep 3
+                return
+            else
+                print_warning "Dashboard may have been restored (check Grafana)"
+                sleep 3
+                return
+            fi
+        elif [ "$http_code" = "401" ]; then
+            print_error "Authentication failed. Incorrect password."
+            if [ $attempt -lt $max_attempts ]; then
+                echo "Please try again."
+            else
+                echo ""
+                print_warning "Maximum attempts reached. Returning to menu."
+                echo "If you continue to have issues, you may need to reset your Grafana password."
+            fi
+        elif [ "$http_code" = "412" ]; then
+            # Dashboard already exists with same version - this is OK
+            print_status "Dashboard restored (already up to date)"
+            sleep 3
+            return
+        else
+            print_error "Failed to restore dashboard (HTTP $http_code)"
+            echo "Response: $body" | head -3
+            sleep 3
+            return
+        fi
+    done
+
+    sleep 2
+}
+
+# Backup & Restore menu
+backup_restore_menu() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    clear
+    echo ""
+    echo "Dashboard Backup & Restore"
+    echo ""
+    echo -e "  ${YELLOW}Note: This backs up Grafana dashboards, settings, and users.${NC}"
+    echo -e "  ${YELLOW}Time-series metrics (VictoriaMetrics) are not included.${NC}"
+    echo ""
+    echo "  1) Create dashboard backup"
+    echo "  2) Restore from backup"
+    echo "  3) Back to main menu"
+    echo ""
+
+    read -p "Select option [1-3]: " backup_choice
+
+    case $backup_choice in
+        1)
+            create_dashboard_backup
+            ;;
+        2)
+            restore_dashboard_backup
+            ;;
+        3)
+            return
+            ;;
+        *)
+            print_error "Invalid choice"
+            sleep 2
+            ;;
+    esac
+}
+
+# Create dashboard backup
+create_dashboard_backup() {
+    clear
+    echo ""
+    echo "Create Dashboard Backup"
+    echo ""
+
+    if [ ! -f "scripts/backup-grafana.sh" ]; then
+        print_error "Backup script not found: scripts/backup-grafana.sh"
+        sleep 2
+        return
+    fi
+
+    print_info "This will backup:"
+    echo "  - Grafana dashboards and customizations"
+    echo "  - User settings and preferences"
+    echo "  - Alert configurations"
+    echo "  - Provisioning configs"
+    echo ""
+    print_warning "VictoriaMetrics data (time-series metrics) is NOT backed up"
+    echo ""
+
+    read -p "Continue with backup? [Y/n]: " confirm
+    if [[ $confirm =~ ^[Nn]$ ]]; then
+        print_info "Backup cancelled"
+        sleep 1
+        return
+    fi
+
+    echo ""
+    bash scripts/backup-grafana.sh
+
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Restore dashboard backup
+restore_dashboard_backup() {
+    clear
+    echo ""
+    echo "Restore Dashboard Backup"
+    echo ""
+
+    if [ ! -f "scripts/restore-grafana.sh" ]; then
+        print_error "Restore script not found: scripts/restore-grafana.sh"
+        sleep 2
+        return
+    fi
+
+    BACKUP_DIR="data/grafana-backups"
+
+    if [ ! -d "$BACKUP_DIR" ] || [ -z "$(ls -A $BACKUP_DIR/*.tar.gz 2>/dev/null)" ]; then
+        print_warning "No backups found in $BACKUP_DIR"
+        echo ""
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    echo "Available backups (most recent first):"
+    echo ""
+
+    # List backups with numbers
+    local backups=()
+    local count=1
+    for backup in $(ls -t "$BACKUP_DIR"/grafana-backup-*.tar.gz 2>/dev/null); do
+        local filename=$(basename "$backup")
+        local size=$(du -h "$backup" | cut -f1)
+        local date=$(echo "$filename" | grep -oP '\d{8}-\d{6}' | sed 's/\([0-9]\{4\}\)\([0-9]\{2\}\)\([0-9]\{2\}\)-\([0-9]\{2\}\)\([0-9]\{2\}\)\([0-9]\{2\}\)/\1-\2-\3 \4:\5:\6/')
+
+        echo "  [$count] $date ($size)"
+        backups+=("$backup")
+        ((count++))
+    done
+
+    echo ""
+    echo "  [0] Cancel and return to menu"
+    echo ""
+    read -p "Select backup number to restore [0-$((count-1))]: " backup_num
+
+    if [ "$backup_num" = "0" ]; then
+        print_info "Restore cancelled"
+        sleep 1
+        return
+    fi
+
+    if ! [[ "$backup_num" =~ ^[0-9]+$ ]] || [ "$backup_num" -lt 1 ] || [ "$backup_num" -gt "${#backups[@]}" ]; then
+        print_error "Invalid selection"
+        sleep 2
+        return
+    fi
+
+    local selected_backup="${backups[$((backup_num-1))]}"
+
+    echo ""
+    print_warning "This will restore Grafana from: $(basename "$selected_backup")"
+    print_warning "A backup of current state will be created first"
+    echo ""
+
+    bash scripts/restore-grafana.sh "$selected_backup"
+
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+# Update Dashboard menu (after user runs git pull)
+update_dashboard_menu() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    clear
+    echo ""
+    echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}                    Update Dashboard                           ${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo "This will regenerate configuration files and rebuild containers"
+    echo "to apply any updates from the latest code."
+    echo ""
+    echo -e "${YELLOW}IMPORTANT: You should run 'git pull' first to get the latest code.${NC}"
+    echo ""
+    read -p "Have you already run 'git pull'? [y/N]: " git_pulled
+
+    if [[ ! $git_pulled =~ ^[Yy]$ ]]; then
+        echo ""
+        print_info "Please run 'git pull' first, then come back to update."
+        echo ""
+        echo "Commands to run:"
+        echo "  git pull"
+        echo "  ./manage.sh"
+        echo ""
+        return
+    fi
+
+    echo ""
+    print_info "Proceeding with update..."
+    echo ""
+
+    # Load environment variables with defaults and EXPORT them for envsubst
+    if [ -f .env ]; then
+        source .env
+    fi
+    export NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT:-9100}
+    export UPTIME_EXPORTER_PORT=${UPTIME_EXPORTER_PORT:-9101}
+    export STATE_EXPORTER_PORT=${STATE_EXPORTER_PORT:-9102}
+    export VICTORIA_METRICS_PORT=${VICTORIA_METRICS_PORT:-8428}
+    export GRAFANA_PORT=${GRAFANA_PORT:-3000}
+    export COLLECTOR_PORT=${COLLECTOR_PORT:-8090}
+    export VMAGENT_PORT=${VMAGENT_PORT:-8427}
+
+    # Regenerate scrape.yml from template
+    print_info "Regenerating configuration files from templates..."
+    if [ -f config/vmagent/scrape.yml.template ]; then
+        envsubst < config/vmagent/scrape.yml.template > config/vmagent/scrape.yml
+        print_status "scrape.yml regenerated"
+    else
+        print_warning "scrape.yml.template not found, skipping"
+    fi
+
+    # Regenerate datasource.yml from template
+    if [ -f config/grafana/provisioning/datasources/datasource.yml.template ]; then
+        envsubst < config/grafana/provisioning/datasources/datasource.yml.template > config/grafana/provisioning/datasources/datasource.yml
+        print_status "datasource.yml regenerated"
+    else
+        print_warning "datasource.yml.template not found, skipping"
+    fi
+
+    # Rebuild containers with code changes
+    print_info "Rebuilding containers..."
+    docker compose build collector state-exporter uptime-exporter
+    print_status "Containers rebuilt"
+
+    # Restart all services to pick up changes
+    print_info "Restarting services..."
+    docker compose up -d --force-recreate
+    print_status "Services restarted"
+
+    # Wait for services to stabilize
+    print_info "Waiting for services to stabilize..."
+    sleep 10
+
+    # Verify health
+    echo ""
+    print_info "Verifying service health..."
+    show_status
+
+    echo ""
+    print_status "Update complete!"
+    echo ""
+    print_info "If you see any unhealthy services, check logs with option 6"
+}
+
+# ==============================================================================
+# GMAIL ALERT SETUP
+# ==============================================================================
+
+# Check if Gmail is already configured
+check_gmail_config() {
+    if [ -f .env ]; then
+        source .env
+        if [ -n "$GF_SMTP_USER" ] && [[ "$GF_SMTP_USER" == *"@gmail.com" ]]; then
+            return 0  # Configured
+        fi
+    fi
+    return 1  # Not configured
+}
+
+# Get masked email for display
+mask_email() {
+    local email=$1
+    local user="${email%@*}"
+    local domain="${email#*@}"
+    local user_len=${#user}
+
+    if [ $user_len -le 4 ]; then
+        echo "${user:0:1}***@${domain}"
+    else
+        echo "${user:0:4}****@${domain}"
+    fi
+}
+
+# Validate Gmail address
+validate_gmail() {
+    local email=$1
+    # Case-insensitive check for @gmail.com
+    if [[ "${email,,}" == *"@gmail.com" ]]; then
+        return 0
+    fi
+    return 1
+}
+
+# Validate App Password format (16 characters, ignoring spaces)
+validate_app_password() {
+    local password=$1
+    # Remove spaces
+    local clean_password="${password// /}"
+    if [ ${#clean_password} -eq 16 ]; then
+        return 0
+    fi
+    return 1
+}
+
+# Mask app password for display (show first 4 and last 4)
+mask_password() {
+    local password=$1
+    local len=${#password}
+    if [ $len -ge 8 ]; then
+        echo "${password:0:4}........${password: -4}"
+    else
+        echo "****"
+    fi
+}
+
+# Show test instructions after Gmail update
+show_gmail_test_instructions() {
+    local grafana_port=${GRAFANA_PORT:-3000}
+    echo ""
+    echo "To verify your changes:"
+    echo -e "  1. ${YELLOW}Refresh your browser${NC} (Ctrl+R or Cmd+R)"
+    echo "  2. Go to: Alerting → Contact points"
+    echo "  3. Click 'View' on the right of xrpl-monitor-email"
+    echo "  4. Click 'Test' → 'Send test notification'"
+    echo "  5. Check your inbox"
+    echo ""
+}
+
+# Update .env with Gmail SMTP settings
+update_env_gmail() {
+    local email=$1
+    local password=$2
+
+    # Remove existing SMTP settings from .env
+    if [ -f .env ]; then
+        sed -i '/^GF_SMTP_ENABLED=/d' .env
+        sed -i '/^GF_SMTP_HOST=/d' .env
+        sed -i '/^GF_SMTP_USER=/d' .env
+        sed -i '/^GF_SMTP_PASSWORD=/d' .env
+        sed -i '/^GF_SMTP_FROM_ADDRESS=/d' .env
+        sed -i '/^# SMTP Configuration/d' .env
+        sed -i '/^# Gmail SMTP/d' .env
+    fi
+
+    # Append new SMTP settings
+    cat >> .env << EOF
+
+# Gmail SMTP Configuration (configured via manage.sh)
+GF_SMTP_ENABLED=true
+GF_SMTP_HOST=smtp.gmail.com:587
+GF_SMTP_USER=${email}
+GF_SMTP_PASSWORD=${password}
+GF_SMTP_FROM_ADDRESS=${email}
+EOF
+}
+
+# Update contact-points.yaml with email address
+update_contact_points() {
+    local email=$1
+    local contact_file="config/grafana/provisioning/alerting/contact-points.yaml"
+
+    if [ -f "$contact_file" ]; then
+        # Replace the email address line
+        sed -i "s/addresses:.*$/addresses: ${email}/" "$contact_file"
+        return 0
+    fi
+    return 1
+}
+
+# Disable Gmail alerts
+disable_gmail_alerts() {
+    if [ -f .env ]; then
+        sed -i 's/^GF_SMTP_ENABLED=true/GF_SMTP_ENABLED=false/' .env
+    fi
+}
+
+# Enable Gmail alerts (if previously disabled)
+enable_gmail_alerts() {
+    if [ -f .env ]; then
+        sed -i 's/^GF_SMTP_ENABLED=false/GF_SMTP_ENABLED=true/' .env
+    fi
+}
+
+# Test Gmail alert via Grafana API
+test_gmail_alert() {
+    local grafana_port=${GRAFANA_PORT:-3000}
+
+    echo ""
+    echo "To test your Gmail alert configuration:"
+    echo ""
+    echo "  1. Open Grafana: http://localhost:${grafana_port}"
+    echo "  2. Log in with admin credentials"
+    echo "  3. Go to: Alerting → Contact points"
+    echo "  4. Click 'View' on the right of xrpl-monitor-email"
+    echo "  5. Click 'Test' → 'Send test notification'"
+    echo "  6. Check your inbox (and spam folder)"
+    echo ""
+    echo "If you don't receive the test email:"
+    echo "  - Verify App Password is correct"
+    echo "  - Check that 2FA is enabled on your Google account"
+    echo "  - Look for security alerts in your Gmail inbox"
+    echo "  - Check logs: docker compose logs grafana | grep -i smtp"
+    echo ""
+    echo "See docs/ALERTS.md for detailed troubleshooting."
+    echo ""
+}
+
+# Show current Gmail config screen
+show_gmail_current_config() {
+    source .env 2>/dev/null
+
+    local masked_email=$(mask_email "$GF_SMTP_USER")
+    local status="Enabled"
+    local status_color="${GREEN}"
+
+    if [ "$GF_SMTP_ENABLED" != "true" ]; then
+        status="Disabled"
+        status_color="${YELLOW}"
+    fi
+
+    clear
+    echo ""
+    echo -e "${BLUE}━━━ Gmail Alert Configuration ━━━${NC}"
+    echo ""
+    echo "Current Configuration:"
+    echo "  Email:        ${masked_email}"
+    echo "  App Password: ****  (configured)"
+    echo -e "  Status:       ${status_color}${status}${NC}"
+    echo ""
+    echo "Options:"
+    echo "  [u] Update email address"
+    echo "  [p] Update app password"
+    echo "  [t] How to test email alert"
+    if [ "$GF_SMTP_ENABLED" = "true" ]; then
+        echo "  [d] Disable email alerts"
+    else
+        echo "  [e] Enable email alerts"
+    fi
+    echo "  [b] Back to main menu"
+    echo ""
+
+    read -p "Choose: " config_choice
+
+    case "${config_choice,,}" in
+        u)
+            setup_gmail_email
+            ;;
+        p)
+            setup_gmail_password true  # true = update mode
+            ;;
+        t)
+            test_gmail_alert
+            read -p "Press Enter to continue..."
+            show_gmail_current_config
+            ;;
+        d)
+            echo ""
+            print_info "Disabling email alerts..."
+            disable_gmail_alerts
+            docker compose up -d grafana --force-recreate >/dev/null 2>&1
+            print_status "Email alerts disabled"
+            sleep 2
+            show_gmail_current_config
+            ;;
+        e)
+            echo ""
+            print_info "Enabling email alerts..."
+            enable_gmail_alerts
+            docker compose up -d grafana --force-recreate >/dev/null 2>&1
+            print_status "Email alerts enabled"
+            sleep 2
+            show_gmail_current_config
+            ;;
+        b)
+            return
+            ;;
+        *)
+            show_gmail_current_config
+            ;;
+    esac
+}
+
+# Setup Gmail email address
+setup_gmail_email() {
+    local update_mode=${1:-false}
+
+    clear
+    echo ""
+    echo -e "${BLUE}━━━ Gmail Alert Setup ━━━${NC}"
+    echo ""
+    echo "XRPL Monitor can send email alerts for all 14 configured alerts, such as:"
+    echo "  • Validator not proposing"
+    echo "  • Node offline or degraded"
+    echo "  • Low peer count or amendment blocked"
+    echo "  • ...and more"
+    echo ""
+    echo "Requirements:"
+    echo "  • Gmail account"
+    echo "  • Gmail App Password (NOT your regular password)"
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+
+    local email=""
+    while true; do
+        read -p "Enter your Gmail address: " email
+
+        if [ -z "$email" ]; then
+            echo ""
+            read -p "Cancel setup? [y/N]: " cancel
+            if [[ "${cancel,,}" == "y" ]]; then
+                return 1
+            fi
+            continue
+        fi
+
+        if validate_gmail "$email"; then
+            print_status "Email accepted: ${email}"
+            break
+        else
+            print_error "Invalid: Must be a @gmail.com address"
+            echo ""
+        fi
+    done
+
+    echo ""
+    read -p "Is this correct? [Y/n]: " confirm
+    if [[ "${confirm,,}" == "n" ]]; then
+        setup_gmail_email "$update_mode"
+        return $?
+    fi
+
+    # Store email for later
+    GMAIL_ADDRESS="$email"
+
+    # If update mode and only updating email, apply now
+    if [ "$update_mode" = true ]; then
+        source .env 2>/dev/null
+        local current_password="${GF_SMTP_PASSWORD}"
+
+        echo ""
+        print_info "Updating email address..."
+        update_env_gmail "$email" "$current_password"
+        update_contact_points "$email"
+
+        echo ""
+        print_info "Recreating Grafana container..."
+        docker compose up -d grafana --force-recreate >/dev/null 2>&1
+        sleep 5
+
+        print_status "Email address updated!"
+        show_gmail_test_instructions
+        read -p "Press Enter to continue..."
+        show_gmail_current_config
+        return 0
+    fi
+
+    # Continue to password setup
+    setup_gmail_password false
+}
+
+# Setup Gmail App Password
+setup_gmail_password() {
+    local update_only=${1:-false}
+
+    clear
+    echo ""
+    echo -e "${BLUE}━━━ Gmail App Password ━━━${NC}"
+    echo ""
+    echo "Gmail requires an 'App Password' for SMTP access."
+    echo "This is a 16-character code (NOT your regular password)."
+    echo ""
+    echo -e "${CYAN}How to get an App Password:${NC}"
+    echo "  1. Go to: https://myaccount.google.com/apppasswords"
+    echo "  2. Sign in to your Google account"
+    echo "  3. Select app: 'Mail'"
+    echo "  4. Select device: 'Other' → name it 'XRPL Monitor'"
+    echo "  5. Click 'Generate'"
+    echo "  6. Copy the 16-character password"
+    echo ""
+    echo -e "${YELLOW}Note: 2-Factor Authentication must be enabled on your Google account.${NC}"
+    echo "See docs/ALERTS.md for detailed instructions."
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+
+    local password=""
+    while true; do
+        read -s -p "Enter App Password: " password
+        echo ""
+
+        if [ -z "$password" ]; then
+            echo ""
+            read -p "Cancel setup? [y/N]: " cancel
+            if [[ "${cancel,,}" == "y" ]]; then
+                return 1
+            fi
+            continue
+        fi
+
+        # Remove spaces from password
+        password="${password// /}"
+
+        if validate_app_password "$password"; then
+            print_status "Password format valid (16 characters)"
+            break
+        else
+            print_error "Invalid: App Password must be 16 characters"
+            echo "  (spaces are automatically removed)"
+            echo ""
+        fi
+    done
+
+    # Show masked password so user can verify
+    local masked_pwd=$(mask_password "$password")
+    echo ""
+    echo "You entered: ${masked_pwd}"
+    echo ""
+    echo "Options:"
+    echo "  [Enter] Continue (password looks correct)"
+    echo "  [r]     Re-enter password"
+    echo "  [b]     Back/Cancel"
+    echo ""
+    read -p "Choose: " pwd_choice
+
+    case "${pwd_choice,,}" in
+        r)
+            setup_gmail_password "$update_only"
+            return $?
+            ;;
+        b)
+            return 1
+            ;;
+    esac
+
+    # Store password
+    GMAIL_PASSWORD="$password"
+
+    # If update mode, apply now
+    if [ "$update_only" = true ]; then
+        source .env 2>/dev/null
+        local current_email="${GF_SMTP_USER}"
+
+        echo ""
+        print_info "Updating app password..."
+        update_env_gmail "$current_email" "$password"
+
+        echo ""
+        print_info "Recreating Grafana container..."
+        docker compose up -d grafana --force-recreate >/dev/null 2>&1
+        sleep 5
+
+        print_status "App password updated!"
+        show_gmail_test_instructions
+        read -p "Press Enter to continue..."
+        show_gmail_current_config
+        return 0
+    fi
+
+    # Continue to confirmation
+    confirm_gmail_setup
+}
+
+# Confirm and apply Gmail setup
+confirm_gmail_setup() {
+    clear
+    echo ""
+    echo -e "${BLUE}━━━ Confirm Gmail Configuration ━━━${NC}"
+    echo ""
+    echo "Email Address:  ${GMAIL_ADDRESS}"
+    echo "App Password:   ****............****  (configured)"
+    echo ""
+    echo "This will update:"
+    echo "  • .env (SMTP settings)"
+    echo "  • contact-points.yaml (alert recipient)"
+    echo ""
+    echo "Then recreate Grafana container to apply changes."
+    echo -e "${YELLOW}⚠ This will NOT affect your dashboards or metrics data.${NC}"
+    echo ""
+    echo "Options:"
+    echo "  [Enter] Apply configuration"
+    echo "  [e]     Edit settings"
+    echo "  [c]     Cancel"
+    echo ""
+
+    read -p "Choose: " confirm_choice
+
+    case "${confirm_choice,,}" in
+        e)
+            setup_gmail_email
+            return $?
+            ;;
+        c)
+            print_info "Setup cancelled"
+            sleep 2
+            return 1
+            ;;
+    esac
+
+    # Apply the configuration
+    apply_gmail_setup
+}
+
+# Apply Gmail configuration
+apply_gmail_setup() {
+    echo ""
+    echo -e "${BLUE}━━━ Applying Gmail Configuration ━━━${NC}"
+    echo ""
+
+    print_info "Updating .env with SMTP settings..."
+    update_env_gmail "$GMAIL_ADDRESS" "$GMAIL_PASSWORD"
+    print_status ".env updated"
+
+    print_info "Updating contact-points.yaml..."
+    if update_contact_points "$GMAIL_ADDRESS"; then
+        print_status "contact-points.yaml updated"
+    else
+        print_warning "contact-points.yaml not found (alerts may need manual config)"
+    fi
+
+    print_info "Recreating Grafana container..."
+    docker compose up -d grafana --force-recreate >/dev/null 2>&1
+
+    print_info "Waiting for Grafana to start (10 seconds)..."
+    sleep 10
+
+    # Check Grafana health
+    local grafana_port=${GRAFANA_PORT:-3000}
+    if curl -s "http://localhost:${grafana_port}/api/health" 2>/dev/null | grep -q "ok"; then
+        print_status "Grafana is healthy"
+    else
+        print_warning "Grafana may still be starting..."
+    fi
+
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    print_status "Gmail alerts configured successfully!"
+    echo ""
+    echo "To test your configuration:"
+    echo "  1. Open Grafana: http://localhost:${grafana_port}"
+    echo -e "  2. ${YELLOW}Refresh your browser${NC} (Ctrl+R or Cmd+R)"
+    echo "  3. Go to: Alerting → Contact points"
+    echo "  4. Click 'View' on the right of xrpl-monitor-email"
+    echo "  5. Click 'Test' → 'Send test notification'"
+    echo "  6. Check your inbox for the test email"
+    echo ""
+    echo "See docs/ALERTS.md for more details."
+}
+
+# Main Gmail setup menu entry point
+setup_gmail_alerts() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    if check_gmail_config; then
+        show_gmail_current_config
+    else
+        setup_gmail_email false
+    fi
+}
+
+# Advanced settings menu
+advanced_settings_menu() {
+    if ! is_dashboard_installed; then
+        prompt_install
+        return
+    fi
+    clear
+    echo ""
+    echo "Advanced Settings"
+    echo ""
+    echo "  1) Adjust data retention period"
+    echo "  2) Restore default dashboard"
+    echo "  3) Back to main menu"
+    echo ""
+
+    read -p "Select option [1-3]: " settings_choice
+
+    case $settings_choice in
+        1)
+            adjust_retention
+            ;;
+        2)
+            restore_default_dashboard
+            ;;
+        3)
+            return
+            ;;
+        *)
+            print_error "Invalid choice"
+            sleep 2
+            ;;
+    esac
+}
+
+# Interactive menu
+show_menu() {
+    clear
+    show_banner
+
+    echo -e "${BLUE}💡 Tip: For quick commands, run './manage.sh --help'${NC}"
+    echo ""
+
+    show_status
+
+    echo "What would you like to do?"
+    echo ""
+    echo "  1) Start the stack"
+    echo "  2) Stop the stack"
+    echo "  3) Restart the stack"
+    echo "  4) Manage a single service"
+    echo "  5) View logs (all services)"
+    echo "  6) View logs (specific service)"
+    echo "  7) Check service status"
+    echo "  8) Rebuild service"
+    echo "  9) Backup & Restore"
+    echo "  10) Update Dashboard (after git pull)"
+    echo "  11) Setup Gmail Alerts"
+    echo "  12) Advanced settings"
+    echo "  13) Exit"
+    echo ""
+
+    read -p "Enter your choice [1-13]: " choice
+
+    case $choice in
+        1)
+            echo ""
+            start_services
+            ;;
+        2)
+            if ! is_dashboard_installed; then
+                prompt_install
+            else
+                echo ""
+                read -p "Stop the stack? [y/N]: " confirm
+                if [[ $confirm =~ ^[Yy]$ ]]; then
+                    echo ""
+                    stop_services
+                else
+                    print_info "Cancelled"
+                fi
+            fi
+            ;;
+        3)
+            echo ""
+            restart_services
+            ;;
+        4)
+            manage_single_service
+            ;;
+        5)
+            if ! is_dashboard_installed; then
+                prompt_install
+            else
+                echo ""
+                print_info "Viewing logs for all services... (Press Ctrl+C to exit)"
+                echo ""
+                docker compose logs -f --tail=50
+            fi
+            ;;
+        6)
+            if ! is_dashboard_installed; then
+                prompt_install
+            else
+                echo ""
+                echo "Available services: ${SERVICES[*]}"
+                read -p "Enter service name [collector]: " service
+                service=${service:-collector}
+                echo ""
+                view_logs "$service"
+            fi
+            ;;
+        7)
+            echo ""
+            show_status
+            ;;
+        8)
+            if ! is_dashboard_installed; then
+                prompt_install
+            else
+                echo ""
+                echo "Available services: ${SERVICES[*]}"
+                read -p "Enter service name: " service
+                echo ""
+                rebuild_service "$service"
+            fi
+            ;;
+        9)
+            backup_restore_menu
+            ;;
+        10)
+            update_dashboard_menu
+            ;;
+        11)
+            setup_gmail_alerts
+            ;;
+        12)
+            advanced_settings_menu
+            ;;
+        13)
+            echo ""
+            print_info "Goodbye!"
+            exit 0
+            ;;
+        *)
+            echo ""
+            print_error "Invalid choice. Please select 1-13."
+            sleep 2
+            ;;
+    esac
+
+    # Return to menu unless exiting
+    if [ "$choice" != "13" ]; then
+        echo ""
+        read -p "Press Enter to return to menu..."
+        show_menu
+    fi
+}
+
+# Main
+main() {
+    # Check if running in project directory
+    if [ ! -f "docker-compose.yml" ]; then
+        print_error "Error: docker-compose.yml not found"
+        print_info "Please run this script from the XRPL Monitor directory"
+        exit 1
+    fi
+
+    # Parse command line arguments
+    case "${1:-}" in
+        start)
+            show_banner
+            start_services
+            ;;
+        stop)
+            show_banner
+            stop_services
+            ;;
+        restart)
+            show_banner
+            restart_services "$2"
+            ;;
+        status)
+            show_banner
+            show_status
+            ;;
+        logs)
+            show_banner
+            view_logs "$2"
+            ;;
+        rebuild)
+            show_banner
+            rebuild_service "$2"
+            ;;
+        --help|-h|help)
+            show_help
+            ;;
+        "")
+            # No arguments - show interactive menu
+            show_menu
+            ;;
+        *)
+            print_error "Unknown command: $1"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# Run main
+main "$@"
