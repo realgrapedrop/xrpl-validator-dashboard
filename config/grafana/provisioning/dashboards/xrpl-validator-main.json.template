@@ -181,6 +181,17 @@
                 }
               },
               "type": "value"
+            },
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "color": "dark-red",
+                  "index": 2,
+                  "text": "Disconnected"
+                }
+              },
+              "type": "special"
             }
           ],
           "noValue": "WebSocket: Disconnected",
