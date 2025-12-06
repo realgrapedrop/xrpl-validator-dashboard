@@ -2,7 +2,7 @@
 
 Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 40+ metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
 
-**Real-time monitoring and alerting for XRPL validator nodes**
+**Built by a validator — real-time visibility, zero intrusion. Never miss another block.**
 
 ![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
