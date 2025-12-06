@@ -383,7 +383,11 @@ step_rippled_detection() {
                     fi
                 done
 
-                # Test for WebSocket
+                # Test for WebSocket - collect candidates then find admin port
+                # Strategy: combine multiple detection methods for maximum compatibility
+                WS_CANDIDATES=""
+
+                # Method 1: Check ports that respond with "ripple" HTML (public WS ports)
                 for port in $LISTENING_PORTS; do
                     case $port in
                         22|80|443|3000|8080|8428|8427|9090|9100|9101|9102) continue ;;
@@ -395,11 +399,123 @@ step_rippled_detection() {
                     fi
 
                     if timeout 2 curl -s "http://localhost:$port" 2>/dev/null | grep -qi "ripple"; then
-                        RIPPLED_WS_URL="ws://localhost:$port"
-                        print_status "Found WebSocket on port $port"
-                        break
+                        WS_CANDIDATES="$WS_CANDIDATES $port"
                     fi
                 done
+
+                # Method 2: Add common rippled WebSocket ports if they're listening
+                # These are typical admin WS ports that may not respond to HTTP GET
+                for port in 6006 6005 6007 51233; do
+                    # Skip if already in candidates
+                    if echo "$WS_CANDIDATES" | grep -qw "$port"; then
+                        continue
+                    fi
+                    # Skip HTTP port
+                    if [ -n "$RIPPLED_HTTP_URL" ] && [[ "$RIPPLED_HTTP_URL" == *":$port" ]]; then
+                        continue
+                    fi
+                    # Check if port is listening
+                    if echo "$LISTENING_PORTS" | grep -qw "$port"; then
+                        WS_CANDIDATES="$WS_CANDIDATES $port"
+                    fi
+                done
+
+                # Method 3: For Docker rippled, check container port mappings
+                if [ "$RIPPLED_TYPE" = "docker" ] && [ -n "$DOCKER_RIPPLED" ]; then
+                    DOCKER_WS_PORTS=$(docker inspect "$DOCKER_RIPPLED" 2>/dev/null | \
+                        jq -r '.[0].NetworkSettings.Ports | to_entries[] | select(.key | contains("/tcp")) | .value[]?.HostPort // empty' 2>/dev/null | sort -u)
+                    for port in $DOCKER_WS_PORTS; do
+                        # Skip if already in candidates or is HTTP port
+                        if echo "$WS_CANDIDATES" | grep -qw "$port"; then
+                            continue
+                        fi
+                        if [ -n "$RIPPLED_HTTP_URL" ] && [[ "$RIPPLED_HTTP_URL" == *":$port" ]]; then
+                            continue
+                        fi
+                        # Skip peer port (usually 51235)
+                        if [ "$port" = "51235" ]; then
+                            continue
+                        fi
+                        WS_CANDIDATES="$WS_CANDIDATES $port"
+                    done
+                fi
+
+                # If we found WebSocket candidates, test for admin access
+                if [ -n "$WS_CANDIDATES" ]; then
+                    # Check if websocket-client is available for admin detection
+                    if python3 -c "import websocket" 2>/dev/null; then
+                        # Try to find admin WebSocket port using Python
+                        # Note: heredoc without quotes to allow $WS_CANDIDATES expansion
+                        ADMIN_WS_PORT=$(python3 << PYEOF 2>/dev/null
+import sys
+try:
+    import websocket
+    import json
+
+    candidates = [int(p) for p in "$WS_CANDIDATES".split()]
+
+    for port in candidates:
+        try:
+            ws = websocket.create_connection(f"ws://localhost:{port}", timeout=3)
+            ws.send(json.dumps({"command": "peers"}))
+            result = json.loads(ws.recv())
+            ws.close()
+
+            # Check if we got peers (admin access) or forbidden error (no admin)
+            if "peers" in result.get("result", {}):
+                print(port)
+                sys.exit(0)
+            # Also check top-level error (some rippled versions)
+            if result.get("error") == "forbidden":
+                continue
+        except:
+            continue
+
+    # No admin port found, return first candidate
+    if candidates:
+        print(candidates[0])
+except Exception as e:
+    pass
+PYEOF
+)
+                        # Clean up - get only first line/word (remove any extra output)
+                        ADMIN_WS_PORT=$(echo "$ADMIN_WS_PORT" | head -1 | tr -d '[:space:]')
+                        if [ -n "$ADMIN_WS_PORT" ]; then
+                            RIPPLED_WS_URL="ws://localhost:$ADMIN_WS_PORT"
+                            # Check if this is admin or fallback
+                            if python3 -c "
+import websocket, json
+ws = websocket.create_connection('ws://localhost:$ADMIN_WS_PORT', timeout=3)
+ws.send(json.dumps({'command': 'peers'}))
+r = json.loads(ws.recv())
+ws.close()
+exit(0 if 'peers' in r.get('result', {}) else 1)
+" 2>/dev/null; then
+                                print_status "Found admin WebSocket on port $ADMIN_WS_PORT"
+                            else
+                                print_status "Found WebSocket on port $ADMIN_WS_PORT"
+                                print_warning "Note: This may be a public WebSocket port (admin port preferred)"
+                            fi
+                        else
+                            # Fallback to first candidate if Python detection failed
+                            FIRST_WS=$(echo $WS_CANDIDATES | awk '{print $1}')
+                            RIPPLED_WS_URL="ws://localhost:$FIRST_WS"
+                            print_status "Found WebSocket on port $FIRST_WS"
+                        fi
+                    else
+                        # websocket-client not available, use first candidate and warn user
+                        FIRST_WS=$(echo $WS_CANDIDATES | awk '{print $1}')
+                        RIPPLED_WS_URL="ws://localhost:$FIRST_WS"
+                        print_status "Found WebSocket on port $FIRST_WS"
+                        # Check if there are multiple candidates
+                        WS_COUNT=$(echo $WS_CANDIDATES | wc -w)
+                        if [ "$WS_COUNT" -gt 1 ]; then
+                            print_warning "Multiple WebSocket ports found: $WS_CANDIDATES"
+                            print_warning "Could not detect admin port (websocket-client not installed)"
+                            print_warning "If this is wrong, press 'e' to edit after detection completes"
+                        fi
+                    fi
+                fi
 
                 # Fallback - require user input if not found
                 if [ -z "$RIPPLED_HTTP_URL" ]; then
@@ -923,13 +1039,22 @@ configure_single_port() {
 
         if check_port "$port_input"; then
             suggested_port=$(find_available_port $((port_input + 1)))
+            # Also check that new suggested port isn't already selected
+            while is_port_already_selected "$suggested_port" "$exclude_key" > /dev/null; do
+                suggested_port=$((suggested_port + 1))
+            done
             print_warning "Port $port_input is in use. Try $suggested_port"
             continue
         fi
 
         local conflict_service=$(is_port_already_selected "$port_input" "$exclude_key")
         if [ -n "$conflict_service" ]; then
-            print_warning "Port $port_input is already selected for $conflict_service"
+            suggested_port=$(find_available_port $((port_input + 1)))
+            # Also check that new suggested port isn't already selected
+            while is_port_already_selected "$suggested_port" "$exclude_key" > /dev/null; do
+                suggested_port=$((suggested_port + 1))
+            done
+            print_warning "Port $port_input is already selected for $conflict_service. Try $suggested_port"
             continue
         fi
 
