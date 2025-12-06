@@ -2733,6 +2733,8 @@
           },
           "decimals": 3,
           "mappings": [],
+          "max": 0.15,
+          "min": 0,
           "noValue": "-",
           "thresholds": {
             "mode": "absolute",
@@ -2747,7 +2749,7 @@
               },
               {
                 "color": "dark-red",
-                "value": 0.11
+                "value": 0.12
               }
             ]
           },
@@ -2763,11 +2765,9 @@
       },
       "id": 390,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -2775,9 +2775,9 @@
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
       "pluginVersion": "12.1.1",
       "targets": [
@@ -2795,14 +2795,14 @@
         }
       ],
       "title": "Peer Disconnects",
-      "type": "stat"
+      "type": "gauge"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Main ledger database size on disk (SQLite). Grows over time based on ledger history retention. Monitor for disk space planning.\n\nThresholds:\n- Green: <40 GB\n- Yellow: 40-53 GB\n- Red: >53 GB",
+      "description": "Ledger DB size as percentage of root filesystem. Based on actual disk capacity for universal thresholds.\n\nThresholds:\n- Green: <60%\n- Yellow: 60-80%\n- Red: >80%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2810,7 +2810,7 @@
           },
           "decimals": 1,
           "mappings": [],
-          "max": 100000000,
+          "max": 100,
           "min": 0,
           "noValue": "-",
           "thresholds": {
@@ -2822,15 +2822,15 @@
               },
               {
                 "color": "#EAB839",
-                "value": 42949672960
+                "value": 60
               },
               {
                 "color": "dark-red",
-                "value": 57266230613.3
+                "value": 80
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -2842,11 +2842,9 @@
       },
       "id": 381,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -2854,12 +2852,9 @@
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
-        "text": {
-          "valueSize": 35
-        },
-        "textMode": "auto",
-        "wideLayout": false
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
       "pluginVersion": "12.1.1",
       "targets": [
@@ -2870,7 +2865,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "xrpl_ledger_db_bytes",
+          "expr": "xrpl_ledger_db_bytes / on() node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
           "instant": true,
           "legendFormat": "__auto",
           "range": false,
@@ -2878,14 +2873,14 @@
         }
       ],
       "title": "Ledger DB",
-      "type": "stat"
+      "type": "gauge"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "NuDB ledger database size (key-value store). Size depends on online_delete setting. Typically 10-30 GB with deletion enabled, larger with full history retention.\n\nThresholds:\n- Green: <40 GB\n- Yellow: 40-60 GB\n- Red: >60 GB",
+      "description": "NuDB ledger database size as percentage of root filesystem. Based on actual disk capacity for universal thresholds.\n\nThresholds:\n- Green: <60%\n- Yellow: 60-80%\n- Red: >80%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2893,7 +2888,7 @@
           },
           "decimals": 1,
           "mappings": [],
-          "max": 107374182400,
+          "max": 100,
           "min": 0,
           "noValue": "-",
           "thresholds": {
@@ -2905,15 +2900,15 @@
               },
               {
                 "color": "#EAB839",
-                "value": 42949672960
+                "value": 60
               },
               {
                 "color": "dark-red",
-                "value": 64424509440
+                "value": 80
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -2925,11 +2920,9 @@
       },
       "id": 382,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -2937,12 +2930,9 @@
           "fields": "",
           "values": false
         },
-        "showPercentChange": false,
-        "text": {
-          "valueSize": 35
-        },
-        "textMode": "auto",
-        "wideLayout": false
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
       "pluginVersion": "12.1.1",
       "targets": [
@@ -2953,7 +2943,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "xrpl_ledger_nudb_bytes",
+          "expr": "xrpl_ledger_nudb_bytes / on() node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
           "instant": true,
           "legendFormat": "__auto",
           "range": false,
@@ -2961,7 +2951,7 @@
         }
       ],
       "title": "Ledger NuDB",
-      "type": "stat"
+      "type": "gauge"
     },
     {
       "datasource": {
