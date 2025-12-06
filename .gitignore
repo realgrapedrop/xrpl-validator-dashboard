@@ -100,6 +100,5 @@ data/grafana-backups/
 # Generated dashboard JSON (generated from .template by install.sh)
 config/grafana/provisioning/dashboards/xrpl-validator-main.json
 
-# Claude Code project files (local development context)
-.CLAUDE
+# Local development files
 .project/
