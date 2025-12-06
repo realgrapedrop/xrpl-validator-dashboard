@@ -72,7 +72,7 @@ v3.0 is a **complete architectural rewrite** featuring:
 - **Performance Optimized** - 50% less RAM, 47% less CPU than v2.0
 
 ### Alerting & Notifications
-- **Built-in Alerting** - 12 auto-provisioned alert rules for critical validator states
+- **Built-in Alerting** - 14 auto-provisioned alert rules for critical validator states
 - **Multi-Channel Notifications** - Email, Discord, Slack, Microsoft Teams, Telegram, PagerDuty
 - **Webhook Support** - Custom webhook integrations for automation
 - **Real-time Alerts** - Instant notifications via WebSocket event streams
