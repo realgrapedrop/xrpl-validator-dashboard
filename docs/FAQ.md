@@ -71,7 +71,7 @@
 - Network connectivity to your rippled node
 
 **rippled Requirements:**
-- WebSocket admin API enabled on port 6006
+- WebSocket admin API enabled (commonly port 6006, but configurable)
 - (Optional) HTTP admin API enabled on port 5005
 - Admin access configured (`admin = 127.0.0.1` in rippled.cfg)
 

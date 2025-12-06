@@ -31,16 +31,18 @@
 
 ### rippled Requirements
 
-XRPL Monitor requires rippled with admin API access:
+XRPL Monitor requires rippled with admin API access via WebSocket. The port number (6006 in this example) is configurable—any available port works as long as it's defined in your `rippled.cfg`:
 
 ```ini
 # Example rippled.cfg
 [port_ws_admin_local]
-port = 6006
+port = 6006              # Can be any available port
 ip = 127.0.0.1
 admin = 127.0.0.1
 protocol = ws
 ```
+
+**Security Note:** When XRPL Monitor runs on the same machine as your rippled validator (recommended), binding to `127.0.0.1` ensures the admin API is only accessible locally. This is a low-risk configuration—no firewall rules are needed since all traffic stays on localhost and never traverses the network.
 
 See [rippled Configuration Guide](RIPPLED-CONFIG.md) for details.
 
