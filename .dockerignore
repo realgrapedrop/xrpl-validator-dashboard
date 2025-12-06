@@ -3,7 +3,6 @@
 .gitignore
 
 # Development
-.claude/
 docs/dev/
 venv/
 __pycache__/
