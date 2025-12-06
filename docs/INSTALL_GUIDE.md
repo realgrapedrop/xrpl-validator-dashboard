@@ -168,7 +168,7 @@ This removes:
 - Docker network
 - Log files
 
-**NOT removed:** Docker itself, project directory, rippled.
+**Note:** The uninstaller prompts to fully remove Docker and Docker Compose, or keep them installed.
 
 ### Manual Uninstall
 
