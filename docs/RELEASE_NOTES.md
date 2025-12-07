@@ -1,179 +1,184 @@
 # **__RELEASE NOTES__**
 
-*What's new in XRPL Monitor v3.0 - December 2025.*
+*Release history and changelog for the XRPL Validator Dashboard.*
 
 ---
 
 # Table of Contents
 
 - [Overview](#overview)
-- [What's New in v3.0](#whats-new-in-v30)
-- [Breaking Changes](#breaking-changes)
-- [Performance Improvements](#performance-improvements)
+- [New Features](#new-features)
+- [Enhancements and Improvements](#enhancements-and-improvements)
+- [Bug Fixes](#bug-fixes)
+- [Deprecations and Removals](#deprecations-and-removals)
 - [Known Issues](#known-issues)
-- [Deprecations](#deprecations)
-- [Future Roadmap](#future-roadmap)
-- [Changelog](#changelog)
-- [Support](#support)
+- [System Requirements and Compatibility](#system-requirements-and-compatibility)
+- [Installation and Upgrade Instructions](#installation-and-upgrade-instructions)
+- [Additional Resources](#additional-resources)
+
+---
+
+**XRPL Validator Dashboard**
+**Version 3.0.0**
+**Release Date: December 6, 2025**
 
 ---
 
 # Overview
 
-**XRPL Monitor v3.0 is a complete architectural rewrite** that transforms validator monitoring with real-time WebSocket streams, the official xrpl-py library, and VictoriaMetrics for dramatically improved performance and reliability.
+XRPL Validator Dashboard v3.0 is a **complete architectural rewrite** that transforms validator monitoring with real-time WebSocket streams, the official xrpl-py library, and VictoriaMetrics for dramatically improved performance and reliability.
+
+This release delivers **instant event latency** (vs 3-6 seconds in v2.0), **92% fewer HTTP requests**, and **97% less disk usage** while adding new features like the Cyberpunk dashboard theme, editable dashboards via API import, and improved management tools.
 
 ---
 
-# What's New in v3.0
+# New Features
 
-### Real-Time WebSocket Architecture
+- **Real-Time WebSocket Architecture**
+  0-second latency for critical events with 5 real-time streams: ledger, server, peer_status, consensus, and validations.
 
-- **0-second latency** for critical events (vs 3-6s in v2.0)
-- **92% fewer HTTP requests** (from 42/min to 3.2/min)
-- **5 real-time streams**: ledger, server, peer_status, consensus, validations
+- **Official xrpl-py Integration**
+  AsyncWebSocketClient for real-time event streams and AsyncJsonRpcClient for supplementary HTTP API calls, with type hints throughout.
 
-### Official xrpl-py Integration
+- **VictoriaMetrics Database**
+  Single database for all metrics (replaces SQLite + Prometheus) with Prometheus-compatible query language (PromQL).
 
-- AsyncWebSocketClient for real-time event streams
-- AsyncJsonRpcClient for supplementary HTTP API calls
-- Type hints throughout for better IDE support
-- Maintained by XRPL team
+- **Docker Deployment**
+  One-command deployment with `sudo ./install.sh`, host networking for easy access to local rippled, and 14 auto-provisioned alert rules.
 
-### Single Database: VictoriaMetrics
+- **Cyberpunk Dashboard**
+  Fun alternate theme with vibrant neon colors for those late-night monitoring sessions.
 
-- Single database for all metrics (replaces SQLite + Prometheus)
-- Prometheus-compatible query language (PromQL)
-- **97% less disk usage** for 30-day retention (~290 MB vs ~9.5 GB)
+- **Editable Dashboards**
+  Dashboards imported via Grafana API instead of file provisioning—customize and save your changes.
 
-### Docker Deployment
-
-- One-command deployment: `sudo ./install.sh`
-- Host networking for easy access to local rippled
-- 14 auto-provisioned alert rules
-
-### Enhanced Dashboard
-
-- Thousand separators in large numbers
-- Panel descriptions explaining metrics
-- Real-time state monitoring (1-second refresh)
-- Grafana 12.x (grafana:latest) with trendline visualizations on key panels
-- **Cyberpunk Dashboard** - Fun alternate theme with vibrant neon colors
-- **Editable dashboards** - Dashboards imported via API, not provisioned (you can customize and save)
-- **Hidden variables/time picker** - Cleaner UI without clutter
-- **Gauge panels** - Peer Disconnects, Ledger DB, Ledger NuDB with visual gauges
-- **Percentage-based thresholds** - Ledger DB/NuDB use % of disk space (60%/80%)
-
-### Install & Management Improvements
-
-- `install.sh` imports dashboards via Grafana API instead of provisioning
-- Dashboards are fully editable - customize and save your changes
-- `manage.sh` → Advanced → Restore default dashboard (choose Main, Cyberpunk, or Both)
-- Restore prompts for Grafana username (default: admin) and password
-- Handles authentication errors and permission checks gracefully
+- **Dashboard Restore Menu**
+  Restore default dashboards from `manage.sh` → Advanced → Restore. Choose Main, Cyberpunk, or Both.
 
 ---
 
-# Breaking Changes
+# Enhancements and Improvements
 
-### Cannot Upgrade In-Place
+- **Gauge Panels for Database Metrics**
+  Peer Disconnects, Ledger DB, and Ledger NuDB now display as visual gauges instead of stat panels.
 
-v3.0 cannot upgrade from v2.0. This is a complete rewrite with incompatible data formats.
+- **Percentage-Based Disk Thresholds**
+  Ledger DB and NuDB panels use percentage of disk space (60%/80% thresholds) instead of fixed byte values—works universally regardless of disk size or retention settings.
 
-**Migration**: See [INSTALL_GUIDE.md](INSTALL_GUIDE.md#migrating-from-v20) for migration steps.
+- **Cleaner Dashboard UI**
+  Hidden variables row and time picker for a streamlined interface.
 
-### Configuration Changes
+- **Improved Dashboard Restore Flow**
+  Prompts for Grafana username (default: admin) before password, with clear notes about required Admin or Editor role.
 
-**v2.0** used `RIPPLED_HOST` and `RIPPLED_PORT`.
-**v3.0** uses full URLs:
-```bash
-RIPPLED_WS_URL=ws://localhost:6006
-RIPPLED_HTTP_URL=http://localhost:5005
-VICTORIA_METRICS_URL=http://localhost:8428
-```
+- **Better Authentication Error Handling**
+  Dashboard restore now handles wrong password (401) vs insufficient permissions (403) separately with clear error messages.
 
-### Metric Changes
+- **Grafana 12.x Support**
+  Uses `grafana:latest` with trendline visualizations on key panels.
 
-| v2.0 Metric | v3.0 Metric |
-|-------------|-------------|
-| `xrpl_validation_agreement_pct` | `xrpl_validation_agreement_pct_1h` |
-| `xrpl_validation_agreements` | `xrpl_validation_agreements_1h` |
-| `xrpl_validation_missed` | `xrpl_validation_missed_1h` |
+- **Panel Descriptions**
+  Metrics include descriptions explaining what each panel measures.
 
-**New metrics**: 24-hour versions (`_24h`) of all validation metrics.
+- **Thousand Separators**
+  Large numbers display with thousand separators for readability.
 
 ---
 
-# Performance Improvements
+# Bug Fixes
 
-| Metric | v2.0 | v3.0 | Change |
-|--------|------|------|--------|
-| HTTP Requests/min | 42 | 3.2 | **92%** |
-| Event Latency | 3-6s | 0s | Instant |
-| Disk (30d) | ~9.5 GB | ~290 MB | **97%** |
-| RAM | ~609 MB | ~729 MB | +20% (justified by real-time streams) |
+- **WebSocket Admin Port Detection**
+  Fixed detection logic for rippled WebSocket admin port configuration.
+
+- **Port Conflict Loop**
+  Resolved issue where port detection could enter an infinite loop on certain configurations.
+
+- **Development Tool References**
+  Removed development tool references from ignore files.
+
+---
+
+# Deprecations and Removals
+
+- **SQLite Database**
+  Removed in favor of VictoriaMetrics for all metric storage.
+
+- **File-Based Dashboard Provisioning**
+  Replaced with API import to enable dashboard editing and customization.
+
+- **v2.0 Configuration Format**
+  `RIPPLED_HOST` and `RIPPLED_PORT` replaced with full URLs (`RIPPLED_WS_URL`, `RIPPLED_HTTP_URL`).
+
+- **Legacy Metric Names**
+  Validation metrics renamed with explicit time windows (e.g., `xrpl_validation_agreement_pct` → `xrpl_validation_agreement_pct_1h`).
 
 ---
 
 # Known Issues
 
-### Docker Socket Permissions
+- **Docker Socket Permissions**
+  CPU monitoring requires Docker socket access. Set `DOCKER_GID` in `.env`:
+  ```bash
+  DOCKER_GID=$(getent group docker | cut -d: -f3)
+  ```
 
-CPU monitoring requires Docker socket access. Set `DOCKER_GID` in `.env`:
+- **State Display Flicker**
+  Dashboard's 1-second refresh captures real state transitions. During consensus, validators flip between state 4 (`full`) and state 6 (`proposing`)—both indicate healthy operation.
+
+---
+
+# System Requirements and Compatibility
+
+| Requirement | Specification |
+|-------------|---------------|
+| **Operating System** | Ubuntu 20.04 LTS or later |
+| **Docker** | Version 23.0+ |
+| **Docker Compose** | Version 2.0+ |
+| **rippled** | Running on same machine with admin WebSocket access |
+| **Disk Space** | ~500 MB for images, ~290 MB for 30-day metrics |
+| **Memory** | ~729 MB RAM total |
+
+### Breaking Changes from v2.0
+
+- Cannot upgrade in-place from v2.0—this is a complete rewrite with incompatible data formats
+- Configuration format changed to `.env` based with full URLs
+- Some metrics renamed with explicit time windows (`_1h`, `_24h` suffixes)
+
+---
+
+# Installation and Upgrade Instructions
+
+### New Installation
+
 ```bash
-DOCKER_GID=$(getent group docker | cut -d: -f3)
+git clone https://github.com/realgrapedrop/xrpl-validator-dashboard.git
+cd xrpl-validator-dashboard
+sudo ./install.sh
 ```
 
-### State Display
+### Upgrading from v2.0
 
-Dashboard's 1-second refresh captures real state transitions. During consensus, validators flip between state 4 (`full`) and state 6 (`proposing`) - both indicate healthy operation.
+v3.0 cannot upgrade in-place from v2.0. See [INSTALL_GUIDE.md](INSTALL_GUIDE.md#migrating-from-v20) for migration steps.
 
----
+### Updating v3.x
 
-# Deprecations
-
-**Removed from v2.0**:
-- SQLite database (replaced with VictoriaMetrics)
-- File-based dashboard provisioning (replaced with API import for editability)
-
----
-
-# Future Roadmap
-
-### v3.1.0 (Planned)
-- Multi-validator support
-- Custom alert rules
-- Mobile-responsive dashboards
-- Prometheus remote write
-- REST API
+```bash
+cd xrpl-validator-dashboard
+git pull
+sudo ./install.sh
+```
 
 ---
 
-# Changelog
+# Additional Resources
 
-### v3.0.0
-
-**Major Changes**:
-- Complete WebSocket event-driven architecture
-- Official xrpl-py library integration
-- VictoriaMetrics replaces SQLite + Prometheus
-- Docker Compose deployment
-- 14 auto-provisioned alert rules
-- 92% reduction in HTTP requests
-- 97% reduction in disk usage
-
-**Breaking Changes**:
-- Cannot upgrade in-place from v2.0
-- Configuration format changed (.env based)
-- Some metrics renamed with explicit time windows
-
----
-
-# Support
-
-- **Documentation**: [docs/](../docs/) folder
-- **Issues**: [GitHub Issues](https://github.com/realgrapedrop/xrpl-validator-dashboard/issues)
+- **Installation Guide**: [INSTALL_GUIDE.md](INSTALL_GUIDE.md)
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Metrics Reference**: [METRICS.md](METRICS.md)
+- **Alert Rules**: [ALERTS.md](ALERTS.md)
+- **GitHub Issues**: [Report a bug or request a feature](https://github.com/realgrapedrop/xrpl-validator-dashboard/issues)
 - **XRPL Discord**: `#validators` channel
 
 ---
 
-**Built for the XRPL validator community**
+**Thank you for using XRPL Validator Dashboard. We appreciate your continued support.**
