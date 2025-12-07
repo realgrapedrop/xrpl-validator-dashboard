@@ -712,12 +712,13 @@ adjust_retention() {
 }
 
 # Import a single dashboard via API (helper function)
-# Args: $1=grafana_port, $2=password, $3=template_file, $4=dashboard_name
+# Args: $1=grafana_port, $2=username, $3=password, $4=template_file, $5=dashboard_name
 import_dashboard_api() {
     local grafana_port=$1
-    local password=$2
-    local template_file=$3
-    local dashboard_name=$4
+    local username=$2
+    local password=$3
+    local template_file=$4
+    local dashboard_name=$5
 
     # Prepare import payload (remove id, set version to 0, wrap for import)
     local import_payload
@@ -731,7 +732,7 @@ import_dashboard_api() {
     # Import dashboard via Grafana API
     local response
     response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
-        -u "admin:${password}" \
+        -u "${username}:${password}" \
         -H "Content-Type: application/json" \
         -d @- 2>&1)
 
@@ -742,7 +743,9 @@ import_dashboard_api() {
         print_status "$dashboard_name restored successfully"
         return 0
     elif [ "$http_code" = "401" ]; then
-        return 2  # Auth failed
+        return 2  # Auth failed (wrong username/password)
+    elif [ "$http_code" = "403" ]; then
+        return 3  # Forbidden (insufficient permissions)
     elif [ "$http_code" = "412" ]; then
         print_status "$dashboard_name restored (already up to date)"
         return 0
@@ -839,6 +842,13 @@ restore_default_dashboard() {
         return
     fi
 
+    # Get Grafana credentials
+    echo ""
+    echo "Enter Grafana credentials (requires Admin or Editor role):"
+    echo ""
+    read -p "Username [admin]: " grafana_username
+    grafana_username=${grafana_username:-admin}
+
     # Password retry loop
     while [ $attempt -lt $max_attempts ]; do
         attempt=$((attempt + 1))
@@ -850,8 +860,6 @@ restore_default_dashboard() {
                 echo -e "${YELLOW}WARNING: This is your last attempt. Too many failed attempts may lock your account.${NC}"
             fi
         fi
-        echo "Enter Grafana admin password (or press Ctrl+C to cancel):"
-        echo "(Password not stored, only used for this API call)"
         read -s -p "Password: " grafana_password
         echo ""
 
@@ -865,11 +873,11 @@ restore_default_dashboard() {
         if [ "$restore_both" = true ]; then
             print_info "Restoring both dashboards..."
 
-            import_dashboard_api "$grafana_port" "$grafana_password" "$main_template" "Main Dashboard"
+            import_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password" "$main_template" "Main Dashboard"
             local main_result=$?
 
             if [ $main_result -eq 2 ]; then
-                print_error "Authentication failed. Incorrect password."
+                print_error "Authentication failed. Incorrect username or password."
                 if [ $attempt -lt $max_attempts ]; then
                     echo "Please try again."
                     continue
@@ -878,9 +886,13 @@ restore_default_dashboard() {
                     print_warning "Maximum attempts reached. Returning to menu."
                     break
                 fi
+            elif [ $main_result -eq 3 ]; then
+                print_error "Permission denied. User '$grafana_username' needs Admin or Editor role."
+                sleep 3
+                return
             fi
 
-            import_dashboard_api "$grafana_port" "$grafana_password" "$cyberpunk_file" "Cyberpunk Dashboard"
+            import_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password" "$cyberpunk_file" "Cyberpunk Dashboard"
 
             echo ""
             print_info "Access your dashboards at: http://localhost:${grafana_port}"
@@ -889,11 +901,11 @@ restore_default_dashboard() {
         else
             print_info "Restoring $dashboard_name..."
 
-            import_dashboard_api "$grafana_port" "$grafana_password" "$template_file" "$dashboard_name"
+            import_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password" "$template_file" "$dashboard_name"
             local result=$?
 
             if [ $result -eq 2 ]; then
-                print_error "Authentication failed. Incorrect password."
+                print_error "Authentication failed. Incorrect username or password."
                 if [ $attempt -lt $max_attempts ]; then
                     echo "Please try again."
                     continue
@@ -902,6 +914,10 @@ restore_default_dashboard() {
                     print_warning "Maximum attempts reached. Returning to menu."
                     break
                 fi
+            elif [ $result -eq 3 ]; then
+                print_error "Permission denied. User '$grafana_username' needs Admin or Editor role."
+                sleep 3
+                return
             fi
 
             echo ""
