@@ -56,7 +56,20 @@
 - Thousand separators in large numbers
 - Panel descriptions explaining metrics
 - Real-time state monitoring (1-second refresh)
-- Grafana 12.1.1 with trendline visualizations on key panels
+- Grafana 12.x (grafana:latest) with trendline visualizations on key panels
+- **Cyberpunk Dashboard** - Fun alternate theme with vibrant neon colors
+- **Editable dashboards** - Dashboards imported via API, not provisioned (you can customize and save)
+- **Hidden variables/time picker** - Cleaner UI without clutter
+- **Gauge panels** - Peer Disconnects, Ledger DB, Ledger NuDB with visual gauges
+- **Percentage-based thresholds** - Ledger DB/NuDB use % of disk space (60%/80%)
+
+### Install & Management Improvements
+
+- `install.sh` imports dashboards via Grafana API instead of provisioning
+- Dashboards are fully editable - customize and save your changes
+- `manage.sh` → Advanced → Restore default dashboard (choose Main, Cyberpunk, or Both)
+- Restore prompts for Grafana username (default: admin) and password
+- Handles authentication errors and permission checks gracefully
 
 ---
 
@@ -119,9 +132,8 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 # Deprecations
 
 **Removed from v2.0**:
-- Interactive setup wizard (replaced with `.env` configuration)
 - SQLite database (replaced with VictoriaMetrics)
-- Separate Node Exporter container
+- File-based dashboard provisioning (replaced with API import for editability)
 
 ---
 
@@ -131,11 +143,8 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 - Multi-validator support
 - Custom alert rules
 - Mobile-responsive dashboards
-
-### v3.2.0 (Planned)
 - Prometheus remote write
 - REST API
-- Slack/Discord notifications
 
 ---
 
