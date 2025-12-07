@@ -21258,6 +21258,7 @@
           "text": "VictoriaMetrics",
           "value": "victoria"
         },
+        "hide": 2,
         "includeAll": false,
         "label": "Datasource",
         "name": "DS_VICTORIAMETRICS",
@@ -21268,6 +21269,7 @@
         "type": "datasource"
       },
       {
+        "allowCustomValue": true,
         "current": {
           "text": "node",
           "value": "node"
@@ -21277,6 +21279,7 @@
           "uid": "victoria"
         },
         "definition": "",
+        "hide": 2,
         "includeAll": false,
         "label": "Job",
         "name": "job",
@@ -21300,6 +21303,7 @@
           "uid": "victoria"
         },
         "definition": "label_values(node_uname_info{job=\"$job\"}, nodename)",
+        "hide": 2,
         "includeAll": false,
         "label": "Nodename",
         "name": "nodename",
@@ -21323,6 +21327,7 @@
           "uid": "victoria"
         },
         "definition": "label_values(node_uname_info{job=\"$job\", nodename=\"$nodename\"}, instance)",
+        "hide": 2,
         "includeAll": false,
         "label": "Instance",
         "name": "node",
@@ -21361,6 +21366,7 @@
     "to": "now"
   },
   "timepicker": {
+    "hidden": true,
     "refresh_intervals": [
       "1s",
       "5s",
@@ -21378,6 +21384,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard Cyberpunk",
   "uid": "xrpl-validator-monitor-cyberpunk",
-  "version": 20,
+  "version": 23,
   "weekStart": ""
 }
