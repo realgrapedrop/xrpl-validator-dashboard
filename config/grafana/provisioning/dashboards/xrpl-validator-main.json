@@ -26,24 +26,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": 4,
-  "links": [
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "GitHub",
-      "type": "link",
-      "url": "https://github.com/rfmoz/grafana-dashboards"
-    },
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "Grafana",
-      "type": "link",
-      "url": "https://grafana.com/grafana/dashboards/1860"
-    }
-  ],
+  "links": [],
   "liveNow": true,
   "panels": [
     {
@@ -21391,6 +21374,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard",
   "uid": "xrpl-validator-monitor-full",
-  "version": 73,
+  "version": 74,
   "weekStart": ""
 }
