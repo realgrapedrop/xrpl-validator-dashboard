@@ -1715,7 +1715,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "purple",
             "mode": "fixed"
           },
           "decimals": 0,
@@ -1789,7 +1789,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "mappings": [
             {
@@ -1830,7 +1831,7 @@
                   "text": "VALIDATING"
                 },
                 "7": {
-                  "color": "#0079ef",
+                  "color": "purple",
                   "index": 7,
                   "text": "PROPOSING"
                 }
@@ -1843,7 +1844,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#9D00FF",
+                "color": "purple",
                 "value": 0
               },
               {
@@ -1922,7 +1923,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "decimals": 0,
           "mappings": [],
@@ -2281,8 +2283,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
-            "mode": "shades"
+            "fixedColor": "#9D00FF",
+            "mode": "fixed"
           },
           "decimals": 0,
           "mappings": [],
@@ -2356,7 +2358,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "decimals": 0,
@@ -2444,7 +2446,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "mappings": [],
@@ -2929,8 +2931,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0077ef",
-            "mode": "shades"
+            "fixedColor": "#9D00FF",
+            "mode": "fixed"
           },
           "decimals": 1,
           "mappings": [],
@@ -3007,7 +3009,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "decimals": 0,
@@ -3083,7 +3085,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "decimals": 0,
@@ -3585,7 +3587,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "decimals": 1,
@@ -3671,7 +3673,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "mappings": [],
@@ -3750,7 +3752,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#0079ef",
+            "fixedColor": "#9d00ff",
             "mode": "fixed"
           },
           "mappings": [],
@@ -5025,7 +5027,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#b3dc56",
+            "fixedColor": "#9D00FF",
             "mode": "fixed"
           },
           "custom": {
@@ -5087,6 +5089,7 @@
       },
       "id": 387,
       "options": {
+        "colorMode": "background",
         "legend": {
           "calcs": [],
           "displayMode": "list",
@@ -21375,6 +21378,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard Cyberpunk",
   "uid": "xrpl-validator-monitor-cyberpunk",
-  "version": 12,
+  "version": 20,
   "weekStart": ""
 }
