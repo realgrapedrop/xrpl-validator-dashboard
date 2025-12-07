@@ -12,7 +12,7 @@ Production-ready monitoring for validators who need reliable insight without the
 
 ## Dashboard Preview
 
-![XRPL Validator Dashboard](images/dashboard-preview.png)
+![XRPL Validator Dashboard](images/dashboard-preview.gif)
 
 *Real-time monitoring of XRPL validator performance with 40 metrics covering validation, consensus, network health, server state, etc. Features instant WebSocket updates, 1-second dashboard refresh, and smart validation counter with rippled restart detection.*
 
