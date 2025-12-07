@@ -711,10 +711,52 @@ adjust_retention() {
     sleep 2
 }
 
+# Import a single dashboard via API (helper function)
+# Args: $1=grafana_port, $2=password, $3=template_file, $4=dashboard_name
+import_dashboard_api() {
+    local grafana_port=$1
+    local password=$2
+    local template_file=$3
+    local dashboard_name=$4
+
+    # Prepare import payload (remove id, set version to 0, wrap for import)
+    local import_payload
+    import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$template_file" 2>&1)
+
+    if [ $? -ne 0 ]; then
+        print_error "Failed to prepare $dashboard_name payload"
+        return 1
+    fi
+
+    # Import dashboard via Grafana API
+    local response
+    response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
+        -u "admin:${password}" \
+        -H "Content-Type: application/json" \
+        -d @- 2>&1)
+
+    local http_code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | head -n-1)
+
+    if [ "$http_code" = "200" ]; then
+        print_status "$dashboard_name restored successfully"
+        return 0
+    elif [ "$http_code" = "401" ]; then
+        return 2  # Auth failed
+    elif [ "$http_code" = "412" ]; then
+        print_status "$dashboard_name restored (already up to date)"
+        return 0
+    else
+        print_error "Failed to restore $dashboard_name (HTTP $http_code)"
+        return 1
+    fi
+}
+
 # Restore default dashboard
 restore_default_dashboard() {
     local grafana_port=${GRAFANA_PORT:-3003}
-    local template_file="config/grafana/provisioning/dashboards/xrpl-validator-main.json.template"
+    local main_template="config/grafana/provisioning/dashboards/xrpl-validator-main.json.template"
+    local cyberpunk_file="config/grafana/provisioning/dashboards/xrpl-validator-cyberpunk.json"
     local max_attempts=3
     local attempt=0
 
@@ -722,7 +764,43 @@ restore_default_dashboard() {
     echo ""
     echo "Restore Default Dashboard"
     echo ""
-    echo -e "${YELLOW}⚠ WARNING: This will replace your current dashboard with the default template.${NC}"
+    echo "Which dashboard would you like to restore?"
+    echo ""
+    echo "  1) Default Main Dashboard"
+    echo "  2) Cyberpunk Dashboard"
+    echo "  3) Both dashboards"
+    echo "  4) Cancel"
+    echo ""
+
+    read -p "Select option [1-4]: " dashboard_choice
+
+    case $dashboard_choice in
+        1)
+            local template_file="$main_template"
+            local dashboard_name="Main Dashboard"
+            local restore_both=false
+            ;;
+        2)
+            local template_file="$cyberpunk_file"
+            local dashboard_name="Cyberpunk Dashboard"
+            local restore_both=false
+            ;;
+        3)
+            local restore_both=true
+            ;;
+        4|*)
+            print_info "Restore cancelled"
+            sleep 2
+            return
+            ;;
+    esac
+
+    echo ""
+    if [ "$restore_both" = true ]; then
+        echo -e "${YELLOW}⚠ WARNING: This will replace BOTH dashboards with defaults.${NC}"
+    else
+        echo -e "${YELLOW}⚠ WARNING: This will replace the $dashboard_name with the default.${NC}"
+    fi
     echo -e "${YELLOW}All customizations will be LOST.${NC}"
     echo ""
 
@@ -734,11 +812,24 @@ restore_default_dashboard() {
         return
     fi
 
-    # Check if template exists
-    if [ ! -f "$template_file" ]; then
-        print_error "Template file not found: $template_file"
-        sleep 3
-        return
+    # Check if template(s) exist
+    if [ "$restore_both" = true ]; then
+        if [ ! -f "$main_template" ]; then
+            print_error "Main template not found: $main_template"
+            sleep 3
+            return
+        fi
+        if [ ! -f "$cyberpunk_file" ]; then
+            print_error "Cyberpunk dashboard not found: $cyberpunk_file"
+            sleep 3
+            return
+        fi
+    else
+        if [ ! -f "$template_file" ]; then
+            print_error "Template file not found: $template_file"
+            sleep 3
+            return
+        fi
     fi
 
     # Check if Grafana is running
@@ -770,58 +861,51 @@ restore_default_dashboard() {
         fi
 
         echo ""
-        print_info "Restoring default dashboard..."
 
-        # Prepare import payload (remove id, set version to 0, wrap for import)
-        local import_payload
-        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$template_file" 2>&1)
+        if [ "$restore_both" = true ]; then
+            print_info "Restoring both dashboards..."
 
-        if [ $? -ne 0 ]; then
-            print_error "Failed to prepare dashboard payload"
-            echo "$import_payload"
-            sleep 3
-            return
-        fi
+            import_dashboard_api "$grafana_port" "$grafana_password" "$main_template" "Main Dashboard"
+            local main_result=$?
 
-        # Import dashboard via Grafana API
-        local response
-        response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
-            -u "admin:${grafana_password}" \
-            -H "Content-Type: application/json" \
-            -d @- 2>&1)
-
-        local http_code=$(echo "$response" | tail -n1)
-        local body=$(echo "$response" | head -n-1)
-
-        if [ "$http_code" = "200" ]; then
-            if echo "$body" | grep -q '"status":"success"'; then
-                print_status "Dashboard restored successfully"
-                echo ""
-                print_info "Access your dashboard at: http://localhost:${grafana_port}"
-                sleep 3
-                return
-            else
-                print_warning "Dashboard may have been restored (check Grafana)"
-                sleep 3
-                return
+            if [ $main_result -eq 2 ]; then
+                print_error "Authentication failed. Incorrect password."
+                if [ $attempt -lt $max_attempts ]; then
+                    echo "Please try again."
+                    continue
+                else
+                    echo ""
+                    print_warning "Maximum attempts reached. Returning to menu."
+                    break
+                fi
             fi
-        elif [ "$http_code" = "401" ]; then
-            print_error "Authentication failed. Incorrect password."
-            if [ $attempt -lt $max_attempts ]; then
-                echo "Please try again."
-            else
-                echo ""
-                print_warning "Maximum attempts reached. Returning to menu."
-                echo "If you continue to have issues, you may need to reset your Grafana password."
-            fi
-        elif [ "$http_code" = "412" ]; then
-            # Dashboard already exists with same version - this is OK
-            print_status "Dashboard restored (already up to date)"
+
+            import_dashboard_api "$grafana_port" "$grafana_password" "$cyberpunk_file" "Cyberpunk Dashboard"
+
+            echo ""
+            print_info "Access your dashboards at: http://localhost:${grafana_port}"
             sleep 3
             return
         else
-            print_error "Failed to restore dashboard (HTTP $http_code)"
-            echo "Response: $body" | head -3
+            print_info "Restoring $dashboard_name..."
+
+            import_dashboard_api "$grafana_port" "$grafana_password" "$template_file" "$dashboard_name"
+            local result=$?
+
+            if [ $result -eq 2 ]; then
+                print_error "Authentication failed. Incorrect password."
+                if [ $attempt -lt $max_attempts ]; then
+                    echo "Please try again."
+                    continue
+                else
+                    echo ""
+                    print_warning "Maximum attempts reached. Returning to menu."
+                    break
+                fi
+            fi
+
+            echo ""
+            print_info "Access your dashboard at: http://localhost:${grafana_port}"
             sleep 3
             return
         fi

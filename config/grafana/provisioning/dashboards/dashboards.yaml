@@ -1,13 +1,15 @@
 apiVersion: 1
 
-providers:
-  - name: 'XRPL Validator Dashboards'
-    orgId: 1
-    folder: ''
-    type: file
-    disableDeletion: true
-    updateIntervalSeconds: 10
-    allowUiUpdates: true
-    options:
-      path: /etc/grafana/provisioning/dashboards
-      foldersFromFilesStructure: false
+# ==============================================================================
+# Dashboard Provisioning Configuration
+# ==============================================================================
+# NOTE: Dashboards are imported via the Grafana API during installation,
+# NOT via file-based provisioning. This allows users to customize dashboards
+# and save their changes.
+#
+# To restore default dashboards: ./manage.sh → Advanced settings → Restore default
+# ==============================================================================
+
+providers: []
+# Empty providers list = no auto-provisioning
+# Dashboards are imported via API in install.sh (import_dashboards_via_api function)

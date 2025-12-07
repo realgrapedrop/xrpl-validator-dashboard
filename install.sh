@@ -170,6 +170,95 @@ trap cleanup_on_error ERR
 log "Installation started"
 
 # ==============================================================================
+# DASHBOARD IMPORT VIA GRAFANA API
+# ==============================================================================
+# Import dashboards via API instead of file provisioning.
+# This allows users to customize dashboards and save changes.
+
+import_dashboards_via_api() {
+    local grafana_port=$1
+    local max_wait=60
+    local wait_count=0
+
+    print_info "Importing dashboards via Grafana API..."
+
+    # Wait for Grafana to be ready
+    while [ $wait_count -lt $max_wait ]; do
+        if curl -s "http://localhost:${grafana_port}/api/health" 2>/dev/null | grep -q "ok"; then
+            break
+        fi
+        sleep 2
+        wait_count=$((wait_count + 2))
+    done
+
+    if [ $wait_count -ge $max_wait ]; then
+        print_warning "Grafana not ready after ${max_wait}s, skipping API import"
+        print_warning "Dashboards can be imported later via: ./manage.sh → Advanced → Restore default"
+        return 1
+    fi
+
+    # Import main dashboard
+    local main_dashboard="config/grafana/provisioning/dashboards/xrpl-validator-main.json"
+    if [ -f "$main_dashboard" ]; then
+        # Prepare import payload: remove id, set version to 0, wrap for import API
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$main_dashboard" 2>/dev/null)
+
+        if [ -n "$import_payload" ]; then
+            local response
+            response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" \
+                -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
+                -u "admin:admin" \
+                -H "Content-Type: application/json" \
+                -d @- 2>&1)
+
+            local http_code=$(echo "$response" | tail -n1)
+            local body=$(echo "$response" | head -n-1)
+
+            if [ "$http_code" = "200" ]; then
+                print_status "Main dashboard imported successfully"
+                log "Dashboard imported: xrpl-validator-main.json"
+            elif [ "$http_code" = "412" ]; then
+                # Already exists - OK
+                print_status "Main dashboard imported (already exists)"
+            else
+                print_warning "Dashboard import returned HTTP $http_code"
+                log "Dashboard import warning: HTTP $http_code - $body"
+            fi
+        else
+            print_warning "Failed to prepare main dashboard payload"
+        fi
+    else
+        print_warning "Main dashboard file not found: $main_dashboard"
+    fi
+
+    # Import cyberpunk dashboard if it exists
+    local cyberpunk_dashboard="config/grafana/provisioning/dashboards/xrpl-validator-cyberpunk.json"
+    if [ -f "$cyberpunk_dashboard" ]; then
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$cyberpunk_dashboard" 2>/dev/null)
+
+        if [ -n "$import_payload" ]; then
+            local response
+            response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" \
+                -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
+                -u "admin:admin" \
+                -H "Content-Type: application/json" \
+                -d @- 2>&1)
+
+            local http_code=$(echo "$response" | tail -n1)
+
+            if [ "$http_code" = "200" ] || [ "$http_code" = "412" ]; then
+                print_status "Cyberpunk dashboard imported"
+                log "Dashboard imported: xrpl-validator-cyberpunk.json"
+            fi
+        fi
+    fi
+
+    return 0
+}
+
+# ==============================================================================
 # STEP 1: RIPPLED DETECTION (NEW - was Step 3)
 # ==============================================================================
 
@@ -1288,11 +1377,12 @@ EOF
 
     if timeout 10 curl -s "http://localhost:$GRAFANA_PORT/api/health" | grep -q "ok"; then
         print_status "Grafana is responding"
-        print_info "Waiting for dashboard provisioning (15 seconds)..."
-        sleep 15
-        print_status "Dashboard provisioned and ready"
+
+        # Import dashboards via API (allows user customization)
+        import_dashboards_via_api "$GRAFANA_PORT"
     else
         print_warning "Grafana not responding yet"
+        print_warning "Dashboards can be imported later via: ./manage.sh → Advanced → Restore default"
     fi
 
     log "Installation completed successfully"
@@ -1322,9 +1412,10 @@ EOF
     echo ""
     echo -e "${CYAN}Next Steps:${NC}"
     echo "  1. Log into Grafana and change the admin password"
-    echo "  2. Configure email/webhook notifications:"
-    echo "     See: config/grafana/provisioning/README.md"
-    echo "  3. Review alert rules in Grafana → Alerting"
+    echo "  2. Customize your dashboard (changes are saved!)"
+    echo "  3. Configure email/webhook notifications:"
+    echo "     See: docs/ALERTS.md"
+    echo "  4. Review alert rules in Grafana → Alerting"
     echo ""
     echo -e "${CYAN}Useful commands:${NC}"
     echo "  View logs:        docker compose logs -f"
