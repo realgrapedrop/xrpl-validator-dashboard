@@ -319,6 +319,22 @@ To rollback component versions, edit `docker-compose.yml` to use previous image 
 docker compose down && docker compose up -d
 ```
 
+### Restoring Dashboards
+
+If you accidentally break a dashboard, you can restore it to the default:
+
+```bash
+./manage.sh    # Select option 12 (Advanced settings)
+               # Select option 2 (Restore default dashboard)
+```
+
+You can restore:
+- **Default Main Dashboard** - The standard XRPL Validator Dashboard
+- **Cyberpunk Dashboard** - Vibrant color theme variant
+- **Both dashboards** - Restore both at once
+
+You'll be prompted for your Grafana username (default: `admin`) and password. The user account must have **Admin** or **Editor** role in Grafana.
+
 ---
 
 # Troubleshooting
