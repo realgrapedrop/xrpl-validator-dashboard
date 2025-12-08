@@ -1083,22 +1083,120 @@ update_dashboard_menu() {
     echo -e "${BLUE}                    Update Dashboard                           ${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
-    echo "This will regenerate configuration files and rebuild containers"
-    echo "to apply any updates from the latest code."
+    echo -e "${YELLOW}⚠️  WARNING: This update will reset Grafana to apply new features.${NC}"
+    echo ""
+    echo "This update will:"
+    echo "  1. Export your current dashboards"
+    echo "  2. Reset Grafana and import the latest dashboards"
+    echo "  3. Re-import your old dashboards as 'Dashboard-TIMESTAMP' for comparison"
+    echo ""
+    echo "What will be preserved:"
+    echo "  - All metrics data (agreements, missed, peer counts, etc.)"
+    echo "  - Your .env settings (ports, SMTP config)"
+    echo "  - Your old dashboards (renamed with timestamp)"
     echo ""
     echo -e "${YELLOW}IMPORTANT: You should run 'git pull' first to get the latest code.${NC}"
     echo ""
-    read -p "Have you already run 'git pull'? [y/N]: " git_pulled
+    read -p "Do you want to continue? (yes/no) [no]: " confirm </dev/tty
 
-    if [[ ! $git_pulled =~ ^[Yy]$ ]]; then
+    if [ "$confirm" != "yes" ]; then
         echo ""
-        print_info "Please run 'git pull' first, then come back to update."
-        echo ""
-        echo "Commands to run:"
-        echo "  git pull"
-        echo "  ./manage.sh"
+        print_info "Update cancelled."
         echo ""
         return
+    fi
+
+    # Verify Grafana credentials before proceeding
+    # This ensures only authorized users can run the update
+    echo ""
+    echo "Enter your current Grafana credentials to proceed:"
+    read -p "  Username [admin]: " grafana_user </dev/tty
+    grafana_user=${grafana_user:-admin}
+    read -s -p "  Password: " new_password </dev/tty
+    echo ""
+
+    # Verify credentials (use /api/org which requires authentication, not /api/health which doesn't)
+    print_info "Verifying credentials..."
+    local auth_response
+    auth_response=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/org" 2>/dev/null)
+    if ! echo "$auth_response" | grep -q '"id":1'; then
+        echo ""
+        print_error "Invalid Grafana credentials. Update cancelled."
+        echo ""
+        return
+    fi
+    print_status "Credentials verified"
+
+    # Ask about keeping dashboard copies
+    echo ""
+    echo "Keep your current dashboards for comparison after update?"
+    echo "  - Main & Cyberpunk dashboards will be re-imported with timestamps"
+    echo "  - Any custom dashboards will be saved to data/dashboard-backups/"
+    echo ""
+    read -p "Keep copies? (yes/no) [yes]: " keep_copies </dev/tty
+    keep_copies=${keep_copies:-yes}
+
+    # Export current dashboards FIRST (before any changes)
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local saved_main=""
+    local saved_cyberpunk=""
+    local saved_user_dashboards=0
+
+    if [ "$keep_copies" = "yes" ] || [ "$keep_copies" = "y" ]; then
+        print_info "Exporting current dashboards..."
+        mkdir -p data/dashboard-backups
+
+        # Export main dashboard
+        local main_export=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/xrpl-validator-monitor-full" 2>/dev/null)
+        if echo "$main_export" | jq -e '.dashboard' > /dev/null 2>&1; then
+            saved_main="XRPL Validator Dashboard-${timestamp}"
+            echo "$main_export" | jq '.dashboard' > "data/dashboard-backups/main-${timestamp}.json"
+            print_status "Main dashboard exported"
+        fi
+
+        # Export cyberpunk dashboard
+        local cyberpunk_export=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/xrpl-validator-monitor-cyberpunk" 2>/dev/null)
+        if echo "$cyberpunk_export" | jq -e '.dashboard' > /dev/null 2>&1; then
+            saved_cyberpunk="XRPL Validator Dashboard Cyberpunk-${timestamp}"
+            echo "$cyberpunk_export" | jq '.dashboard' > "data/dashboard-backups/cyberpunk-${timestamp}.json"
+            print_status "Cyberpunk dashboard exported"
+        fi
+
+        # Export ALL other dashboards (user-created ones)
+        # Get list of all dashboard UIDs, excluding our known ones and backup copies
+        local all_dashboards=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/search?type=dash-db" 2>/dev/null)
+        if echo "$all_dashboards" | jq -e '.' > /dev/null 2>&1; then
+            mkdir -p "data/dashboard-backups/user-dashboards-${timestamp}"
+
+            # Loop through each dashboard
+            echo "$all_dashboards" | jq -r '.[] | "\(.uid)|\(.title)"' | while IFS='|' read -r uid title; do
+                # Skip only the base provisioned dashboards (we export these separately above)
+                case "$uid" in
+                    xrpl-validator-monitor-full|xrpl-validator-monitor-cyberpunk)
+                        continue
+                        ;;
+                esac
+
+                # Export this user dashboard
+                local dash_export=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/${uid}" 2>/dev/null)
+                if echo "$dash_export" | jq -e '.dashboard' > /dev/null 2>&1; then
+                    # Sanitize filename
+                    local safe_title=$(echo "$title" | tr -cd '[:alnum:] _-' | tr ' ' '_')
+                    echo "$dash_export" | jq '.dashboard' > "data/dashboard-backups/user-dashboards-${timestamp}/${safe_title}.json"
+                    echo "    Exported: $title"
+                    saved_user_dashboards=$((saved_user_dashboards + 1))
+                fi
+            done
+
+            # Check if any user dashboards were saved
+            local user_dash_count=$(ls -1 "data/dashboard-backups/user-dashboards-${timestamp}/" 2>/dev/null | wc -l)
+            if [ "$user_dash_count" -gt 0 ]; then
+                print_status "$user_dash_count custom dashboard(s) exported"
+            else
+                # Remove empty directory
+                rmdir "data/dashboard-backups/user-dashboards-${timestamp}" 2>/dev/null
+            fi
+        fi
     fi
 
     echo ""
@@ -1116,6 +1214,9 @@ update_dashboard_menu() {
     export GRAFANA_PORT=${GRAFANA_PORT:-3000}
     export COLLECTOR_PORT=${COLLECTOR_PORT:-8090}
     export VMAGENT_PORT=${VMAGENT_PORT:-8427}
+
+    # Get email from .env for contact point (if configured)
+    local contact_email="${GF_SMTP_USER:-example@email.com}"
 
     # Regenerate scrape.yml from template
     print_info "Regenerating configuration files from templates..."
@@ -1139,14 +1240,177 @@ update_dashboard_menu() {
     docker compose build collector state-exporter uptime-exporter
     print_status "Containers rebuilt"
 
+    # Stop Grafana, remove container and volume to clear provisioning state
+    print_info "Resetting Grafana to apply new features..."
+    docker compose stop grafana 2>/dev/null
+    docker rm xrpl-monitor-grafana 2>/dev/null || true
+    docker volume rm xrpl-monitor-grafana-data 2>/dev/null || true
+    print_status "Grafana data reset"
+
     # Restart all services to pick up changes
     print_info "Restarting services..."
     docker compose up -d --force-recreate
     print_status "Services restarted"
 
+    # Wait for Grafana to be ready (check health endpoint)
+    print_info "Waiting for Grafana to start..."
+    local max_wait=60
+    local wait_count=0
+    while [ $wait_count -lt $max_wait ]; do
+        if curl -s "http://localhost:${GRAFANA_PORT}/api/health" 2>/dev/null | grep -q "ok"; then
+            break
+        fi
+        sleep 2
+        wait_count=$((wait_count + 2))
+    done
+
+    if [ $wait_count -ge $max_wait ]; then
+        print_warning "Grafana did not start in time"
+        print_warning "You may need to manually import dashboards and set password"
+        return
+    fi
+
+    # Wait a bit more for Grafana to fully initialize, then verify default auth works
+    sleep 3
+    local auth_check
+    auth_check=$(curl -s -u "admin:admin" "http://localhost:${GRAFANA_PORT}/api/org" 2>/dev/null)
+    if ! echo "$auth_check" | grep -q '"id":1'; then
+        print_error "Grafana started but default credentials don't work"
+        print_error "Please check Grafana logs: docker logs xrpl-monitor-grafana"
+        return
+    fi
+    print_status "Grafana ready"
+
+    # Import dashboards via API
+    print_info "Importing dashboards..."
+    local main_dashboard="config/grafana/provisioning/dashboards/xrpl-validator-main.json"
+    if [ -f "$main_dashboard" ]; then
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$main_dashboard" 2>/dev/null)
+        if [ -n "$import_payload" ]; then
+            echo "$import_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+            print_status "Main dashboard imported"
+        fi
+    fi
+
+    local cyberpunk_dashboard="config/grafana/provisioning/dashboards/xrpl-validator-cyberpunk.json"
+    if [ -f "$cyberpunk_dashboard" ]; then
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$cyberpunk_dashboard" 2>/dev/null)
+        if [ -n "$import_payload" ]; then
+            echo "$import_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+            print_status "Cyberpunk dashboard imported"
+        fi
+    fi
+
+    # Import contact point via API (use email from .env if available)
+    print_info "Creating contact point..."
+    curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/v1/provisioning/contact-points" \
+        -u "admin:admin" -H "Content-Type: application/json" \
+        -d "{
+            \"name\": \"xrpl-monitor-email\",
+            \"type\": \"email\",
+            \"settings\": {
+                \"addresses\": \"${contact_email}\",
+                \"singleEmail\": false
+            },
+            \"disableResolveMessage\": false
+        }" > /dev/null 2>&1
+    print_status "Contact point created (${contact_email})"
+
+    # Configure notification policy
+    print_info "Configuring notification policy..."
+    curl -s -X PUT "http://localhost:${GRAFANA_PORT}/api/v1/provisioning/policies" \
+        -u "admin:admin" -H "Content-Type: application/json" \
+        -d '{
+            "receiver": "xrpl-monitor-email",
+            "group_by": ["grafana_folder", "alertname"],
+            "group_wait": "30s",
+            "group_interval": "5m",
+            "repeat_interval": "4h"
+        }' > /dev/null 2>&1
+    print_status "Notification policy configured"
+
+    # Re-import saved dashboards with timestamp in title (for comparison)
+    # Do this BEFORE password change so we can use admin:admin
+    if [ -n "$saved_main" ] && [ -f "data/dashboard-backups/main-${timestamp}.json" ]; then
+        print_info "Importing your previous dashboard as '${saved_main}'..."
+        local backup_payload
+        backup_payload=$(jq --arg title "$saved_main" \
+            'del(.id) | .uid = "backup-main-'"${timestamp}"'" | .title = $title | .version = 0 | {dashboard: ., overwrite: true}' \
+            "data/dashboard-backups/main-${timestamp}.json" 2>/dev/null)
+        if [ -n "$backup_payload" ]; then
+            echo "$backup_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+            print_status "Previous main dashboard imported"
+        fi
+    fi
+
+    if [ -n "$saved_cyberpunk" ] && [ -f "data/dashboard-backups/cyberpunk-${timestamp}.json" ]; then
+        print_info "Importing your previous dashboard as '${saved_cyberpunk}'..."
+        local backup_payload
+        backup_payload=$(jq --arg title "$saved_cyberpunk" \
+            'del(.id) | .uid = "backup-cyberpunk-'"${timestamp}"'" | .title = $title | .version = 0 | {dashboard: ., overwrite: true}' \
+            "data/dashboard-backups/cyberpunk-${timestamp}.json" 2>/dev/null)
+        if [ -n "$backup_payload" ]; then
+            echo "$backup_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+            print_status "Previous cyberpunk dashboard imported"
+        fi
+    fi
+
+    # Re-import user dashboards from backup folder
+    if [ -d "data/dashboard-backups/user-dashboards-${timestamp}" ]; then
+        local user_files=$(ls -1 "data/dashboard-backups/user-dashboards-${timestamp}/"*.json 2>/dev/null)
+        if [ -n "$user_files" ]; then
+            print_info "Importing your custom dashboards..."
+            local user_counter=1
+            for dash_file in data/dashboard-backups/user-dashboards-${timestamp}/*.json; do
+                if [ -f "$dash_file" ]; then
+                    # Get original title from the JSON
+                    local orig_title=$(jq -r '.title // "Unknown"' "$dash_file" 2>/dev/null)
+                    local new_title="${orig_title}-${timestamp}"
+                    # Use short UID to stay under 40 char limit: bu-COUNTER-TIMESTAMP
+                    local new_uid="bu-${user_counter}-${timestamp}"
+
+                    # Import with new UID and timestamped title
+                    local user_payload
+                    user_payload=$(jq --arg title "$new_title" --arg uid "$new_uid" \
+                        'del(.id) | .uid = $uid | .title = $title | .version = 0 | {dashboard: ., overwrite: true}' \
+                        "$dash_file" 2>/dev/null)
+                    if [ -n "$user_payload" ]; then
+                        echo "$user_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                            -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+                        echo "    Imported: ${orig_title}"
+                    fi
+                    user_counter=$((user_counter + 1))
+                fi
+            done
+            local imported_count=$(ls -1 "data/dashboard-backups/user-dashboards-${timestamp}/"*.json 2>/dev/null | wc -l)
+            print_status "$imported_count custom dashboard(s) imported"
+        fi
+    fi
+
+    # Change admin password LAST (after all imports are done)
+    print_info "Setting Grafana password..."
+    local pw_response
+    pw_response=$(curl -s -X PUT "http://localhost:${GRAFANA_PORT}/api/admin/users/1/password" \
+        -u "admin:admin" -H "Content-Type: application/json" \
+        -d "{\"password\": \"${new_password}\"}" 2>&1)
+
+    if echo "$pw_response" | grep -qi "updated"; then
+        print_status "Password updated"
+    else
+        print_warning "Could not update password automatically"
+        print_warning "API response: $pw_response"
+        print_info "Default password is 'admin' - change it on first login"
+    fi
+
     # Wait for services to stabilize
     print_info "Waiting for services to stabilize..."
-    sleep 10
+    sleep 5
 
     # Verify health
     echo ""
@@ -1154,9 +1418,53 @@ update_dashboard_menu() {
     show_status
 
     echo ""
-    print_status "Update complete!"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}                    Update Complete!                           ${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
-    print_info "If you see any unhealthy services, check logs with option 6"
+    echo "Please log in at: http://localhost:${GRAFANA_PORT}"
+    echo "  Username: admin"
+    echo "  Password: (the password you entered)"
+    echo ""
+    if [ "$contact_email" != "example@email.com" ]; then
+        echo -e "${GREEN}✓${NC} Contact point configured with: ${contact_email}"
+    else
+        echo -e "${YELLOW}!${NC} Configure email alerts: ./manage.sh → 11) Setup Gmail Alerts"
+    fi
+
+    # Show backup info if dashboards were saved
+    if [ -n "$saved_main" ] || [ -n "$saved_cyberpunk" ]; then
+        echo ""
+        echo -e "${BLUE}Your previous dashboards have been imported for comparison:${NC}"
+        if [ -n "$saved_main" ]; then
+            echo "  - ${saved_main}"
+        fi
+        if [ -n "$saved_cyberpunk" ]; then
+            echo "  - ${saved_cyberpunk}"
+        fi
+    fi
+
+    # Show user dashboard info
+    if [ -d "data/dashboard-backups/user-dashboards-${timestamp}" ]; then
+        local user_count=$(ls -1 "data/dashboard-backups/user-dashboards-${timestamp}/"*.json 2>/dev/null | wc -l)
+        if [ "$user_count" -gt 0 ]; then
+            echo ""
+            echo -e "${BLUE}Your custom dashboards have also been imported:${NC}"
+            for dash_file in data/dashboard-backups/user-dashboards-${timestamp}/*.json; do
+                if [ -f "$dash_file" ]; then
+                    local orig_title=$(jq -r '.title // "Unknown"' "$dash_file" 2>/dev/null)
+                    echo "  - ${orig_title}-${timestamp}"
+                fi
+            done
+        fi
+    fi
+
+    if [ -n "$saved_main" ] || [ -n "$saved_cyberpunk" ]; then
+        echo ""
+        echo "You can find them all in the Grafana dashboard list."
+        echo "JSON backups saved to: data/dashboard-backups/"
+    fi
+    echo ""
 }
 
 # ==============================================================================
@@ -1776,22 +2084,23 @@ show_menu() {
 
     echo "What would you like to do?"
     echo ""
-    echo "  1) Start the stack"
-    echo "  2) Stop the stack"
-    echo "  3) Restart the stack"
-    echo "  4) Manage a single service"
-    echo "  5) View logs (all services)"
-    echo "  6) View logs (specific service)"
-    echo "  7) Check service status"
-    echo "  8) Rebuild service"
-    echo "  9) Backup & Restore"
+    echo "   1) Start the stack"
+    echo "   2) Stop the stack"
+    echo "   3) Restart the stack"
+    echo "   4) Manage a single service"
+    echo "   5) View logs (all services)"
+    echo "   6) View logs (specific service)"
+    echo "   7) Check service status"
+    echo "   8) Rebuild service"
+    echo "   9) Backup & Restore"
     echo "  10) Update Dashboard (after git pull)"
     echo "  11) Setup Gmail Alerts"
     echo "  12) Advanced settings"
     echo "  13) Exit"
     echo ""
 
-    read -p "Enter your choice [1-13]: " choice
+    read -p "Enter your choice 1-13 [13]: " choice
+    choice=${choice:-13}
 
     case $choice in
         1)
