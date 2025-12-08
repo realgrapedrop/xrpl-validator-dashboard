@@ -1261,17 +1261,79 @@ GF_SMTP_FROM_ADDRESS=${email}
 EOF
 }
 
-# Update contact-points.yaml with email address
+# Update contact point via Grafana API
 update_contact_points() {
     local email=$1
-    local contact_file="config/grafana/provisioning/alerting/contact-points.yaml"
+    local grafana_port=${GRAFANA_PORT:-3000}
 
-    if [ -f "$contact_file" ]; then
-        # Replace the email address line
-        sed -i "s/addresses:.*$/addresses: ${email}/" "$contact_file"
-        return 0
+    # Get credentials from user
+    echo ""
+    read -p "Enter Grafana username [admin]: " grafana_user </dev/tty
+    grafana_user=${grafana_user:-admin}
+    read -s -p "Enter Grafana password: " grafana_pass </dev/tty
+    echo ""
+
+    if [ -z "$grafana_pass" ]; then
+        echo -e "${RED}Password required${NC}"
+        return 1
     fi
-    return 1
+
+    # First, get the UID of the existing contact point
+    local response
+    response=$(curl -s -u "${grafana_user}:${grafana_pass}" \
+        "http://localhost:${grafana_port}/api/v1/provisioning/contact-points" 2>&1)
+
+    # Check for auth error
+    if echo "$response" | grep -q "Invalid username or password"; then
+        echo -e "${RED}Authentication failed${NC}"
+        return 1
+    fi
+
+    # Find the xrpl-monitor-email UID
+    local uid
+    uid=$(echo "$response" | jq -r '.[] | select(.name == "xrpl-monitor-email") | .uid' 2>/dev/null)
+
+    if [ -z "$uid" ] || [ "$uid" = "null" ]; then
+        # Contact point doesn't exist, create it
+        echo -e "${YELLOW}Creating new contact point...${NC}"
+        response=$(curl -s -w "\n%{http_code}" \
+            -X POST "http://localhost:${grafana_port}/api/v1/provisioning/contact-points" \
+            -u "${grafana_user}:${grafana_pass}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"name\": \"xrpl-monitor-email\",
+                \"type\": \"email\",
+                \"settings\": {
+                    \"addresses\": \"${email}\",
+                    \"singleEmail\": false
+                },
+                \"disableResolveMessage\": false
+            }" 2>&1)
+    else
+        # Update existing contact point
+        response=$(curl -s -w "\n%{http_code}" \
+            -X PUT "http://localhost:${grafana_port}/api/v1/provisioning/contact-points/${uid}" \
+            -u "${grafana_user}:${grafana_pass}" \
+            -H "Content-Type: application/json" \
+            -d "{
+                \"name\": \"xrpl-monitor-email\",
+                \"type\": \"email\",
+                \"settings\": {
+                    \"addresses\": \"${email}\",
+                    \"singleEmail\": false
+                },
+                \"disableResolveMessage\": false
+            }" 2>&1)
+    fi
+
+    local http_code=$(echo "$response" | tail -n1)
+
+    if [ "$http_code" = "200" ] || [ "$http_code" = "202" ]; then
+        return 0
+    else
+        echo -e "${RED}Failed to update contact point (HTTP $http_code)${NC}"
+        return 1
+    fi
 }
 
 # Disable Gmail alerts

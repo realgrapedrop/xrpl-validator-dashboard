@@ -259,6 +259,80 @@ import_dashboards_via_api() {
 }
 
 # ==============================================================================
+# CONTACT POINT IMPORT VIA GRAFANA API
+# ==============================================================================
+# Import default email contact point via API instead of file provisioning.
+# This allows users to fully edit/delete contact points in Grafana UI.
+
+import_contact_point_via_api() {
+    local grafana_port=$1
+
+    print_info "Creating default email contact point via API..."
+
+    # Create email contact point with placeholder
+    # Users can edit this in Grafana UI: Alerting → Contact points
+    local payload='{
+        "name": "xrpl-monitor-email",
+        "type": "email",
+        "settings": {
+            "addresses": "example@email.com",
+            "singleEmail": false
+        },
+        "disableResolveMessage": false
+    }'
+
+    local response
+    response=$(echo "$payload" | curl -s -w "\n%{http_code}" \
+        -X POST "http://localhost:${grafana_port}/api/v1/provisioning/contact-points" \
+        -u "admin:admin" \
+        -H "Content-Type: application/json" \
+        -d @- 2>&1)
+
+    local http_code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | head -n-1)
+
+    if [ "$http_code" = "202" ] || [ "$http_code" = "200" ]; then
+        print_status "Email contact point created"
+        print_info "Configure your email: Grafana → Alerting → Contact points"
+        log "Contact point created: xrpl-monitor-email"
+    elif echo "$body" | grep -q "already exists"; then
+        print_status "Email contact point already exists"
+    else
+        print_warning "Contact point creation returned HTTP $http_code"
+        log "Contact point warning: HTTP $http_code - $body"
+    fi
+
+    # Now set up the notification policy to use this contact point
+    print_info "Configuring notification policy..."
+
+    local policy_payload='{
+        "receiver": "xrpl-monitor-email",
+        "group_by": ["grafana_folder", "alertname"],
+        "group_wait": "30s",
+        "group_interval": "5m",
+        "repeat_interval": "4h"
+    }'
+
+    response=$(echo "$policy_payload" | curl -s -w "\n%{http_code}" \
+        -X PUT "http://localhost:${grafana_port}/api/v1/provisioning/policies" \
+        -u "admin:admin" \
+        -H "Content-Type: application/json" \
+        -d @- 2>&1)
+
+    http_code=$(echo "$response" | tail -n1)
+
+    if [ "$http_code" = "202" ] || [ "$http_code" = "200" ]; then
+        print_status "Notification policy configured"
+        log "Notification policy set to use xrpl-monitor-email"
+    else
+        print_warning "Notification policy returned HTTP $http_code"
+        log "Notification policy warning: HTTP $http_code"
+    fi
+
+    return 0
+}
+
+# ==============================================================================
 # STEP 1: RIPPLED DETECTION (NEW - was Step 3)
 # ==============================================================================
 
@@ -1380,6 +1454,9 @@ EOF
 
         # Import dashboards via API (allows user customization)
         import_dashboards_via_api "$GRAFANA_PORT"
+
+        # Import contact point via API (allows user to edit/delete)
+        import_contact_point_via_api "$GRAFANA_PORT"
     else
         print_warning "Grafana not responding yet"
         print_warning "Dashboards can be imported later via: ./manage.sh → Advanced → Restore default"
