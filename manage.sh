@@ -91,7 +91,7 @@ Examples:
 
 Update:
   To update after pulling latest code, run './manage.sh' and select
-  option 10 "Update Dashboard (after git pull)"
+  option 10 "Apply Updates (after git pull)"
 
 EOF
 }
@@ -1071,7 +1071,7 @@ restore_dashboard_backup() {
     read -p "Press Enter to continue..."
 }
 
-# Update Dashboard menu (after user runs git pull)
+# Apply Updates menu (after user runs git pull)
 update_dashboard_menu() {
     if ! is_dashboard_installed; then
         prompt_install
@@ -1080,7 +1080,7 @@ update_dashboard_menu() {
     clear
     echo ""
     echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${BLUE}                    Update Dashboard                           ${NC}"
+    echo -e "${BLUE}                    Apply Updates                              ${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
     echo -e "${YELLOW}⚠️  WARNING: This update will reset Grafana to apply new features.${NC}"
@@ -2093,7 +2093,7 @@ show_menu() {
     echo "   7) Check service status"
     echo "   8) Rebuild service"
     echo "   9) Backup & Restore"
-    echo "  10) Update Dashboard (after git pull)"
+    echo "  10) Apply Updates (after git pull)"
     echo "  11) Setup Gmail Alerts"
     echo "  12) Advanced settings"
     echo "  13) Exit"

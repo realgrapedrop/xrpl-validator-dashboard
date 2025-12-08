@@ -9,7 +9,7 @@
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Uninstalling](#uninstalling)
-- [Updates & Maintenance](#updates--maintenance)
+- [Updates](#updates)
 - [Troubleshooting](#troubleshooting)
 - [Getting Help](#getting-help)
 - [Related Documentation](#related-documentation)
@@ -131,6 +131,16 @@ docker ps --format "table {{.Names}}\t{{.Status}}" | grep xrpl-monitor
 
 Expected output shows 6-8 containers with "Up" status.
 
+To verify metrics are flowing:
+
+```bash
+docker compose logs -f collector    # Press Ctrl+C to exit
+```
+
+Look for: `INFO Connected to rippled WebSocket` and `INFO Metrics written to VictoriaMetrics`
+
+> **Note:** If you just installed rippled, some panels show "No data" initially. This is normal—panels like Ledgers Per Minute require 1-6 hours of sync time.
+
 ### Step 5: Access Dashboard
 
 Open your browser to: `http://localhost:3000`
@@ -181,28 +191,57 @@ docker network rm xrpl-monitor-network 2>/dev/null || true
 
 ---
 
-# Updates & Maintenance
+# Updates
 
-### Post-Installation Verification
+After installation, updates are applied in two simple steps:
 
-After installation, verify metrics are flowing:
+### Step 1: Pull Latest Code
 
 ```bash
-docker compose logs -f collector
+cd /path/to/xrpl-validator-dashboard
+git pull
 ```
 
-Look for:
+This downloads the latest changes including:
+- Bug fixes and improvements
+- New dashboard panels and features
+- Updated alert rules
+- Exporter and collector enhancements
+
+### Step 2: Apply Updates
+
+```bash
+./manage.sh    # Select option 10 "Apply Updates"
 ```
-INFO Connected to rippled WebSocket
-INFO Subscribed to ledger stream
-INFO Metrics written to VictoriaMetrics
+
+Option 10 automatically:
+- Regenerates config files from your `.env` settings
+- Rebuilds containers with code changes
+- Restarts all services
+- Backs up and preserves your dashboards
+
+### Check for Available Updates
+
+To see what updates are available before pulling:
+
+```bash
+git fetch origin
+git log HEAD..origin/main --oneline
 ```
 
-If you just installed rippled, some panels show "No data" initially. This is normal - panels like Ledgers Per Minute require 1-6 hours of sync time.
+### Dashboard Preservation
 
-### Using manage.sh
+Your dashboards are automatically protected during updates:
+- Main and Cyberpunk dashboards get timestamped backup copies
+- Custom dashboards you created are preserved with timestamps
+- Previous backup copies accumulate (not overwritten)
+- JSON backups saved to `data/dashboard-backups/` for manual recovery
 
-The `manage.sh` script is the primary tool for managing XRPL Monitor. Run `./manage.sh` for an interactive menu or use command-line mode:
+---
+
+## Using manage.sh
+
+The `manage.sh` script is your primary tool for managing XRPL Monitor—including applying updates. Run `./manage.sh` for an interactive menu or use command-line mode:
 
 ```bash
 ./manage.sh                      # Interactive menu
@@ -228,36 +267,10 @@ The `manage.sh` script is the primary tool for managing XRPL Monitor. Run `./man
 | 7 | Check service status | Display status of all services |
 | 8 | Rebuild service | Rebuild and restart a container |
 | 9 | Backup & Restore | Backup/restore Grafana dashboards |
-| 10 | Update Dashboard | Apply updates after git pull |
+| 10 | Apply Updates | Apply updates after git pull |
 | 11 | Setup Gmail Alerts | Configure email notifications |
 | 12 | Advanced settings | Retention period, restore defaults |
 | 13 | Exit | Exit the management console |
-
-### Updating XRPL Monitor
-
-To update after new releases:
-
-```bash
-# Step 1: Pull latest code
-git pull
-
-# Step 2: Apply updates
-./manage.sh    # Select option 10
-```
-
-This regenerates config files, rebuilds containers, and restarts services. All your dashboards are automatically backed up and restored:
-- Main and Cyberpunk dashboards get timestamped backup copies
-- Custom dashboards you created are preserved with timestamps
-- Previous backup copies accumulate (not overwritten)
-
-JSON backups are also saved to `data/dashboard-backups/` for manual recovery.
-
-To check for available updates:
-
-```bash
-git fetch origin
-git log HEAD..origin/main --oneline
-```
 
 ### Customizing Ports
 
@@ -270,7 +283,7 @@ STATE_EXPORTER_PORT=9103
 VICTORIA_METRICS_PORT=8428
 ```
 
-Apply changes with `./manage.sh` → option 10.
+Apply changes with `./manage.sh` → option 10 "Apply Updates".
 
 ### Upgrading Components
 
@@ -315,7 +328,7 @@ To rollback code changes:
 ```bash
 git tag -l | grep stable                    # List stable tags
 git checkout v3.0-stable-20251130 -- .      # Restore to tag
-./manage.sh                                  # Option 10
+./manage.sh                                  # Option 10 "Apply Updates"
 ```
 
 To rollback component versions, edit `docker-compose.yml` to use previous image versions, then:
@@ -350,7 +363,7 @@ Install Docker using the instructions in Prerequisites above.
 
 ### Port Already in Use
 
-Edit `.env` to change ports, then run `./manage.sh` → option 10.
+Edit `.env` to change ports, then run `./manage.sh` → option 10 "Apply Updates".
 
 ### Collector Can't Connect to rippled
 
@@ -388,7 +401,7 @@ GF_SMTP_PASSWORD="uhoc qzyl yonu xcwk"
 ### Merge Conflicts on git pull
 
 ```bash
-git stash && git pull && ./manage.sh   # Option 10
+git stash && git pull && ./manage.sh   # Option 10 "Apply Updates"
 git stash pop
 ```
 
