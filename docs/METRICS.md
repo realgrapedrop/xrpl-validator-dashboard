@@ -1093,13 +1093,13 @@ Participation % = (Validation Rate / Ledgers Per Minute) × 100
 
 # State Exporter Metrics
 
-The State Exporter provides real-time state and peer monitoring with ~2 second state latency and ~5 second peer latency, bypassing VictoriaMetrics for instant updates.
+The State Exporter provides real-time state and peer monitoring with ~1 second state latency and ~5 second peer latency, bypassing VictoriaMetrics for instant updates.
 
 ### `xrpl_state_realtime_value`
 
 **Type**: Gauge
 **Unit**: Numeric state value (0-7)
-**Source**: State Exporter (HTTP poll every 2s)
+**Source**: State Exporter (HTTP poll every 1s)
 **Port**: 9102
 
 Current validator state as a numeric value. This is the primary metric used by the State panel.
@@ -1114,13 +1114,13 @@ Current validator state as a numeric value. This is the primary metric used by t
 - 6 = VALIDATING
 - 7 = PROPOSING
 
-**Why State Exporter exists**: Normal metrics flow through Collector → VictoriaMetrics → Grafana with 20-30 second latency. The State Exporter polls rippled directly every 2 seconds and implements a Prometheus query API (`/api/v1/query`) that Grafana can query directly, achieving ~2 second state update latency.
+**Why State Exporter exists**: Normal metrics flow through Collector → VictoriaMetrics → Grafana with 20-30 second latency. The State Exporter polls rippled directly every 1 second and implements a Prometheus query API (`/api/v1/query`) that Grafana can query directly, achieving ~1 second state update latency.
 
 ### `xrpl_state_realtime`
 
 **Type**: Gauge (per-state)
 **Unit**: Boolean (0 or 1)
-**Source**: State Exporter (HTTP poll every 2s)
+**Source**: State Exporter (HTTP poll every 1s)
 **Port**: 9102
 
 Per-state gauges where the current state has value 1 and all others have value 0.
@@ -1202,7 +1202,7 @@ The State Exporter provides real-time server info metrics for the Release Versio
 
 **Type**: Gauge (info-style with label)
 **Unit**: Always 1 (version in label)
-**Source**: State Exporter (HTTP poll every 2s)
+**Source**: State Exporter (HTTP poll every 1s)
 **Port**: 9102
 
 Current rippled build version. The version is stored in the `version` label.
@@ -1222,7 +1222,7 @@ xrpl_build_version_realtime{instance="validator",version="2.3.0"} 1
 
 **Type**: Gauge (info-style with label)
 **Unit**: Always 1 (pubkey in label)
-**Source**: State Exporter (HTTP poll every 2s)
+**Source**: State Exporter (HTTP poll every 1s)
 **Port**: 9102
 
 Current validator public key. The pubkey is stored in the `pubkey` label.

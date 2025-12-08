@@ -58,7 +58,7 @@ v3.0 is built on three core principles:
 │  ║  Exporter   ║  ║       (Python app)          ║  │   Exporter   │  ║   Exporter   ║  │
 │  ║   :9101     ║  ║         :8090               ║  │    :9100     │  ║    :9102     ║  │
 │  ║             ║  ║                             ║  │              │  ║              ║  │
-│  ║ • Uptime    ║  ║ • WebSocket streams         ║  │ • CPU, RAM   │  ║ • State (2s) ║  │
+│  ║ • Uptime    ║  ║ • WebSocket streams         ║  │ • CPU, RAM   │  ║ • State (1s) ║  │
 │  ║   formatted ║  ║ • HTTP polling (5s/60s/5m)  ║  │ • Disk, Net  │  ║ • Peers (5s) ║  │
 │  ║             ║  ║ • Event handlers            ║  │ • System     │  ║              ║  │
 │  ║             ║  ║ • Validation tracking       ║  │   load       │  ║              ║  │
@@ -103,7 +103,7 @@ v3.0 is built on three core principles:
 │    │  │                                                                    │    │      │
 │    │  │   Dashboard & Alerting                                             │    │      │
 │    │  │   • VictoriaMetrics: historical data (validation counts, etc.)     │    │      │
-│    │  │   • StateExporter *: near-real-time state (2s) & peers (5s)        │    │      │
+│    │  │   • StateExporter *: near-real-time state (1s) & peers (5s)        │    │      │
 │    │  │   • Auto-provisioned dashboards                                    │    │      │
 │    │  │   • Email/webhook alerts                                           │    │      │
 │    │  └─────────────────────────────┬──────────────────────────────────────┘    │      │
@@ -140,7 +140,7 @@ Legend:  ┌───┐ Open Source    ╔═══╗ Custom Code *
 | vmagent | VictoriaMetrics | HTTP POST /api/v1/write | Remote write scraped data |
 | Collector | VictoriaMetrics | HTTP POST /api/v1/import/prometheus | Push real-time events |
 | Grafana | VictoriaMetrics | PromQL queries | Historical data (validation counts, trends) |
-| Grafana | State Exporter | PromQL /api/v1/query | Near-real-time state (2s) & peers (5s) |
+| Grafana | State Exporter | PromQL /api/v1/query | Near-real-time state (1s) & peers (5s) |
 
 **Port Summary:**
 
@@ -897,7 +897,7 @@ Tested with simulated rippled failure (stopped container):
 │  │  Polling Loops    │      │  HTTP Server (threaded)  │    │
 │  │  (async)          │─────►│                          │    │
 │  │                   │      │  GET /metrics            │    │
-│  │  State: 2s poll   │      │  GET /api/v1/query       │◄───┼── Grafana
+│  │  State: 1s poll   │      │  GET /api/v1/query       │◄───┼── Grafana
 │  │  Peers: 5s poll   │      │  GET /health             │    │
 │  │  from rippled     │      │                          │    │
 │  └───────────────────┘      └──────────────────────────┘    │
@@ -919,7 +919,7 @@ Tested with simulated rippled failure (stopped container):
 **Performance:**
 - CPU: ~0.4% (polling + HTTP serving)
 - Memory: ~22 MB
-- Latency: ~2 seconds state update, ~5 seconds peer update (vs 20-30s via VictoriaMetrics)
+- Latency: ~1 second state update, ~5 seconds peer update (vs 20-30s via VictoriaMetrics)
 
 **Key Implementation:**
 ```python
@@ -1156,7 +1156,7 @@ services:
 
   state-exporter:
     # Real-time state and peer monitoring
-    # Polls rippled HTTP API (state: 2s, peers: 5s)
+    # Polls rippled HTTP API (state: 1s, peers: 5s)
     # Exposes /api/v1/query for direct Grafana queries
     # Bypasses VictoriaMetrics for instant updates
     # HTTP API on :9102
