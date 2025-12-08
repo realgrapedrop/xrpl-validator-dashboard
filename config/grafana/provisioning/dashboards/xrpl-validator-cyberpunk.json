@@ -25,31 +25,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 10,
-  "links": [
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "GitHub",
-      "type": "link",
-      "url": "https://github.com/rfmoz/grafana-dashboards"
-    },
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "Grafana",
-      "type": "link",
-      "url": "https://grafana.com/grafana/dashboards/1860"
-    }
-  ],
+  "id": 5,
+  "links": [],
   "liveNow": true,
   "panels": [
     {
       "gridPos": {
         "h": 2,
-        "w": 5,
+        "w": 4,
         "x": 0,
         "y": 0
       },
@@ -60,7 +43,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"display: flex; align-items: center; height: 100%;\">\n  <h3>🛡️ Monitor Component Health:</h3>\n  </div>",
+        "content": "<div style=\"display: flex; align-items: center; height: 100%;\">\n  <h3>🛡️ Monitor Health:</h3>\n  </div>",
         "mode": "html"
       },
       "pluginVersion": "12.3.0",
@@ -111,7 +94,7 @@
       "gridPos": {
         "h": 2,
         "w": 3,
-        "x": 5,
+        "x": 6,
         "y": 0
       },
       "id": 402,
@@ -142,7 +125,7 @@
           "exemplar": false,
           "expr": "xrpl_state_health",
           "instant": true,
-          "legendFormat": "Monitor Health:",
+          "legendFormat": "Health:",
           "range": false,
           "refId": "A"
         }
@@ -167,7 +150,7 @@
                 "0": {
                   "color": "#9D00FF",
                   "index": 0,
-                  "text": "Unhealthy"
+                  "text": "Down"
                 },
                 "1": {
                   "color": "#FF00FF",
@@ -183,7 +166,7 @@
                 "result": {
                   "color": "#9D00FF",
                   "index": 2,
-                  "text": "WebSocket: Disconnected"
+                  "text": "WebSocket: Lost"
                 }
               },
               "type": "special"
@@ -213,7 +196,7 @@
       "gridPos": {
         "h": 2,
         "w": 3,
-        "x": 8,
+        "x": 9,
         "y": 0
       },
       "id": 403,
@@ -304,7 +287,7 @@
       "gridPos": {
         "h": 2,
         "w": 3,
-        "x": 11,
+        "x": 12,
         "y": 0
       },
       "id": 404,
@@ -395,7 +378,7 @@
       "gridPos": {
         "h": 2,
         "w": 3,
-        "x": 14,
+        "x": 15,
         "y": 0
       },
       "id": 405,
@@ -486,8 +469,8 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 17,
+        "w": 3,
+        "x": 18,
         "y": 0
       },
       "id": 407,
@@ -1965,9 +1948,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "valueSize": 25
-        },
+        "text": {},
         "textMode": "auto",
         "wideLayout": true
       },
@@ -2324,9 +2305,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "valueSize": 45
-        },
+        "text": {},
         "textMode": "auto",
         "wideLayout": false
       },
@@ -2413,7 +2392,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 45
+          "valueSize": 55
         },
         "textMode": "auto",
         "wideLayout": false
@@ -2495,9 +2474,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "valueSize": 45
-        },
+        "text": {},
         "textMode": "auto",
         "wideLayout": true
       },
@@ -2974,9 +2951,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "valueSize": 45
-        },
+        "text": {},
         "textMode": "auto",
         "wideLayout": true
       },
@@ -3051,7 +3026,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 45
+          "valueSize": 55
         },
         "textMode": "auto",
         "wideLayout": true
@@ -3140,7 +3115,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 45
+          "valueSize": 55
         },
         "textMode": "auto",
         "wideLayout": true
@@ -3638,9 +3613,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "valueSize": 45
-        },
+        "text": {},
         "textMode": "auto",
         "wideLayout": true
       },
@@ -3717,9 +3690,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {
-          "valueSize": 45
-        },
+        "text": {},
         "textMode": "auto",
         "wideLayout": true
       },
@@ -3806,7 +3777,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 45
+          "valueSize": 55
         },
         "textMode": "auto",
         "wideLayout": true
@@ -21384,6 +21355,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard Cyberpunk",
   "uid": "xrpl-validator-monitor-cyberpunk",
-  "version": 23,
+  "version": 18,
   "weekStart": ""
 }
