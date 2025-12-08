@@ -765,7 +765,7 @@ groups:
       datasourceUid: victoria
       model:
         editorMode: code
-        expr: xrpl_rippled_cpu_percent
+        expr: xrpl_rippled_cpu_percent / xrpl_rippled_cpu_cores
         format: table
         instant: true
         intervalMs: 1000
@@ -783,7 +783,7 @@ groups:
         conditions:
         - evaluator:
             params:
-            - 90
+            - 80
             type: gt
           operator:
             type: and
@@ -804,9 +804,9 @@ groups:
         type: threshold
     noDataState: OK
     execErrState: Error
-    for: 10s
+    for: 2m
     annotations:
-      description: Validator CPU usage is {{ $values.A.Value | printf "%.1f" }}%, above 90% threshold
-      summary: Validator CPU usage critical - rippled may be resource constrained
+      description: Validator CPU usage is {{ $values.A.Value | printf "%.1f" }}% of available capacity (80% threshold)
+      summary: Validator CPU usage critical - rippled using most available CPU capacity
     labels:
       severity: warning
