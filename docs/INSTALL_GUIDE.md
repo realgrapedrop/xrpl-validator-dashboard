@@ -245,7 +245,12 @@ git pull
 ./manage.sh    # Select option 10
 ```
 
-This regenerates config files, rebuilds containers, and restarts services. Your customizations (ports, passwords, dashboards) are preserved.
+This regenerates config files, rebuilds containers, and restarts services. All your dashboards are automatically backed up and restored:
+- Main and Cyberpunk dashboards get timestamped backup copies
+- Custom dashboards you created are preserved with timestamps
+- Previous backup copies accumulate (not overwritten)
+
+JSON backups are also saved to `data/dashboard-backups/` for manual recovery.
 
 To check for available updates:
 

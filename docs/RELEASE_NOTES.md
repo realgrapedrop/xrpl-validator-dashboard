@@ -150,6 +150,18 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 
 # Changelog
 
+### v3.0.2
+
+**Dashboard Preservation on Update**:
+- Option 10 now exports ALL dashboards before updating
+- Timestamped backup copies are auto-imported after update
+- Previous backups accumulate across multiple updates
+- JSON backups saved to `data/dashboard-backups/`
+- Credential verification before proceeding
+- Menu alignment and Exit as default option
+
+---
+
 ### v3.0.1
 
 **Improvements and How to Apply Fixes**:
