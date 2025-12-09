@@ -10,6 +10,7 @@
 - [Installation](#installation)
 - [Uninstalling](#uninstalling)
 - [Updates](#updates)
+- [Migrating from v2.0](#migrating-from-v20)
 - [Troubleshooting](#troubleshooting)
 - [Getting Help](#getting-help)
 - [Related Documentation](#related-documentation)
@@ -158,17 +159,6 @@ Open your browser to: `http://localhost:3000`
 - Password: `admin`
 
 Change the password on first login.
-
-### Migrating from v2.0
-
-If you're running XRPL Monitor v2.0, uninstall it first:
-
-```bash
-cd /path/to/v2.0
-./uninstall.sh
-```
-
-Then install v3.0 using the steps above. Historical data from v2.0 cannot be migrated due to different database formats.
 
 ---
 
@@ -360,6 +350,39 @@ You can restore:
 - **Both dashboards** - Restore both at once
 
 You'll be prompted for your Grafana username (default: `admin`) and password. The user account must have **Admin** or **Editor** role in Grafana.
+
+---
+
+# Migrating from v2.0
+
+If you're running XRPL Monitor v2.0, simply uninstall it and install v3.0 fresh.
+
+### Why a Clean Install?
+
+v3.0 is a complete rewrite with a different architecture:
+
+- **Different database** - v3.0 uses VictoriaMetrics instead of Prometheus
+- **Different metrics** - New metric names and collection methods
+- **Different containers** - All containers are renamed with `xrpl-monitor-` prefix
+- **No conflicts** - v2.0 and v3.0 use different container names, networks, and volumes
+
+Historical data from v2.0 cannot be migrated, but this has minimal impact—most dashboard panels show real-time or rolling 24-hour data that rebuilds quickly after installation.
+
+### Migration Steps
+
+```bash
+# Step 1: Uninstall v2.0
+cd /path/to/v2.0
+./uninstall.sh
+
+# Step 2: Install v3.0 (in a new directory)
+cd /home/user/projects
+git clone https://github.com/realgrapedrop/xrpl-validator-dashboard.git
+cd xrpl-validator-dashboard
+sudo ./install.sh
+```
+
+Your validator continues running normally throughout this process—the monitoring dashboard is independent of rippled.
 
 ---
 
