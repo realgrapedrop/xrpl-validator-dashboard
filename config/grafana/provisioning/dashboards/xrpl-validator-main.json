@@ -43,7 +43,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"display: flex; align-items: center; height: 100%;\">\n  <h3>🛡️ Monitor Health:</h3>\n  </div>",
+        "content": "<div style=\"display: flex; align-items: center; height: 100%;\">\n  <h3>\ud83d\udee1\ufe0f Monitor Health:</h3>\n  </div>",
         "mode": "html"
       },
       "pluginVersion": "12.3.0",
@@ -73,6 +73,11 @@
                   "color": "green",
                   "index": 1,
                   "text": "OK"
+                },
+                "0.5": {
+                  "color": "yellow",
+                  "index": 2,
+                  "text": "Degraded"
                 }
               },
               "type": "value"
@@ -2356,7 +2361,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Network-wide ledger close rate in ledgers per minute. Typically 15-18/min (one ledger every 3-4 seconds). Compare with your Validation Rate to monitor participation.\n\nThresholds:\n- Green: ≥9/min\n- Yellow: 8/min\n- Red: <8/min",
+      "description": "Network-wide ledger close rate in ledgers per minute. Typically 15-18/min (one ledger every 3-4 seconds). Compare with your Validation Rate to monitor participation.\n\nThresholds:\n- Green: \u22659/min\n- Yellow: 8/min\n- Red: <8/min",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2443,7 +2448,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Validation messages YOUR validator publishes per minute. Should track closely with Ledgers Per Minute. Lower values indicate your validator is missing validations.\n\nThresholds:\n- Green: ≥12/min\n- Yellow: 10-11/min\n- Red: <10/min",
+      "description": "Validation messages YOUR validator publishes per minute. Should track closely with Ledgers Per Minute. Lower values indicate your validator is missing validations.\n\nThresholds:\n- Green: \u226512/min\n- Yellow: 10-11/min\n- Red: <10/min",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2523,7 +2528,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Seconds since the last validated ledger closed. Should reset to 0 every 3-4 seconds as new ledgers close. High values indicate your validator may be falling behind the network.\n\nThresholds:\n- Green: ≤10 seconds\n- Yellow: 10-30 seconds\n- Red: >30 seconds",
+      "description": "Seconds since the last validated ledger closed. Should reset to 0 every 3-4 seconds as new ledgers close. High values indicate your validator may be falling behind the network.\n\nThresholds:\n- Green: \u226410 seconds\n- Yellow: 10-30 seconds\n- Red: >30 seconds",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2605,7 +2610,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Server load multiplier affecting transaction fees. 1.0 is normal baseline. High values indicate the server is under stress and may reject transactions or increase fees.\n\nThresholds:\n- Green: <100 (1.0x multiplier)\n- Yellow: 100-499 (1-5x multiplier)\n- Red: ≥500 (5x+ multiplier)",
+      "description": "Server load multiplier affecting transaction fees. 1.0 is normal baseline. High values indicate the server is under stress and may reject transactions or increase fees.\n\nThresholds:\n- Green: <100 (1.0x multiplier)\n- Yellow: 100-499 (1-5x multiplier)\n- Red: \u2265500 (5x+ multiplier)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2692,7 +2697,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Rate of peer disconnections per second. Some churn is normal as peers rotate. Sustained high rates indicate network instability, firewall issues, or connectivity problems.\n\nThresholds:\n- Green: <0.1/sec\n- Red: ≥0.1/sec",
+      "description": "Rate of peer disconnections per second. Some churn is normal as peers rotate. Sustained high rates indicate network instability, firewall issues, or connectivity problems.\n\nThresholds:\n- Green: <0.1/sec\n- Red: \u22650.1/sec",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2925,7 +2930,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Percentage of ledgers where your validator agreed with network consensus in the last hour. More sensitive to recent issues than the 24h metric.\n\nThresholds:\n- Green: ≥98%\n- Yellow: 95-97%\n- Red: <95%",
+      "description": "Percentage of ledgers where your validator agreed with network consensus in the last hour. More sensitive to recent issues than the 24h metric.\n\nThresholds:\n- Green: \u226598%\n- Yellow: 95-97%\n- Red: <95%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3175,7 +3180,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Total number of peer rippled servers connected to your validator. Healthy validators typically maintain 21+ peers for reliable network participation.\n\nThresholds:\n- Green: ≥21 peers\n- Yellow: 19-20 peers\n- Red: <19 peers",
+      "description": "Total number of peer rippled servers connected to your validator. Healthy validators typically maintain 21+ peers for reliable network participation.\n\nThresholds:\n- Green: \u226521 peers\n- Yellow: 19-20 peers\n- Red: <19 peers",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3257,7 +3262,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Peers your validator actively connected TO. Your validator initiates and maintains these outbound connections. Important for network resilience.\n\nThresholds:\n- Green: ≥6 peers\n- Yellow: 5 peers\n- Red: <5 peers",
+      "description": "Peers your validator actively connected TO. Your validator initiates and maintains these outbound connections. Important for network resilience.\n\nThresholds:\n- Green: \u22656 peers\n- Yellow: 5 peers\n- Red: <5 peers",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3338,7 +3343,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Peers that connected TO your validator. Higher inbound counts indicate your validator is well-connected and discoverable on the network.\n\nThresholds:\n- Green: ≥6 peers\n- Yellow: 5 peers\n- Red: <5 peers",
+      "description": "Peers that connected TO your validator. Higher inbound counts indicate your validator is well-connected and discoverable on the network.\n\nThresholds:\n- Green: \u22656 peers\n- Yellow: 5 peers\n- Red: <5 peers",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3419,7 +3424,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Peers on a different ledger chain (wrong network fork). Usually 0-3 during normal operation. High counts may indicate a network split, misconfigured peers, or testnet connections.\n\nThresholds:\n- Green: <10 peers\n- Yellow: 10-19 peers\n- Red: ≥20 peers",
+      "description": "Peers on a different ledger chain (wrong network fork). Usually 0-3 during normal operation. High counts may indicate a network split, misconfigured peers, or testnet connections.\n\nThresholds:\n- Green: <10 peers\n- Yellow: 10-19 peers\n- Red: \u226520 peers",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3588,7 +3593,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Percentage of ledgers where your validator agreed with network consensus in the last 24 hours. The key metric for overall validator health and reliability.\n\nThresholds:\n- Green: ≥99%\n- Yellow: 95-98%\n- Red: <95%",
+      "description": "Percentage of ledgers where your validator agreed with network consensus in the last 24 hours. The key metric for overall validator health and reliability.\n\nThresholds:\n- Green: \u226599%\n- Yellow: 95-98%\n- Red: <95%",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3916,7 +3921,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Number of validators that proposed in the last consensus round. Should be close to or higher than quorum for healthy consensus. Low values may indicate network-wide issues.\n\nThresholds:\n- Green: ≥11 proposers\n- Yellow: 10 proposers\n- Red: <10 proposers",
+      "description": "Number of validators that proposed in the last consensus round. Should be close to or higher than quorum for healthy consensus. Low values may indicate network-wide issues.\n\nThresholds:\n- Green: \u226511 proposers\n- Yellow: 10 proposers\n- Red: <10 proposers",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4158,7 +4163,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Days until Validator List (UNL) expires. List auto-updates from publishers. If critically low, check network connectivity to vl.ripple.com and vl.xrplf.org.\n\nThresholds:\n- Green: ≥30 days\n- Yellow: 14-29 days\n- Red: <14 days",
+      "description": "Days until Validator List (UNL) expires. List auto-updates from publishers. If critically low, check network connectivity to vl.ripple.com and vl.xrplf.org.\n\nThresholds:\n- Green: \u226530 days\n- Yellow: 14-29 days\n- Red: <14 days",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4792,7 +4797,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Historical trend of your validator's agreement with network consensus. Use to identify patterns in validation problems and verify fixes over time.\n\nTarget ranges:\n- Excellent: ≥99%\n- Good: 95-99%\n- Concerning: 90-95%\n- Critical: <90% (investigate immediately)",
+      "description": "Historical trend of your validator's agreement with network consensus. Use to identify patterns in validation problems and verify fixes over time.\n\nTarget ranges:\n- Excellent: \u226599%\n- Good: 95-99%\n- Concerning: 90-95%\n- Critical: <90% (investigate immediately)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -7784,7 +7789,7 @@
             "type": "prometheus",
             "uid": "victoria"
           },
-          "description": "How often tasks experience CPU, memory, or I/O delays. “Some” indicates partial slowdown; “Full” indicates all tasks are stalled. Based on Linux PSI metrics:\nhttps://docs.kernel.org/accounting/psi.html",
+          "description": "How often tasks experience CPU, memory, or I/O delays. \u201cSome\u201d indicates partial slowdown; \u201cFull\u201d indicates all tasks are stalled. Based on Linux PSI metrics:\nhttps://docs.kernel.org/accounting/psi.html",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8110,7 +8115,7 @@
               "expr": "node_memory_Committed_AS_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Committed_AS – Memory promised to processes (not necessarily used)",
+              "legendFormat": "Committed_AS \u2013 Memory promised to processes (not necessarily used)",
               "range": true,
               "refId": "A",
               "step": 240
@@ -8227,7 +8232,7 @@
               "expr": "node_memory_Writeback_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Writeback – Memory currently being flushed to disk",
+              "legendFormat": "Writeback \u2013 Memory currently being flushed to disk",
               "range": true,
               "refId": "A",
               "step": 240
@@ -8241,7 +8246,7 @@
               "expr": "node_memory_WritebackTmp_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "WritebackTmp – FUSE temporary writeback buffers",
+              "legendFormat": "WritebackTmp \u2013 FUSE temporary writeback buffers",
               "range": true,
               "refId": "B",
               "step": 240
@@ -8255,7 +8260,7 @@
               "expr": "node_memory_Dirty_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Dirty – Memory marked dirty (pending write to disk)",
+              "legendFormat": "Dirty \u2013 Memory marked dirty (pending write to disk)",
               "range": true,
               "refId": "C",
               "step": 240
@@ -8270,7 +8275,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "NFS Unstable – Pages sent to NFS server, awaiting storage commit",
+              "legendFormat": "NFS Unstable \u2013 Pages sent to NFS server, awaiting storage commit",
               "range": true,
               "refId": "D",
               "step": 240
@@ -8373,7 +8378,7 @@
               "expr": "node_memory_SUnreclaim_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "SUnreclaim – Non-reclaimable slab memory (kernel objects)",
+              "legendFormat": "SUnreclaim \u2013 Non-reclaimable slab memory (kernel objects)",
               "range": true,
               "refId": "A",
               "step": 240
@@ -8387,7 +8392,7 @@
               "expr": "node_memory_SReclaimable_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "SReclaimable – Potentially reclaimable slab memory (e.g., inode cache)",
+              "legendFormat": "SReclaimable \u2013 Potentially reclaimable slab memory (e.g., inode cache)",
               "range": true,
               "refId": "B",
               "step": 240
@@ -8491,7 +8496,7 @@
               "expr": "node_memory_Mapped_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Mapped – Memory mapped from files (e.g., libraries, mmap)",
+              "legendFormat": "Mapped \u2013 Memory mapped from files (e.g., libraries, mmap)",
               "range": true,
               "refId": "A",
               "step": 240
@@ -8505,7 +8510,7 @@
               "expr": "node_memory_Shmem_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Shmem – Shared memory used by processes and tmpfs",
+              "legendFormat": "Shmem \u2013 Shared memory used by processes and tmpfs",
               "range": true,
               "refId": "B",
               "step": 240
@@ -8520,7 +8525,7 @@
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "ShmemHugePages – Shared memory (shmem/tmpfs) allocated with HugePages",
+              "legendFormat": "ShmemHugePages \u2013 Shared memory (shmem/tmpfs) allocated with HugePages",
               "range": true,
               "refId": "C",
               "step": 240
@@ -8535,7 +8540,7 @@
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "PMD Mapped – Shmem/tmpfs backed by Transparent HugePages (PMD)",
+              "legendFormat": "PMD Mapped \u2013 Shmem/tmpfs backed by Transparent HugePages (PMD)",
               "range": true,
               "refId": "D",
               "step": 240
@@ -8670,7 +8675,7 @@
               "expr": "(node_memory_Inactive_bytes{instance=\"$node\",job=\"$job\"}) \n/ \n(node_memory_MemTotal_bytes{instance=\"$node\",job=\"$job\"})",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Inactive – Less recently used memory, more likely to be reclaimed",
+              "legendFormat": "Inactive \u2013 Less recently used memory, more likely to be reclaimed",
               "range": true,
               "refId": "A",
               "step": 240
@@ -8684,7 +8689,7 @@
               "expr": "(node_memory_Active_bytes{instance=\"$node\",job=\"$job\"}) \n/ \n(node_memory_MemTotal_bytes{instance=\"$node\",job=\"$job\"})\n",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Active – Recently used memory, retained unless under pressure",
+              "legendFormat": "Active \u2013 Recently used memory, retained unless under pressure",
               "range": true,
               "refId": "B",
               "step": 240
@@ -8804,7 +8809,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "Inactive_anon – Anonymous memory on inactive LRU (incl. tmpfs & swap cache)",
+              "legendFormat": "Inactive_anon \u2013 Anonymous memory on inactive LRU (incl. tmpfs & swap cache)",
               "range": true,
               "refId": "B",
               "step": 240
@@ -8834,7 +8839,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "Active_anon – Anonymous memory on active LRU (incl. tmpfs & swap cache)",
+              "legendFormat": "Active_anon \u2013 Anonymous memory on active LRU (incl. tmpfs & swap cache)",
               "range": true,
               "refId": "D",
               "step": 240
@@ -8938,7 +8943,7 @@
               "expr": "node_memory_KernelStack_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "KernelStack – Kernel stack memory (per-thread, non-reclaimable)",
+              "legendFormat": "KernelStack \u2013 Kernel stack memory (per-thread, non-reclaimable)",
               "range": true,
               "refId": "A",
               "step": 240
@@ -8953,7 +8958,7 @@
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "PerCPU – Dynamically allocated per-CPU memory (used by kernel modules)",
+              "legendFormat": "PerCPU \u2013 Dynamically allocated per-CPU memory (used by kernel modules)",
               "range": true,
               "refId": "B",
               "step": 240
@@ -8969,7 +8974,7 @@
               "hide": false,
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "Bounce Memory – I/O buffer for DMA-limited devices",
+              "legendFormat": "Bounce Memory \u2013 I/O buffer for DMA-limited devices",
               "range": true,
               "refId": "C",
               "step": 240
@@ -9103,7 +9108,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "Vmalloc Free Chunk – Largest available block in vmalloc area",
+              "legendFormat": "Vmalloc Free Chunk \u2013 Largest available block in vmalloc area",
               "range": true,
               "refId": "A",
               "step": 240
@@ -9118,7 +9123,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "Vmalloc Total – Total size of the vmalloc memory area",
+              "legendFormat": "Vmalloc Total \u2013 Total size of the vmalloc memory area",
               "range": true,
               "refId": "B",
               "step": 240
@@ -9133,7 +9138,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "Vmalloc Used – Portion of vmalloc area currently in use",
+              "legendFormat": "Vmalloc Used \u2013 Portion of vmalloc area currently in use",
               "range": true,
               "refId": "C",
               "step": 240
@@ -9236,7 +9241,7 @@
               "expr": "node_memory_AnonHugePages_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "AnonHugePages – Anonymous memory using HugePages",
+              "legendFormat": "AnonHugePages \u2013 Anonymous memory using HugePages",
               "range": true,
               "refId": "A",
               "step": 240
@@ -9250,7 +9255,7 @@
               "expr": "node_memory_AnonPages_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "AnonPages – Anonymous memory (non-file-backed)",
+              "legendFormat": "AnonPages \u2013 Anonymous memory (non-file-backed)",
               "range": true,
               "refId": "B",
               "step": 240
@@ -9370,7 +9375,7 @@
               "expr": "node_memory_Unevictable_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Unevictable – Kernel-pinned memory (not swappable)",
+              "legendFormat": "Unevictable \u2013 Kernel-pinned memory (not swappable)",
               "range": true,
               "refId": "A",
               "step": 240
@@ -9384,7 +9389,7 @@
               "expr": "node_memory_Mlocked_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Mlocked – Application-locked memory via mlock()",
+              "legendFormat": "Mlocked \u2013 Application-locked memory via mlock()",
               "range": true,
               "refId": "B",
               "step": 240
@@ -9762,7 +9767,7 @@
               "expr": "node_memory_DirectMap1G_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "DirectMap 1G – Memory mapped with 1GB pages",
+              "legendFormat": "DirectMap 1G \u2013 Memory mapped with 1GB pages",
               "range": true,
               "refId": "A",
               "step": 240
@@ -9777,7 +9782,7 @@
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "DirectMap 2M – Memory mapped with 2MB pages",
+              "legendFormat": "DirectMap 2M \u2013 Memory mapped with 2MB pages",
               "range": true,
               "refId": "B",
               "step": 240
@@ -9792,7 +9797,7 @@
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "DirectMap 4K – Memory mapped with 4KB pages",
+              "legendFormat": "DirectMap 4K \u2013 Memory mapped with 4KB pages",
               "range": true,
               "refId": "C",
               "step": 240
@@ -9895,7 +9900,7 @@
               "expr": "node_memory_HugePages_Free{instance=\"$node\",job=\"$job\"} * node_memory_Hugepagesize_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "HugePages Used – Currently allocated",
+              "legendFormat": "HugePages Used \u2013 Currently allocated",
               "range": true,
               "refId": "A",
               "step": 240
@@ -9909,7 +9914,7 @@
               "expr": "node_memory_HugePages_Rsvd{instance=\"$node\",job=\"$job\"} * node_memory_Hugepagesize_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "HugePages Reserved – Promised but unused",
+              "legendFormat": "HugePages Reserved \u2013 Promised but unused",
               "range": true,
               "refId": "B",
               "step": 240
@@ -9923,7 +9928,7 @@
               "expr": "node_memory_HugePages_Surp{instance=\"$node\",job=\"$job\"} * node_memory_Hugepagesize_bytes{instance=\"$node\",job=\"$job\"}",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "HugePages Surplus – Dynamic pool extension",
+              "legendFormat": "HugePages Surplus \u2013 Dynamic pool extension",
               "range": true,
               "refId": "C",
               "step": 240
@@ -9938,7 +9943,7 @@
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "HugePages Total – Reserved memory",
+              "legendFormat": "HugePages Total \u2013 Reserved memory",
               "range": true,
               "refId": "D",
               "step": 240
@@ -14190,7 +14195,7 @@
                 "axisBorderShow": false,
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "read (–) / write (+)",
+                "axisLabel": "read (\u2013) / write (+)",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "barWidthFactor": 0.6,
@@ -14332,7 +14337,7 @@
                 "axisBorderShow": false,
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "read (–) / write (+)",
+                "axisLabel": "read (\u2013) / write (+)",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "barWidthFactor": 0.6,
@@ -14478,7 +14483,7 @@
                 "axisBorderShow": false,
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "read (–) / write (+)",
+                "axisLabel": "read (\u2013) / write (+)",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "barWidthFactor": 0.6,
@@ -14743,7 +14748,7 @@
                 "axisBorderShow": false,
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "read (–) / write (+)",
+                "axisLabel": "read (\u2013) / write (+)",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "barWidthFactor": 0.6,
