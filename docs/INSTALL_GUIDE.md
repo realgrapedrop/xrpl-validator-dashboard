@@ -31,12 +31,19 @@
 
 ### rippled Requirements
 
-XRPL Monitor requires rippled with admin API access via WebSocket. The port number (6006 in this example) is configurable—any available port works as long as it's defined in your `rippled.cfg`:
+XRPL Monitor requires rippled with admin API access via both WebSocket and HTTP RPC. The port numbers are configurable—any available ports work as long as they're defined in your `rippled.cfg`:
 
 ```ini
 # Example rippled.cfg
+
+[port_rpc_admin_local]
+port = 5005              # HTTP RPC admin port (any available port)
+ip = 127.0.0.1
+admin = 127.0.0.1
+protocol = http
+
 [port_ws_admin_local]
-port = 6006              # Can be any available port
+port = 6006              # WebSocket admin port (any available port)
 ip = 127.0.0.1
 admin = 127.0.0.1
 protocol = ws
@@ -56,7 +63,8 @@ Before starting, verify:
 
 - [ ] Docker installed: `docker --version`
 - [ ] rippled running: `rippled server_info` or `curl http://localhost:5005`
-- [ ] Admin API enabled on port 6006
+- [ ] WebSocket admin API enabled (default port 6006)
+- [ ] HTTP RPC admin API enabled (default port 5005)
 - [ ] Ports available: 3000, 8428, 9100-9102
 
 ### Step 1: Install Docker (if needed)
