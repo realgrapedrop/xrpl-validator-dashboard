@@ -375,13 +375,14 @@ class ValidationsHandler:
         As new validation events arrive, these gauges will update normally.
         The recovery just provides continuity across collector restarts.
         """
-        # Use max_over_time to get the highest value before restart
-        # This ensures we recover from the peak value, not a stale instant value
+        # Use last_over_time to get the most recent value before restart
+        # These are windowed gauges that can go up AND down as events age out,
+        # so we need the current value, not the historical maximum
         metrics_to_recover = {
-            "xrpl_validation_agreements_1h": ("1h agreements", "1h"),
-            "xrpl_validation_missed_1h": ("1h missed", "1h"),
-            "xrpl_validation_agreements_24h": ("24h agreements", "24h"),
-            "xrpl_validation_missed_24h": ("24h missed", "24h")
+            "xrpl_validation_agreements_1h": ("1h agreements", "5m"),
+            "xrpl_validation_missed_1h": ("1h missed", "5m"),
+            "xrpl_validation_agreements_24h": ("24h agreements", "5m"),
+            "xrpl_validation_missed_24h": ("24h missed", "5m")
         }
 
         # Store recovered values for percentage calculation and batch writing
@@ -389,10 +390,12 @@ class ValidationsHandler:
         recovered_count = 0
         recovered_metrics = []  # Collect all recovered metrics for batch write
 
-        for metric_name, (display_name, window) in metrics_to_recover.items():
+        for metric_name, (display_name, lookback) in metrics_to_recover.items():
             try:
-                # Query the max value over the window period to recover from peak
-                query = f"max_over_time({metric_name}[{window}])"
+                # Query the last value over a short lookback period to get current value
+                # Using last_over_time instead of max_over_time because these gauges
+                # can decrease as old events age out of the window
+                query = f"last_over_time({metric_name}[{lookback}])"
                 result = await self.victoria_client.query(query)
 
                 if not result or result.get('status') != 'success':
