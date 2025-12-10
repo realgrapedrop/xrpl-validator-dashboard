@@ -259,6 +259,35 @@ import_dashboards_via_api() {
 }
 
 # ==============================================================================
+# SET HOME DASHBOARD VIA GRAFANA API
+# ==============================================================================
+# Set the default home dashboard via API (not env var) to allow dashboard saving.
+# Using GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH causes "Save as copy" limitation.
+
+set_home_dashboard() {
+    local grafana_port=$1
+
+    # Set home dashboard for organization via API
+    # This allows the dashboard to be fully editable (no "Save as copy" restriction)
+    local response
+    response=$(curl -s -w "\n%{http_code}" \
+        -X PATCH "http://localhost:${grafana_port}/api/org/preferences" \
+        -u "admin:admin" \
+        -H "Content-Type: application/json" \
+        -d '{"homeDashboardUID": "xrpl-validator-monitor-full"}' 2>&1)
+
+    local http_code=$(echo "$response" | tail -n1)
+
+    if [ "$http_code" = "200" ]; then
+        print_status "Home dashboard set to XRPL Validator Dashboard"
+        log "Home dashboard set via API: xrpl-validator-monitor-full"
+    else
+        print_warning "Could not set home dashboard (HTTP $http_code)"
+        log "Home dashboard warning: HTTP $http_code"
+    fi
+}
+
+# ==============================================================================
 # CONTACT POINT IMPORT VIA GRAFANA API
 # ==============================================================================
 # Import default email contact point via API instead of file provisioning.
@@ -1454,6 +1483,9 @@ EOF
 
         # Import dashboards via API (allows user customization)
         import_dashboards_via_api "$GRAFANA_PORT"
+
+        # Set home dashboard via API (allows dashboard to be saved, not just "Save as copy")
+        set_home_dashboard "$GRAFANA_PORT"
 
         # Import contact point via API (allows user to edit/delete)
         import_contact_point_via_api "$GRAFANA_PORT"

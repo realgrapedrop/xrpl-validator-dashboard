@@ -755,6 +755,19 @@ import_dashboard_api() {
     fi
 }
 
+# Set home dashboard via API (allows dashboard to be saved, not just "Save as copy")
+# Args: $1=grafana_port, $2=username, $3=password
+set_home_dashboard_api() {
+    local grafana_port=$1
+    local username=$2
+    local password=$3
+
+    curl -s -X PATCH "http://localhost:${grafana_port}/api/org/preferences" \
+        -u "${username}:${password}" \
+        -H "Content-Type: application/json" \
+        -d '{"homeDashboardUID": "xrpl-validator-monitor-full"}' > /dev/null 2>&1
+}
+
 # Restore default dashboard
 restore_default_dashboard() {
     local grafana_port=${GRAFANA_PORT:-3003}
@@ -894,6 +907,9 @@ restore_default_dashboard() {
 
             import_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password" "$cyberpunk_file" "Cyberpunk Dashboard"
 
+            # Set home dashboard (ensures dashboards can be saved, not just "Save as copy")
+            set_home_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password"
+
             echo ""
             print_info "Access your dashboards at: http://localhost:${grafana_port}"
             sleep 3
@@ -918,6 +934,11 @@ restore_default_dashboard() {
                 print_error "Permission denied. User '$grafana_username' needs Admin or Editor role."
                 sleep 3
                 return
+            fi
+
+            # Set home dashboard if main dashboard was restored
+            if [ "$template_file" = "$main_template" ]; then
+                set_home_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password"
             fi
 
             echo ""
@@ -1304,6 +1325,12 @@ update_dashboard_menu() {
             print_status "Cyberpunk dashboard imported"
         fi
     fi
+
+    # Set home dashboard via API (ensures dashboards can be saved, not just "Save as copy")
+    curl -s -X PATCH "http://localhost:${GRAFANA_PORT}/api/org/preferences" \
+        -u "admin:admin" -H "Content-Type: application/json" \
+        -d '{"homeDashboardUID": "xrpl-validator-monitor-full"}' > /dev/null 2>&1
+    print_status "Home dashboard configured"
 
     # Import contact point via API (use email from .env if available)
     print_info "Creating contact point..."
