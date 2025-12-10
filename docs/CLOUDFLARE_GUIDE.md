@@ -113,18 +113,6 @@ ingress:
   - service: http_status:404
 ```
 
-**Example:**
-
-```yaml
-tunnel: a1aec802-96a1-4b36-b87f-0bfcf169c213
-credentials-file: /home/grapedrop/.cloudflared/a1aec802-96a1-4b36-b87f-0bfcf169c213.json
-connections: 4
-
-ingress:
-  - hostname: monitor.grapedrop.xyz
-    service: http://127.0.0.1:3000
-  - service: http_status:404
-```
 
 ### Step 3: Create DNS Record
 
