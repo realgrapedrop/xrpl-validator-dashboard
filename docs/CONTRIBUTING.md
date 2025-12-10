@@ -195,7 +195,7 @@ Update documentation when:
 ### Documentation Files
 
 - `README.md` - Project overview and quick start
-- `DOCKER_ADVANCED_DEPLOYMENT.md` - Docker deployment guide
+- `DOCKER_ADVANCED.md` - Docker deployment guide
 - `METRICS.md` - Metrics schema and descriptions
 - `RIPPLED-CONFIG.md` - rippled configuration guide
 - `docs/architecture/` - Architecture documentation

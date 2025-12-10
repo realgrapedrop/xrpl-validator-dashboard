@@ -647,7 +647,7 @@ DOCKER_GID=999  # Find with: getent group docker | cut -d: -f3
 
 - [rippled Configuration Reference](https://xrpl.org/configure-rippled.html)
 - [rippled Admin API Methods](https://xrpl.org/admin-rippled-methods.html)
-- [XRPL Monitor Network Access Guide](DOCKER_ADVANCED_DEPLOYMENT.md#network-access--firewall-requirements)
+- [XRPL Monitor Network Access Guide](DOCKER_ADVANCED.md#network-access--firewall-requirements)
 
 ---
 

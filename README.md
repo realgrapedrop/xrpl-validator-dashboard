@@ -283,7 +283,7 @@ The stack includes safe resource limits to prevent runaway containers:
 |----------|-------------|
 | [Install & Operations Guide](docs/INSTALL_GUIDE.md) | Installation, updates, and maintenance |
 | [Architecture Overview](docs/ARCHITECTURE.md) | Technical architecture and design decisions |
-| [Docker Deployment Guide](docs/DOCKER_ADVANCED_DEPLOYMENT.md) | Advanced containerized deployment options |
+| [Docker Deployment Guide](docs/DOCKER_ADVANCED.md) | Advanced containerized deployment options |
 | [Backup & Restore Guide](docs/BACKUP_RESTORE.md) | Grafana backup procedures |
 | [Alert Configuration Guide](docs/ALERTS.md) | Email/webhook notifications and custom alerts |
 | [Performance Tuning Guide](docs/TUNING.md) | Optimize for your hardware and workload |

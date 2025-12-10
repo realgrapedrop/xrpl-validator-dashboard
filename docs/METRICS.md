@@ -1378,7 +1378,7 @@ All metrics are available in Grafana via the VictoriaMetrics datasource.
 
 # See Also
 
-- [DOCKER_ADVANCED_DEPLOYMENT.md](DOCKER_ADVANCED_DEPLOYMENT.md) - Docker deployment guide
+- [DOCKER_ADVANCED.md](DOCKER_ADVANCED.md) - Docker deployment guide
 - [README.md](README.md) - Project overview and setup
 - [Grafana Dashboard](http://localhost:3000) - Live metrics visualization
 - [VictoriaMetrics](http://localhost:8428) - Metrics database UI
