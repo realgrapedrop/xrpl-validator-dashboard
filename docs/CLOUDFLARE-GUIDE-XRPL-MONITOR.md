@@ -49,10 +49,10 @@ This guide documents a proven three-tier architecture for publicly exposing a Gr
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                  Public Internet                        │
-│              https://monitor.yourdomain.com         │
+│              https://monitor.yourdomain.com             │
 └────────────────────────┬────────────────────────────────┘
                          │
-                         │ HTTPS
+                         │ HTTPS:443
                          ↓
 ┌─────────────────────────────────────────────────────────┐
 │              Cloudflare Worker (Edge)                   │
@@ -63,17 +63,16 @@ This guide documents a proven three-tier architecture for publicly exposing a Gr
 │  • Provides /health endpoint                            │
 └────────────────────────┬────────────────────────────────┘
                          │
-                         │ Cloudflare Tunnel (encrypted)
+                         │ Cloudflare Tunnel (TLS encrypted)
                          ↓
 ┌─────────────────────────────────────────────────────────┐
 │              Cloudflare Tunnel (cloudflared)            │
 │  • Systemd service on your server                       │
 │  • 4 concurrent connections to Cloudflare               │
-│  • Routes traffic to localhost:3004                     │
 │  • No inbound firewall rules needed                     │
 └────────────────────────┬────────────────────────────────┘
                          │
-                         │ localhost:3004
+                         │ HTTP:3000 (localhost)
                          ↓
 ┌─────────────────────────────────────────────────────────┐
 │              Grafana Container (Docker)                 │
@@ -191,7 +190,7 @@ services:
 
     environment:
       # Server Configuration
-      GF_SERVER_HTTP_PORT: "3004"
+      GF_SERVER_HTTP_PORT: "3000"
       GF_SERVER_ROOT_URL: "https://monitor.yourdomain.com"
       GF_SERVER_ENABLE_GZIP: "true"
       GF_LOG_MODE: "console"
@@ -245,7 +244,7 @@ services:
     mem_limit: "4g"
 
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3004/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -255,7 +254,7 @@ services:
 
 | Variable | Purpose |
 |----------|---------|
-| `GF_SERVER_HTTP_PORT` | Port 3004 - Grafana listen port |
+| `GF_SERVER_HTTP_PORT` | Port 3000 - Grafana listen port |
 | `GF_SERVER_ROOT_URL` | https://monitor.yourdomain.com |
 | `GF_AUTH_ANONYMOUS_ENABLED` | Enables public access without login |
 | `GF_AUTH_ANONYMOUS_ORG_ROLE` | Set to "Viewer" for read-only |
@@ -465,7 +464,7 @@ cd /home/user/monitoring/compose/prod-xrpl-monitor
 docker compose up -d
 
 # Verify health
-curl http://localhost:3004/api/health
+curl http://localhost:3000/api/health
 # Expected: {"database":"ok","version":"12.1.1",...}
 ```
 
@@ -515,7 +514,7 @@ connections: 4  # Number of concurrent connections
 
 ingress:
   - hostname: monitor.yourdomain.com
-    service: http://127.0.0.1:3004
+    service: http://127.0.0.1:3000
   - service: http_status:404  # Catch-all
 ```
 
@@ -523,7 +522,7 @@ ingress:
 - `tunnel`: Must match your tunnel ID
 - `credentials-file`: Auto-created when tunnel is created
 - `connections`: 4 is recommended for reliability
-- `service`: Must use port 3004 to match Grafana
+- `service`: Must use port 3000 to match Grafana
 
 #### 2.4 Install as Systemd Service
 
@@ -696,13 +695,13 @@ curl https://monitor.yourdomain.com/health
 
 ```bash
 # Health check
-curl http://localhost:3004/api/health
+curl http://localhost:3000/api/health
 
 # Dashboard exists
-curl http://localhost:3004/api/dashboards/uid/xrpl-validator-monitor-full | jq .
+curl http://localhost:3000/api/dashboards/uid/xrpl-validator-monitor-full | jq .
 
 # Anonymous auth enabled
-curl http://localhost:3004/api/user | jq .
+curl http://localhost:3000/api/user | jq .
 # Expected: {"id":1,"orgId":1,"role":"Viewer"}
 ```
 
@@ -761,10 +760,10 @@ curl https://monitor.yourdomain.com/ | grep iframe
 
 ```bash
 # Check datasource configuration
-curl -s http://localhost:3004/api/datasources | jq '.[] | {name, uid, type}'
+curl -s http://localhost:3000/api/datasources | jq '.[] | {name, uid, type}'
 
 # Check dashboard datasource references
-curl -s http://localhost:3004/api/dashboards/uid/xrpl-validator-monitor-full | \
+curl -s http://localhost:3000/api/dashboards/uid/xrpl-validator-monitor-full | \
   jq '.dashboard.panels[0].targets[0].datasource'
 
 # If UIDs don't match, update dashboard JSON and restart Grafana
@@ -784,7 +783,7 @@ sudo journalctl -u cloudflared-xrpl-monitor -n 50
 |-------|----------|
 | "Invalid tunnel ID" | Verify `tunnel:` in config matches `cloudflared tunnel list` |
 | "Credentials file not found" | Check path in `credentials-file:` |
-| "Connection refused" | Grafana not running on port 3004 |
+| "Connection refused" | Grafana not running on port 3000 |
 | "Failed to register" | DNS not configured correctly |
 
 **Restart tunnel:**
@@ -886,7 +885,7 @@ systemctl status cloudflared-xrpl-monitor | grep "Registered tunnel connection"
 # 1. Edit dashboard in Grafana UI or JSON file
 
 # 2. Export dashboard (if edited in UI)
-curl -s http://localhost:3004/api/dashboards/uid/xrpl-validator-monitor-full | \
+curl -s http://localhost:3000/api/dashboards/uid/xrpl-validator-monitor-full | \
   jq '.dashboard' > /path/to/dashboard.json
 
 # 3. Copy to provisioning directory
@@ -922,7 +921,7 @@ cd /home/user/monitoring/compose/prod-xrpl-monitor
 docker compose up -d --force-recreate
 
 # 3. Verify health
-curl http://localhost:3004/api/health
+curl http://localhost:3000/api/health
 ```
 
 ### Update Cloudflared
@@ -987,7 +986,7 @@ sudo journalctl -u cloudflared-xrpl-monitor -f
 ### Network Security
 
 **Grafana:**
-- Listens only on `localhost` (127.0.0.1) port 3004
+- Listens only on `localhost` (127.0.0.1) port 3000
 - No direct internet exposure
 - Accessible only via tunnel
 
@@ -1328,7 +1327,7 @@ set -e
 
 # Configuration
 DOMAIN="monitor.yourdomain.com"
-GRAFANA_PORT="3004"
+GRAFANA_PORT="3000"
 DASHBOARD_UID="xrpl-validator-monitor-full"
 TUNNEL_NAME="xrpl-monitor"
 
@@ -1408,7 +1407,7 @@ journalctl -u cloudflared-xrpl-monitor -f
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `GF_SERVER_HTTP_PORT` | `3000` | Grafana listen port (3004) |
+| `GF_SERVER_HTTP_PORT` | `3000` | Grafana listen port |
 | `GF_SERVER_ROOT_URL` | - | Public URL (required) |
 | `GF_AUTH_ANONYMOUS_ENABLED` | `false` | Enable public access |
 | `GF_AUTH_ANONYMOUS_ORG_ROLE` | `Viewer` | Anonymous user role |
