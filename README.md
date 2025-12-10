@@ -289,7 +289,6 @@ The stack includes safe resource limits to prevent runaway containers:
 | [Performance Tuning Guide](docs/TUNING.md) | Optimize for your hardware and workload |
 | [Frequently Asked Questions](docs/FAQ.md) | Common questions and troubleshooting |
 | [Metrics Reference](docs/METRICS.md) | Complete metrics documentation (40 panels) |
-| [Quick Time Range Presets](docs/GRAFANA_QUICK_TIME_RANGES.md) | Dashboard time range navigation |
 | [Release Notes](docs/RELEASE_NOTES.md) | Version history and changelog |
 | [Contributing to XRPL Monitor](docs/CONTRIBUTING.md) | Guidelines for contributing to development |
 | [Cloudflare Deployment Guide](docs/CLOUDFLARE_GUIDE.md) | Public dashboard deployment with Cloudflare |
