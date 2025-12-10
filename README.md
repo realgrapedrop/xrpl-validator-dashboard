@@ -2,7 +2,7 @@
 
 Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 40+ metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
 
-**Built by a validator — real-time visibility, zero intrusion. Never miss another block.**
+**Real-time monitoring and alerting for XRPL validator nodes**
 
 ![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
@@ -292,7 +292,7 @@ The stack includes safe resource limits to prevent runaway containers:
 | [Quick Time Range Presets](docs/GRAFANA_QUICK_TIME_RANGES.md) | Dashboard time range navigation |
 | [Release Notes](docs/RELEASE_NOTES.md) | Version history and changelog |
 | [Contributing to XRPL Monitor](docs/CONTRIBUTING.md) | Guidelines for contributing to development |
-| [Cloudflare Deployment Guide](docs/CLOUDFLARE-GUIDE-XRPL-MONITOR.md) | Public dashboard deployment with Cloudflare |
+| [Cloudflare Deployment Guide](docs/CLOUDFLARE_GUIDE.md) | Public dashboard deployment with Cloudflare |
 
 ---
 
