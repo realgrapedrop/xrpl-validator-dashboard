@@ -583,9 +583,10 @@ groups:
     labels:
       severity: warning
   - uid: cf3s82tit1zpca
-    title: Peer Latency Degradation
-    condition: C
+    title: Peer Latency with Disconnect Correlation
+    condition: E
     data:
+    # Query A: P90 peer latency from state-exporter
     - refId: A
       queryType: ''
       relativeTimeRange:
@@ -602,6 +603,24 @@ groups:
         maxDataPoints: 43200
         range: false
         refId: A
+    # Query B: Peer disconnect rate from VictoriaMetrics (increase over 5m)
+    - refId: B
+      queryType: ''
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: victoria
+      model:
+        editorMode: code
+        expr: increase(xrpl_peer_disconnects_total[5m])
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: B
+    # Expression C: Threshold - latency > 500ms
     - refId: C
       queryType: ''
       relativeTimeRange:
@@ -631,12 +650,72 @@ groups:
         maxDataPoints: 43200
         refId: C
         type: threshold
+    # Expression D: Threshold - disconnects > 2 in 5m
+    - refId: D
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 2
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - D
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: B
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: D
+        type: threshold
+    # Expression E: Math - both conditions must be true (C AND D)
+    - refId: E
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 0
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - E
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: $C * $D
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: E
+        type: math
     noDataState: OK
     execErrState: Error
     for: 2m
     annotations:
-      description: P90 peer latency is {{ $values.A.Value }}ms, above 500ms threshold
-      summary: High peer latency detected - network performance degraded
+      description: P90 peer latency is {{ $values.A.Value }}ms AND {{ $values.B.Value }} peers disconnected in 5m - network connectivity issue
+      summary: High peer latency with elevated disconnect rate - investigate network
     labels:
       severity: warning
   - uid: af3s82tjfj2tcf
