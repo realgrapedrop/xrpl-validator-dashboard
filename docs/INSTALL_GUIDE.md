@@ -23,9 +23,9 @@
 
 | Requirement | Specification |
 |-------------|---------------|
-| **Operating System** | Ubuntu 20.04 LTS or later |
-| **Docker** | Version 23.0+ |
-| **Docker Compose** | Version 2.0+ (auto-installed on Ubuntu) |
+| **Operating System** | Ubuntu 20.04+ or Linux Mint 20.x/21.x/22.x |
+| **Docker** | Version 23.0+ (auto-installed if missing) |
+| **Docker Compose** | Version 2.0+ (auto-installed if missing) |
 | **rippled** | Running on same machine |
 | **Disk Space** | ~500 MB for images, ~290 MB for 30-day metrics |
 | **Memory** | ~729 MB RAM total |
@@ -75,7 +75,7 @@ Before starting, verify:
 <details>
 <summary><strong>Click to expand Docker installation instructions</strong></summary>
 
-#### Quick Docker Installation (Ubuntu)
+#### Quick Docker Installation (Ubuntu/Mint)
 
 ```bash
 # Remove old packages
@@ -122,8 +122,8 @@ sudo ./install.sh
 ```
 
 The installer will:
-1. Check for Docker (fails if not present)
-2. Install Docker Compose if missing (Ubuntu only)
+1. Install Docker if missing (via get.docker.com)
+2. Install Docker Compose if missing
 3. Detect port conflicts and suggest alternatives
 4. Auto-detect rippled endpoints
 5. Pull container images
