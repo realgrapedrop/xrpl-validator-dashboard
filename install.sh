@@ -987,7 +987,7 @@ check_system_requirements() {
             noble)  UBUNTU_BASE="24.04" ;;
             *)
                 print_error "Unsupported Linux Mint version (unknown Ubuntu base: $UBUNTU_CODENAME)"
-                print_info "Supported: Mint 20.x (focal), Mint 21.x (jammy)"
+                print_info "Supported: Mint 20.x (focal), Mint 21.x (jammy), Mint 22.x (noble)"
                 exit 1
                 ;;
         esac

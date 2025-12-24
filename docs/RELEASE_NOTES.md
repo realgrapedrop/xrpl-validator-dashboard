@@ -153,8 +153,8 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 ### v3.0.3
 
 **Linux Mint Support**:
-- Installer now supports Linux Mint 20.x and 21.x
-- Auto-detects Mint and maps to underlying Ubuntu base (focal/jammy)
+- Installer now supports Linux Mint 20.x, 21.x, and 22.x
+- Auto-detects Mint and maps to underlying Ubuntu base (focal/jammy/noble)
 - Status message shows both Mint version and Ubuntu base
 - Docker installation via `get.docker.com` works seamlessly on Mint
 
