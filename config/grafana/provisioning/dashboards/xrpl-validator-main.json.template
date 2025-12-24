@@ -69,6 +69,11 @@
                   "index": 0,
                   "text": "Failed"
                 },
+                "0.5": {
+                  "color": "yellow",
+                  "index": 2,
+                  "text": "Degraded"
+                },
                 "1": {
                   "color": "green",
                   "index": 1,
@@ -21340,7 +21345,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {
@@ -21362,6 +21367,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard",
   "uid": "xrpl-validator-monitor-full",
-  "version": 5,
+  "version": 3,
   "weekStart": ""
 }
