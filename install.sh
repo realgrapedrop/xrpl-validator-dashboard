@@ -964,7 +964,7 @@ check_system_requirements() {
         REQUIREMENTS_MET=false
     fi
 
-    # Check OS
+    # Check OS (supports Ubuntu 20.04+ and Linux Mint 20.x/21.x)
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         OS_ID=$ID
@@ -974,18 +974,37 @@ check_system_requirements() {
         exit 1
     fi
 
-    if [ "$OS_ID" != "ubuntu" ]; then
-        print_error "This installer requires Ubuntu 20.04 LTS or later"
-        print_info "For other distributions, install Docker Compose manually"
+    # Determine Ubuntu base version
+    UBUNTU_BASE=""
+    if [ "$OS_ID" = "ubuntu" ]; then
+        UBUNTU_BASE=$OS_VERSION
+        OS_DISPLAY="Ubuntu $OS_VERSION"
+    elif [ "$OS_ID" = "linuxmint" ]; then
+        # Linux Mint provides UBUNTU_CODENAME in /etc/os-release
+        case "$UBUNTU_CODENAME" in
+            focal)  UBUNTU_BASE="20.04" ;;
+            jammy)  UBUNTU_BASE="22.04" ;;
+            noble)  UBUNTU_BASE="24.04" ;;
+            *)
+                print_error "Unsupported Linux Mint version (unknown Ubuntu base: $UBUNTU_CODENAME)"
+                print_info "Supported: Mint 20.x (focal), Mint 21.x (jammy)"
+                exit 1
+                ;;
+        esac
+        OS_DISPLAY="Linux Mint $OS_VERSION (Ubuntu $UBUNTU_BASE base)"
+    else
+        print_error "This installer requires Ubuntu 20.04+ or Linux Mint 20.x+"
+        print_info "For other distributions, install Docker and Docker Compose manually"
         exit 1
     fi
 
-    VERSION_MAJOR="${OS_VERSION%%.*}"
+    # Validate Ubuntu base version is 20.04 or later
+    VERSION_MAJOR="${UBUNTU_BASE%%.*}"
     if [ "$VERSION_MAJOR" -lt 20 ]; then
-        print_error "Ubuntu 20.04 LTS or later is required (detected: $OS_VERSION)"
+        print_error "Ubuntu 20.04 LTS or later is required (detected base: $UBUNTU_BASE)"
         exit 1
     fi
-    print_status "Operating system: Ubuntu $OS_VERSION"
+    print_status "Operating system: $OS_DISPLAY"
 
     # Check for Docker
     if ! command -v docker &> /dev/null; then
