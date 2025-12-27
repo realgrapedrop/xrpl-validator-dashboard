@@ -58,6 +58,7 @@
 - Real-time state monitoring (1-second refresh)
 - Grafana 12.x (grafana:latest) with trendline visualizations on key panels
 - **Cyberpunk Dashboard** - Fun alternate theme with vibrant neon colors
+- **Light Mode Dashboard** - Blue color scheme optimized for Grafana's light theme
 - **Editable dashboards** - Dashboards imported via API, not provisioned (you can customize and save)
 - **Hidden variables/time picker** - Cleaner UI without clutter
 - **Gauge panels** - Peer Disconnects, Ledger DB, Ledger NuDB with visual gauges
@@ -67,7 +68,7 @@
 
 - `install.sh` imports dashboards via Grafana API instead of provisioning
 - Dashboards are fully editable - customize and save your changes
-- `manage.sh` → Advanced → Restore default dashboard (choose Main, Cyberpunk, or Both)
+- `manage.sh` → Advanced → Restore default dashboard (choose Main, Cyberpunk, Light Mode, or All)
 - Restore prompts for Grafana username (default: admin) and password
 - Handles authentication errors and permission checks gracefully
 
@@ -149,16 +150,6 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 ---
 
 # Changelog
-
-### v3.0.3
-
-**Linux Mint Support**:
-- Installer now supports Linux Mint 20.x, 21.x, and 22.x
-- Auto-detects Mint and maps to underlying Ubuntu base (focal/jammy/noble)
-- Status message shows both Mint version and Ubuntu base
-- Docker installation via `get.docker.com` works seamlessly on Mint
-
----
 
 ### v3.0.2
 

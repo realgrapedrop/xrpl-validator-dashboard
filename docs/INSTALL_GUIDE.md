@@ -23,9 +23,9 @@
 
 | Requirement | Specification |
 |-------------|---------------|
-| **Operating System** | Ubuntu 20.04+ or Linux Mint 20.x/21.x/22.x |
-| **Docker** | Version 23.0+ (auto-installed if missing) |
-| **Docker Compose** | Version 2.0+ (auto-installed if missing) |
+| **Operating System** | Ubuntu 20.04 LTS or later |
+| **Docker** | Version 23.0+ |
+| **Docker Compose** | Version 2.0+ (auto-installed on Ubuntu) |
 | **rippled** | Running on same machine |
 | **Disk Space** | ~500 MB for images, ~290 MB for 30-day metrics |
 | **Memory** | ~729 MB RAM total |
@@ -75,7 +75,7 @@ Before starting, verify:
 <details>
 <summary><strong>Click to expand Docker installation instructions</strong></summary>
 
-#### Quick Docker Installation (Ubuntu/Mint)
+#### Quick Docker Installation (Ubuntu)
 
 ```bash
 # Remove old packages
@@ -122,8 +122,8 @@ sudo ./install.sh
 ```
 
 The installer will:
-1. Install Docker if missing (via get.docker.com)
-2. Install Docker Compose if missing
+1. Check for Docker (fails if not present)
+2. Install Docker Compose if missing (Ubuntu only)
 3. Detect port conflicts and suggest alternatives
 4. Auto-detect rippled endpoints
 5. Pull container images
@@ -230,7 +230,7 @@ git log HEAD..origin/main --oneline
 ### Dashboard Preservation
 
 Your dashboards are automatically protected during updates:
-- Main and Cyberpunk dashboards get timestamped backup copies
+- Main, Cyberpunk, and Light Mode dashboards get timestamped backup copies
 - Custom dashboards you created are preserved with timestamps
 - Previous backup copies accumulate (not overwritten)
 - JSON backups saved to `data/dashboard-backups/` for manual recovery
@@ -345,9 +345,10 @@ If you accidentally break a dashboard, you can restore it to the default:
 ```
 
 You can restore:
-- **Default Main Dashboard** - The standard XRPL Validator Dashboard
-- **Cyberpunk Dashboard** - Vibrant color theme variant
-- **Both dashboards** - Restore both at once
+- **Default Main Dashboard** - The standard XRPL Validator Dashboard (dark theme)
+- **Cyberpunk Dashboard** - Vibrant neon color theme variant
+- **Light Mode Dashboard** - Blue color scheme optimized for Grafana's light theme
+- **All dashboards** - Restore all three at once
 
 You'll be prompted for your Grafana username (default: `admin`) and password. The user account must have **Admin** or **Editor** role in Grafana.
 

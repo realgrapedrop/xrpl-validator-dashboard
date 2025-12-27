@@ -784,11 +784,14 @@ restore_default_dashboard() {
     echo ""
     echo "  1) Default Main Dashboard"
     echo "  2) Cyberpunk Dashboard"
-    echo "  3) Both dashboards"
-    echo "  4) Cancel"
+    echo "  3) Light Mode Dashboard"
+    echo "  4) All dashboards"
+    echo "  5) Cancel"
     echo ""
 
-    read -p "Select option [1-4]: " dashboard_choice
+    read -p "Select option [1-5]: " dashboard_choice
+
+    local lightmode_file="config/grafana/provisioning/dashboards/xrpl-validator-light-mode.json"
 
     case $dashboard_choice in
         1)
@@ -802,9 +805,14 @@ restore_default_dashboard() {
             local restore_both=false
             ;;
         3)
+            local template_file="$lightmode_file"
+            local dashboard_name="Light Mode Dashboard"
+            local restore_both=false
+            ;;
+        4)
             local restore_both=true
             ;;
-        4|*)
+        5|*)
             print_info "Restore cancelled"
             sleep 2
             return
@@ -813,7 +821,7 @@ restore_default_dashboard() {
 
     echo ""
     if [ "$restore_both" = true ]; then
-        echo -e "${YELLOW}⚠ WARNING: This will replace BOTH dashboards with defaults.${NC}"
+        echo -e "${YELLOW}⚠ WARNING: This will replace ALL dashboards with defaults.${NC}"
     else
         echo -e "${YELLOW}⚠ WARNING: This will replace the $dashboard_name with the default.${NC}"
     fi
@@ -906,6 +914,11 @@ restore_default_dashboard() {
             fi
 
             import_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password" "$cyberpunk_file" "Cyberpunk Dashboard"
+
+            local lightmode_file="config/grafana/provisioning/dashboards/xrpl-validator-light-mode.json"
+            if [ -f "$lightmode_file" ]; then
+                import_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password" "$lightmode_file" "Light Mode Dashboard"
+            fi
 
             # Set home dashboard (ensures dashboards can be saved, not just "Save as copy")
             set_home_dashboard_api "$grafana_port" "$grafana_username" "$grafana_password"
@@ -1151,7 +1164,7 @@ update_dashboard_menu() {
     # Ask about keeping dashboard copies
     echo ""
     echo "Keep your current dashboards for comparison after update?"
-    echo "  - Main & Cyberpunk dashboards will be re-imported with timestamps"
+    echo "  - Main, Cyberpunk & Light Mode dashboards will be re-imported with timestamps"
     echo "  - Any custom dashboards will be saved to data/dashboard-backups/"
     echo ""
     read -p "Keep copies? (yes/no) [yes]: " keep_copies </dev/tty
@@ -1161,6 +1174,7 @@ update_dashboard_menu() {
     local timestamp=$(date +%Y%m%d-%H%M%S)
     local saved_main=""
     local saved_cyberpunk=""
+    local saved_lightmode=""
     local saved_user_dashboards=0
 
     if [ "$keep_copies" = "yes" ] || [ "$keep_copies" = "y" ]; then
@@ -1183,6 +1197,14 @@ update_dashboard_menu() {
             print_status "Cyberpunk dashboard exported"
         fi
 
+        # Export light mode dashboard
+        local lightmode_export=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/dashboards/uid/xrpl-validator-monitor-light" 2>/dev/null)
+        if echo "$lightmode_export" | jq -e '.dashboard' > /dev/null 2>&1; then
+            saved_lightmode="XRPL Validator Dashboard Light Mode-${timestamp}"
+            echo "$lightmode_export" | jq '.dashboard' > "data/dashboard-backups/lightmode-${timestamp}.json"
+            print_status "Light Mode dashboard exported"
+        fi
+
         # Export ALL other dashboards (user-created ones)
         # Get list of all dashboard UIDs, excluding our known ones and backup copies
         local all_dashboards=$(curl -s -u "${grafana_user}:${new_password}" "http://localhost:${GRAFANA_PORT:-3000}/api/search?type=dash-db" 2>/dev/null)
@@ -1193,7 +1215,7 @@ update_dashboard_menu() {
             echo "$all_dashboards" | jq -r '.[] | "\(.uid)|\(.title)"' | while IFS='|' read -r uid title; do
                 # Skip only the base provisioned dashboards (we export these separately above)
                 case "$uid" in
-                    xrpl-validator-monitor-full|xrpl-validator-monitor-cyberpunk)
+                    xrpl-validator-monitor-full|xrpl-validator-monitor-cyberpunk|xrpl-validator-monitor-light)
                         continue
                         ;;
                 esac
@@ -1326,6 +1348,17 @@ update_dashboard_menu() {
         fi
     fi
 
+    local lightmode_dashboard="config/grafana/provisioning/dashboards/xrpl-validator-light-mode.json"
+    if [ -f "$lightmode_dashboard" ]; then
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$lightmode_dashboard" 2>/dev/null)
+        if [ -n "$import_payload" ]; then
+            echo "$import_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+            print_status "Light Mode dashboard imported"
+        fi
+    fi
+
     # Set home dashboard via API (ensures dashboards can be saved, not just "Save as copy")
     curl -s -X PATCH "http://localhost:${GRAFANA_PORT}/api/org/preferences" \
         -u "admin:admin" -H "Content-Type: application/json" \
@@ -1385,6 +1418,19 @@ update_dashboard_menu() {
             echo "$backup_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
                 -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
             print_status "Previous cyberpunk dashboard imported"
+        fi
+    fi
+
+    if [ -n "$saved_lightmode" ] && [ -f "data/dashboard-backups/lightmode-${timestamp}.json" ]; then
+        print_info "Importing your previous dashboard as '${saved_lightmode}'..."
+        local backup_payload
+        backup_payload=$(jq --arg title "$saved_lightmode" \
+            'del(.id) | .uid = "backup-lightmode-'"${timestamp}"'" | .title = $title | .version = 0 | {dashboard: ., overwrite: true}' \
+            "data/dashboard-backups/lightmode-${timestamp}.json" 2>/dev/null)
+        if [ -n "$backup_payload" ]; then
+            echo "$backup_payload" | curl -s -X POST "http://localhost:${GRAFANA_PORT}/api/dashboards/db" \
+                -u "admin:admin" -H "Content-Type: application/json" -d @- > /dev/null 2>&1
+            print_status "Previous light mode dashboard imported"
         fi
     fi
 
@@ -1460,7 +1506,7 @@ update_dashboard_menu() {
     fi
 
     # Show backup info if dashboards were saved
-    if [ -n "$saved_main" ] || [ -n "$saved_cyberpunk" ]; then
+    if [ -n "$saved_main" ] || [ -n "$saved_cyberpunk" ] || [ -n "$saved_lightmode" ]; then
         echo ""
         echo -e "${BLUE}Your previous dashboards have been imported for comparison:${NC}"
         if [ -n "$saved_main" ]; then
@@ -1468,6 +1514,9 @@ update_dashboard_menu() {
         fi
         if [ -n "$saved_cyberpunk" ]; then
             echo "  - ${saved_cyberpunk}"
+        fi
+        if [ -n "$saved_lightmode" ]; then
+            echo "  - ${saved_lightmode}"
         fi
     fi
 
@@ -1486,7 +1535,7 @@ update_dashboard_menu() {
         fi
     fi
 
-    if [ -n "$saved_main" ] || [ -n "$saved_cyberpunk" ]; then
+    if [ -n "$saved_main" ] || [ -n "$saved_cyberpunk" ] || [ -n "$saved_lightmode" ]; then
         echo ""
         echo "You can find them all in the Grafana dashboard list."
         echo "JSON backups saved to: data/dashboard-backups/"
