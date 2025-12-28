@@ -32,97 +32,96 @@ v3.0 is built on three core principles:
 # High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                    XRPL Validator Node (rippled)                                    │
-│                                                                                                     │
-│       ┌─────────────────────────────┐                    ┌─────────────────────────────┐            │
-│       │    WebSocket API :6006      │                    │    HTTP JSON-RPC :5005      │            │
-│       │                             │                    │                             │            │
-│       │    Streams:                 │                    │    Methods:                 │            │
-│       │    • ledger                 │                    │    • server_info            │            │
-│       │    • server                 │                    │    • peers                  │            │
-│       │    • validations            │                    │    • server_state           │            │
-│       └─────────────────────────────┘                    └─────────────────────────────┘            │
-└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
-             ▲                ▲                                    ▲                   ▲
-             │                │                                    │                   │
-             │ WS :6006       │ WS :6006                           │ HTTP :5005        │ HTTP :5005
-             │ (uptime)       │ (streams)                          │ (polling)         │ (state/peers)
-             │                │                                    │                   │
-┌────────────┼────────────────┼────────────────────────────────────┼───────────────────┼──────────────┐
-│            │                │                                    │                   │              │
-│            │                │         DOCKER CONTAINERS          │                   │              │
-│            │                │                                    │                   │              │
-│  ╔═════════╧═════════╗  ╔═══╧═══════════════════════════╗  ┌─────┴─────────────┐  ╔══╧════════════╗  │
-│  ║   Uptime        * ║  ║         Collector *           ║  │       Node        │  ║    State    * ║  │
-│  ║   Exporter        ║  ║        (Python app)           ║  │      Exporter     │  ║   Exporter    ║  │
-│  ║  (Python app)     ║  ║          :8090                ║  │       (Go)        │  ║  (Python app) ║  │
-│  ║     :9101         ║  ║                               ║  │      :9100        │  ║    :9102      ║  │
-│  ║                   ║  ║  • WebSocket streams          ║  │                   │  ║               ║  │
-│  ║  • Uptime         ║  ║  • HTTP polling (5s/60s/5m)   ║  │  • CPU, RAM       │  ║  • State (1s) ║  │
-│  ║    formatted      ║  ║  • Event handlers             ║  │  • Disk, Net      │  ║  • Peers (5s) ║  │
-│  ║                   ║  ║  • Validation tracking        ║  │  • System load    │  ║               ║  │
-│  ╚═══════════════════╝  ╚═══════════════════════════════╝  └───────────────────┘  ╚═══════════════╝  │
-│            ▲                          ▲                              ▲                    ▲          │
-│            │                          │                              │                    │          │
-│            │                          │                              │                    │          │
-│            │ GET /metrics             │ POST :8428                   │ GET /metrics       │          │
-│            │ (vmagent scrapes)        │ /api/v1/import/              │ (vmagent scrapes)  │          │
-│            │                          │ prometheus                   │                    │          │
-│            │                          │                              │                    │          │
-│  ┌─────────┴──────────────────────────┴──────────────────────────────┴────────────────────┴───────┐  │
-│  │                                      vmagent :8427                                             │  │
-│  │                                                                                                │  │
-│  │       Scrapes /metrics from exporters (initiates GET requests):                                │  │
-│  │       • Node Exporter :9100 (every 15s)                                                        │  │
-│  │       • Uptime Exporter * :9101 (every 10s)                                                    │  │
-│  │       • State Exporter * :9102 (every 5s)                                                      │  │
-│  └────────────────────────────────────────┬───────────────────────────────────────────────────────┘  │
-│                                           │                                                          │
-│                                           │ POST /api/v1/write                                       │
-│                                           │ (remote write)                                           │
-│                                           ▼                                                          │
-│  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐  │
-│  │                                   VictoriaMetrics :8428                                        │  │
-│  │                                                                                            ◄───┼──┘
-│  │       Time-series database                                             (Collector *            │
-│  │       • Stores all historical metrics                                   pushes here)           │
-│  │       • PromQL query interface                                                                 │
-│  │       • 365-day retention                                                                      │
-│  │       • 7x better compression than Prometheus                                                  │
-│  └────────────────────────────────────────────────────────────────────────────────────────────────┘
-│                                           ▲
-│                                           │ PromQL queries
-│                                           │ (Grafana initiates)
-│                                           │
-│       ┌───────────────────────────────────┴────────────────────────────────────────────────────┐
-│       │                                                                                        │
-│       │       ┌────────────────────────────────────────────────────────────────────────┐       │
-│       │       │                            Grafana :3000                               │       │
-│       │       │                                                                        │       │
-│       │       │       Dashboard & Alerting                                             │       │
-│       │       │       • Queries VictoriaMetrics for historical data                    │       │
-│       │       │       • Queries StateExporter for near-real-time state (1s) & peers    │       │
-│       │       │       • Auto-provisioned dashboards                                    │       │
-│       │       │       • Email/webhook alerts                                           │       │
-│       │       └────────────────────────────────┬───────────────────────────────────────┘       │
-│       │                                        │                                               │
-│       │                                        │ GET /api/v1/query                             │
-│       │                                        │ (Grafana initiates)                           │
-│       │                                        ▼                                               │
-│       │                           ╔════════════════════════╗                                   │
-│       │                           ║    State Exporter *    ║                                   │
-│       │                           ║       (Python app)     ║                                   │
-│       │                           ║         :9102          ║                                   │
-│       │                           ║    (responds with      ║                                   │
-│       │                           ║     instant state)     ║                                   │
-│       │                           ╚════════════════════════╝                                   │
-│       │                                                                                        │
-│       └────────────────────────────────────────────────────────────────────────────────────────┘
-│                                           ▲
-│                                           │ HTTP :3000 (Web UI)
-│                                           │ (User initiates)
-└───────────────────────────────────────────┼─────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    XRPL Validator Node (rippled)                                       │
+│                                                                                                        │
+│       ┌─────────────────────────────┐                     ┌───────────────────────────────┐            │
+│       │    WebSocket API :6006      │                     │    HTTP JSON-RPC :5005        │            │
+│       │                             │                     │                               │            │
+│       │    Streams:                 │                     │    Methods:                   │            │
+│       │    • ledger                 │                     │    • server_info              │            │
+│       │    • server                 │                     │    • peers                    │            │
+│       │    • validations            │                     │    • server_state             │            │
+│       └─────────────────────────────┘                     └───────────────────────────────┘            │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+              ▲                ▲                                    ▲                     ▲
+              │                │                                    │                     │
+              │ WS :6006       │ WS :6006                           │ HTTP :5005          │ HTTP :5005
+              │ (uptime)       │ (streams)                          │ (polling)           │ (state/peers)
+              │                │                                    │                     │
+┌─────────────┼────────────────┼────────────────────────────────────┼─────────────────────┼────────────────┐
+│             │                │                                    │                     │                │
+│             │                │         DOCKER CONTAINERS          │                     │                │
+│             │                │                                    │                     │                │
+│  ╔══════════╧═════════╗  ╔═══╧═══════════════════════════╗  ┌─────┴─────────────┐  ╔════╧═════════════╗  │
+│  ║  Uptime Exporter * ║  ║         Collector *           ║  │   Node Exporter   │  ║ State Exporter * ║  │
+│  ║    (Python app)    ║  ║        (Python app)           ║  │      (Go app)     │  ║   (Python app)   ║  │
+│  ║       :9101        ║  ║          :8090                ║  │      :9100        │  ║     :9102        ║  │
+│  ║                    ║  ║  • WebSocket streams          ║  │                   │  ║                  ║  │
+│  ║  • Uptime          ║  ║  • HTTP polling (5s/60s/5m)   ║  │  • CPU, RAM       │  ║  • State (1s)    ║  │
+│  ║    formatted       ║  ║  • Event handlers             ║  │  • Disk, Net      │  ║  • Peers (5s)    ║  │
+│  ║                    ║  ║  • Validation tracking        ║  │  • System load    │  ║                  ║  │
+│  ╚════════════════════╝  ╚═══════════════════════════════╝  └───────────────────┘  ╚══════════════════╝  │
+│            ▲                          ▲                              ▲                    ▲              │
+│            │                          │                              │                    │              │
+│            │                          │                              │                    │              │
+│            │ GET /metrics             │ POST :8428                   │ GET /metrics       │              │
+│            │ (vmagent scrapes)        │ /api/v1/import/              │ (vmagent scrapes)  │              │
+│            │                          │ prometheus                   │                    │              │
+│            │                          │                              │                    │              │
+│  ┌─────────┴──────────────────────────┴──────────────────────────────┴────────────────────┴───────────┐  │
+│  │                                      vmagent :8427                                                 │  │
+│  │                                                                                                    │  │
+│  │       Scrapes /metrics from exporters (initiates GET requests):                                    │  │
+│  │       • Node Exporter :9100 (every 15s)                                                            │  │
+│  │       • Uptime Exporter * :9101 (every 10s)                                                        │  │
+│  │       • State Exporter * :9102 (every 5s)                                                          │  │
+│  └────────────────────────────────────────┬───────────────────────────────────────────────────────────┘  │
+│                                           │                                                              │
+│                                           │ POST /api/v1/write                                           │
+│                                           │ (remote write)                                               │
+│                                           ▼                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                                   VictoriaMetrics :8428                                            │  │
+│  │                                                                                                    │  │
+│  │       Time-series database                                        (Collector * pushes here)        │  │
+│  │       • Stores all historical metrics                                                              │  │
+│  │       • PromQL query interface                                                                     │  │
+│  │       • 365-day retention                                                                          │  │
+│  │       • 7x better compression than Prometheus                                                      │  │
+│  └────────────────────────────────────────────────────────────────────────────────────────────────────┘  │
+│                                           ▲                                                              │
+│                                           │ PromQL queries                                               │
+│                                           │ (Grafana initiates)                                          │
+│                                           │                                                              │
+│       ┌───────────────────────────────────┴────────────────────────────────────────────────────┐         │
+│       │                                                                                        │         │
+│       │       ┌────────────────────────────────────────────────────────────────────────┐       │         │
+│       │       │                            Grafana :3000                               │       │         │
+│       │       │                                                                        │       │         │
+│       │       │       Dashboard & Alerting                                             │       │         │
+│       │       │       • Queries VictoriaMetrics for historical data                    │       │         │
+│       │       │       • Queries StateExporter for near-real-time state (1s) & peers    │       │         │
+│       │       │       • Auto-provisioned dashboards                                    │       │         │
+│       │       │       • Email/webhook alerts                                           │       │         │
+│       │       └────────────────────────────────┬───────────────────────────────────────┘       │         │
+│       │                                        │                                               │         │
+│       │                                        │ GET /api/v1/query                             │         │
+│       │                                        │ (Grafana initiates)                           │         │
+│       │                                        ▼                                               │         │
+│       │                           ╔════════════════════════╗                                   │         │
+│       │                           ║    State Exporter *    ║                                   │         │
+│       │                           ║       (Python app)     ║                                   │         │
+│       │                           ║         :9102          ║                                   │         │
+│       │                           ║    (responds with      ║                                   │         │
+│       │                           ║     instant state)     ║                                   │         │
+│       │                           ╚════════════════════════╝                                   │         │
+│       │                                                                                        │         │
+│       └────────────────────────────────────────────────────────────────────────────────────────┘         │
+│                                           ▲                                                              │
+│                                           │ HTTP :3000 (Web UI)                                          │
+│                                           │ (User initiates)                                             │
+└───────────────────────────────────────────┼──────────────────────────────────────────────────────────────┘
                                             │
                                      [User Browser]
 
