@@ -65,8 +65,8 @@ v3.0 is built on three core principles:
 │            ▲                          ▲                              ▲                    ▲              │
 │            │                          │                              │                    │              │
 │            │                          │                              │                    │              │
-│            │ GET /metrics             │ POST :8428                   │ GET /metrics       │              │
-│            │ (vmagent scrapes)        │ /api/v1/import/              │ (vmagent scrapes)  │              │
+│            │ GET /metrics             │ POST :8428                   │ GET /metrics       │ GET /metrics │
+│            │ (vmagent scrapes)        │ /api/v1/import/              │ (vmagent scrapes)  │ (vmagent)    │
 │            │                          │ prometheus                   │                    │              │
 │            │                          │                              │                    │              │
 │  ┌─────────┴──────────────────────────┴──────────────────────────────┴────────────────────┴───────────┐  │
@@ -113,8 +113,8 @@ v3.0 is built on three core principles:
 │       │                             ║    State Exporter *    ║                                    │      │
 │       │                             ║       (Python app)     ║                                    │      │
 │       │                             ║         :9102          ║                                    │      │
-│       │                             ║    (responds with      ║                                    │      │
-│       │                             ║     instant state)     ║                                    │      │
+│       │                             ║  (same component as    ║                                    │      │
+│       │                             ║  above - direct query) ║                                    │      │
 │       │                             ╚════════════════════════╝                                    │      │
 │       │                                                                                           │      │
 │       └───────────────────────────────────────────────────────────────────────────────────────────┘      │
@@ -127,6 +127,10 @@ v3.0 is built on three core principles:
 
 Legend:  ┌───┐ Open Source    ╔═══╗ Custom Code *
          └───┘                ╚═══╝
+
+Note: State Exporter has TWO data paths:
+  1. vmagent scrapes /metrics → VictoriaMetrics (historical data, alerts)
+  2. Grafana queries /api/v1/query directly (real-time state, 1-2s latency)
 
 Arrow Direction: Shows who initiates the request (initiator ──► target)
 ```
