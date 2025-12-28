@@ -62,85 +62,89 @@ v3.0 is built on three core principles:
 │  ║   formatted ║  ║ • HTTP polling (5s/60s/5m)  ║  │ • Disk, Net  │  ║ • Peers (5s) ║  │
 │  ║             ║  ║ • Event handlers            ║  │ • System     │  ║              ║  │
 │  ║             ║  ║ • Validation tracking       ║  │   load       │  ║              ║  │
-│  ╚══════╤══════╝  ╚═════════════╤═══════════════╝  └───────┬──────┘  ╚═══╤════════╤═╝  │
-│         │                       │                          │             │        │    │
-│         │                       │                          │             │        │    │
-│         │                       │                          │             │        │    │
-│         │                       │                          │             │        │    │
-│         │ /metrics              │ POST :8428               │ /metrics    │/metrics│    │
-│         │                       │ /api/v1/import/          │             │        │    │
-│         │                       │ prometheus               │             │        │    │
-│         ▼                       │                          ▼             ▼        │    │
-│  ┌───────────────────────────────────────────────────────────────────────────┐    │    │
-│  │                         vmagent :8427                                     │    │    │
-│  │                                                                           │    │    │
-│  │   Scrapes /metrics from exporters:                                        │    │    │
-│  │   • Node Exporter :9100 (every 15s)                                       │    │    │
-│  │   • Uptime Exporter * :9101 (every 10s)                                   │    │    │
-│  │   • State Exporter * :9102 (every 5s)                                     │    │    │
-│  └──────────────────────────────┬────────────────────────────────────────────┘    │    │
-│                                 │                                                 │    │
-│                                 │ /api/v1/write                                   │    │
-│                                 │ (remote write)                                  │    │
-│                                 ▼                                                 │    │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐  │    │
-│  │                      VictoriaMetrics :8428                                  │  │    │
-│  │                                                                             │◄─┘    │
-│  │   Time-series database                                      (Collector *    │       │
-│  │   • Stores all historical metrics                            pushes here)   │       │
-│  │   • PromQL query interface                                                  │       │
-│  │   • 365-day retention                                                       │       │
-│  │   • 7x better compression than Prometheus                                   │       │
-│  └────────────────────────────────┬────────────────────────────────────────────┘       │
-│                                   │                                                    │
-│    ┌──────────────────────────────┼─────────────────────────────────────────────┐      │
-│    │                              │                                             │      │
-│    │                              │ PromQL queries                              │      │
-│    │                              │ (historical data)                           │      │
-│    │                              ▼                                             │      │
-│    │  ┌────────────────────────────────────────────────────────────────────┐    │      │
-│    │  │                        Grafana :3000                               │    │      │
-│    │  │                                                                    │    │      │
-│    │  │   Dashboard & Alerting                                             │    │      │
-│    │  │   • VictoriaMetrics: historical data (validation counts, etc.)     │    │      │
-│    │  │   • StateExporter *: near-real-time state (1s) & peers (5s)        │    │      │
-│    │  │   • Auto-provisioned dashboards                                    │    │      │
-│    │  │   • Email/webhook alerts                                           │    │      │
-│    │  └─────────────────────────────┬──────────────────────────────────────┘    │      │
-│    │                                │                  ▲                        │      │
-│    │                                │                  │                        │      │
-│    │                                │                  │                        │      │
-│    │                                │                  │ /api/v1/query          │      │
-│    │                                │                  │ (near-real-time)       │      │
-│    │                                │                  │                        │      │
-│    │                                │          ╔═══════╧═══════════╗            │      │
-│    │                                │          ║  State Exporter * ║            │      │
-│    │                                │          ║  :9102            ║            │      │
-│    │                                │          ║  (Grafana queries ║            │      │
-│    │                                │          ║   directly for    ║            │      │
-│    │                                │          ║   instant state)  ║            │      │
-│    │                                │          ╚═══════════════════╝            │      │
-│    │                                │                                           │      │
-│    └────────────────────────────────┼───────────────────────────────────────────┘      │
-│                                     │                                                  │
-│                                     │ HTTP :3000 (Web UI)                              │
-└─────────────────────────────────────┼──────────────────────────────────────────────────┘
-                                      ▼
+│  ╚══════╤══════╝  ╚═════════════╤═══════════════╝  └───────┬──────┘  ╚══════════╤══╝  │
+│         ▲                       │                          ▲                    ▲     │
+│         │                       │                          │                    │     │
+│         │                       │                          │                    │     │
+│         │ GET /metrics          │ POST :8428               │ GET /metrics       │     │
+│         │ (vmagent scrapes)     │ /api/v1/import/          │ (vmagent scrapes)  │     │
+│         │                       │ prometheus               │                    │     │
+│         │                       │                          │                    │     │
+│  ┌──────┴────────────────────────────────────────────────────────────────────────┴──┐  │
+│  │                         vmagent :8427                                            │  │
+│  │                                                                                  │  │
+│  │   Scrapes /metrics from exporters (initiates GET requests):                      │  │
+│  │   • Node Exporter :9100 (every 15s)                                              │  │
+│  │   • Uptime Exporter * :9101 (every 10s)                                          │  │
+│  │   • State Exporter * :9102 (every 5s)                                            │  │
+│  └──────────────────────────────┬───────────────────────────────────────────────────┘  │
+│                                 │                                                      │
+│                                 │ POST /api/v1/write                                   │
+│                                 │ (remote write)                                       │
+│                                 ▼                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │                      VictoriaMetrics :8428                                      │   │
+│  │                                                                             ◄───┼───┘
+│  │   Time-series database                                      (Collector *        │
+│  │   • Stores all historical metrics                            pushes here)       │
+│  │   • PromQL query interface                                                      │
+│  │   • 365-day retention                                                           │
+│  │   • 7x better compression than Prometheus                                       │
+│  └──────────────────────────────▲──────────────────────────────────────────────────┘
+│                                 │
+│                                 │ PromQL queries
+│                                 │ (Grafana initiates)
+│                                 │
+│    ┌────────────────────────────┴───────────────────────────────────────────────┐
+│    │                                                                            │
+│    │  ┌────────────────────────────────────────────────────────────────────┐    │
+│    │  │                        Grafana :3000                               │    │
+│    │  │                                                                    │    │
+│    │  │   Dashboard & Alerting                                             │    │
+│    │  │   • Queries VictoriaMetrics for historical data                    │    │
+│    │  │   • Queries StateExporter for near-real-time state (1s) & peers    │    │
+│    │  │   • Auto-provisioned dashboards                                    │    │
+│    │  │   • Email/webhook alerts                                           │    │
+│    │  └───────────────┬────────────────────────────────────────────────────┘    │
+│    │                  │                                                         │
+│    │                  │ GET /api/v1/query                                       │
+│    │                  │ (Grafana initiates)                                     │
+│    │                  ▼                                                         │
+│    │          ╔═══════════════════╗                                             │
+│    │          ║  State Exporter * ║                                             │
+│    │          ║  :9102            ║                                             │
+│    │          ║  (responds with   ║                                             │
+│    │          ║   instant state)  ║                                             │
+│    │          ╚═══════════════════╝                                             │
+│    │                                                                            │
+│    └────────────────────────────────────────────────────────────────────────────┘
+│                                     ▲
+│                                     │ HTTP :3000 (Web UI)
+│                                     │ (User initiates)
+└─────────────────────────────────────┼───────────────────────────────────────────┘
+                                      │
                                [User Browser]
 
 Legend:  ┌───┐ Open Source    ╔═══╗ Custom Code *
          └───┘                ╚═══╝
+
+Arrow Direction: Shows who initiates the request (initiator ──► target)
 ```
 
-**Data Flow Summary:**
+**Data Flow Summary (Initiator → Target):**
 
-| Source | Destination | Protocol | Purpose |
-|--------|-------------|----------|---------|
-| Uptime/Node/State Exporters | vmagent | HTTP GET /metrics | vmagent scrapes metrics |
-| vmagent | VictoriaMetrics | HTTP POST /api/v1/write | Remote write scraped data |
+| Initiator | Target | Protocol | Purpose |
+|-----------|--------|----------|---------|
+| Collector | rippled | WS :6006 | Subscribe to ledger/server/validation streams |
+| Collector | rippled | HTTP :5005 | Poll server_info (5s), peers (60s), server_state (5m) |
+| State Exporter | rippled | HTTP :5005 | Poll state (1s) and peers (5s) |
+| Uptime Exporter | rippled | WS :6006 | Fetch uptime data |
 | Collector | VictoriaMetrics | HTTP POST /api/v1/import/prometheus | Push real-time events |
-| Grafana | VictoriaMetrics | PromQL queries | Historical data (validation counts, trends) |
-| Grafana | State Exporter | PromQL /api/v1/query | Near-real-time state (1s) & peers (5s) |
+| vmagent | Node/Uptime/State Exporters | HTTP GET /metrics | Scrape metrics (15s/10s/5s) |
+| vmagent | VictoriaMetrics | HTTP POST /api/v1/write | Remote write scraped data |
+| Grafana | VictoriaMetrics | PromQL POST | Query historical data |
+| Grafana | State Exporter | HTTP GET /api/v1/query | Query near-real-time state & peers |
+| User Browser | Grafana | HTTP :3000 | Access web dashboard UI |
 
 **Port Summary:**
 
