@@ -23,9 +23,11 @@
 
 | Requirement | Specification |
 |-------------|---------------|
-| **Operating System** | Ubuntu 20.04 LTS or later |
+| **Operating System** | Ubuntu 20.04+, Linux Mint 21+, or Debian-based distros |
 | **Docker** | Version 23.0+ |
 | **Docker Compose** | Version 2.0+ (auto-installed on Ubuntu) |
+| **curl** | For API calls (auto-installed if missing) |
+| **jq** | For JSON processing (auto-installed if missing) |
 | **rippled** | Running on same machine |
 | **Disk Space** | ~500 MB for images, ~290 MB for 30-day metrics |
 | **Memory** | ~729 MB RAM total |
@@ -63,6 +65,8 @@ See [rippled Configuration Guide](RIPPLED-CONFIG.md) for details.
 Before starting, verify:
 
 - [ ] Docker installed: `docker --version`
+- [ ] curl installed: `curl --version` (auto-installed if missing)
+- [ ] jq installed: `jq --version` (auto-installed if missing)
 - [ ] rippled running: `rippled server_info` or `curl http://localhost:5005`
 - [ ] WebSocket admin API enabled (default port 6006)
 - [ ] HTTP RPC admin API enabled (default port 5005)
@@ -449,6 +453,26 @@ docker compose logs -f collector
 ```bash
 curl -s "http://localhost:8428/api/v1/query?query=up" | jq '.data.result | length'
 ```
+
+### Firewall Issues (Linux Mint / UFW)
+
+If the collector can't connect to rippled or you can't access Grafana from another machine:
+
+```bash
+# Check if UFW is active
+sudo ufw status
+
+# Allow Grafana access from your local network
+sudo ufw allow from 192.168.1.0/24 to any port 3000
+
+# Or allow from a specific IP
+sudo ufw allow from 192.168.1.100 to any port 3000
+
+# If rippled runs in Docker, allow Docker networks
+sudo ufw allow from 172.16.0.0/12 to any
+```
+
+**Note:** If running XRPL Monitor on the same machine as rippled (recommended), firewall rules typically aren't needed for localhost connections.
 
 ---
 

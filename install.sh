@@ -89,6 +89,29 @@ print_step() {
     echo ""
 }
 
+# Install required system dependencies (curl, jq)
+install_dependencies() {
+    local missing_pkgs=""
+
+    command -v curl &> /dev/null || missing_pkgs="$missing_pkgs curl"
+    command -v jq &> /dev/null || missing_pkgs="$missing_pkgs jq"
+
+    if [ -n "$missing_pkgs" ]; then
+        echo ""
+        print_info "Installing required packages:$missing_pkgs"
+        if apt-get update -qq && apt-get install -y -qq $missing_pkgs > /dev/null 2>&1; then
+            print_status "Required packages installed"
+        else
+            print_error "Failed to install packages:$missing_pkgs"
+            echo "Please install manually: sudo apt-get install$missing_pkgs"
+            exit 1
+        fi
+    fi
+}
+
+# Install dependencies early (before any curl/jq usage)
+install_dependencies
+
 # Progress breadcrumb - NEW ORDER
 show_progress() {
     local current=$1
@@ -964,7 +987,7 @@ check_system_requirements() {
         REQUIREMENTS_MET=false
     fi
 
-    # Check OS (supports Ubuntu 20.04+ and Linux Mint 20.x/21.x)
+    # Check OS
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         OS_ID=$ID
@@ -974,37 +997,18 @@ check_system_requirements() {
         exit 1
     fi
 
-    # Determine Ubuntu base version
-    UBUNTU_BASE=""
-    if [ "$OS_ID" = "ubuntu" ]; then
-        UBUNTU_BASE=$OS_VERSION
-        OS_DISPLAY="Ubuntu $OS_VERSION"
-    elif [ "$OS_ID" = "linuxmint" ]; then
-        # Linux Mint provides UBUNTU_CODENAME in /etc/os-release
-        case "$UBUNTU_CODENAME" in
-            focal)  UBUNTU_BASE="20.04" ;;
-            jammy)  UBUNTU_BASE="22.04" ;;
-            noble)  UBUNTU_BASE="24.04" ;;
-            *)
-                print_error "Unsupported Linux Mint version (unknown Ubuntu base: $UBUNTU_CODENAME)"
-                print_info "Supported: Mint 20.x (focal), Mint 21.x (jammy), Mint 22.x (noble)"
-                exit 1
-                ;;
-        esac
-        OS_DISPLAY="Linux Mint $OS_VERSION (Ubuntu $UBUNTU_BASE base)"
-    else
-        print_error "This installer requires Ubuntu 20.04+ or Linux Mint 20.x+"
-        print_info "For other distributions, install Docker and Docker Compose manually"
+    if [ "$OS_ID" != "ubuntu" ]; then
+        print_error "This installer requires Ubuntu 20.04 LTS or later"
+        print_info "For other distributions, install Docker Compose manually"
         exit 1
     fi
 
-    # Validate Ubuntu base version is 20.04 or later
-    VERSION_MAJOR="${UBUNTU_BASE%%.*}"
+    VERSION_MAJOR="${OS_VERSION%%.*}"
     if [ "$VERSION_MAJOR" -lt 20 ]; then
-        print_error "Ubuntu 20.04 LTS or later is required (detected base: $UBUNTU_BASE)"
+        print_error "Ubuntu 20.04 LTS or later is required (detected: $OS_VERSION)"
         exit 1
     fi
-    print_status "Operating system: $OS_DISPLAY"
+    print_status "Operating system: Ubuntu $OS_VERSION"
 
     # Check for Docker
     if ! command -v docker &> /dev/null; then
