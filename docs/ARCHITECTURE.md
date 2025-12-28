@@ -62,15 +62,15 @@ v3.0 is built on three core principles:
 │  ║   formatted ║  ║ • HTTP polling (5s/60s/5m)  ║  │ • Disk, Net  │  ║ • Peers (5s) ║  │
 │  ║             ║  ║ • Event handlers            ║  │ • System     │  ║              ║  │
 │  ║             ║  ║ • Validation tracking       ║  │   load       │  ║              ║  │
-│  ╚══════╤══════╝  ╚═════════════╤═══════════════╝  └───────┬──────┘  ╚══════════╤══╝  │
-│         ▲                       │                          ▲                    ▲     │
-│         │                       │                          │                    │     │
-│         │                       │                          │                    │     │
-│         │ GET /metrics          │ POST :8428               │ GET /metrics       │     │
-│         │ (vmagent scrapes)     │ /api/v1/import/          │ (vmagent scrapes)  │     │
-│         │                       │ prometheus               │                    │     │
-│         │                       │                          │                    │     │
-│  ┌──────┴────────────────────────────────────────────────────────────────────────┴──┐  │
+│  ╚═════════════╝  ╚═════════════════════════════╝  └──────────────┘  ╚══════════════╝  │
+│         ▲                       ▲                          ▲                     ▲     │
+│         │                       │                          │                     │     │
+│         │                       │                          │                     │     │
+│         │ GET /metrics          │ POST :8428               │ GET /metrics        │     │
+│         │ (vmagent scrapes)     │ /api/v1/import/          │ (vmagent scrapes)   │     │
+│         │                       │ prometheus               │                     │     │
+│         │                       │                          │                     │     │
+│  ┌──────┴───────────────────────┴──────────────────────────┴─────────────────────┴──┐  │
 │  │                         vmagent :8427                                            │  │
 │  │                                                                                  │  │
 │  │   Scrapes /metrics from exporters (initiates GET requests):                      │  │
@@ -84,40 +84,40 @@ v3.0 is built on three core principles:
 │                                 ▼                                                      │
 │  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
 │  │                      VictoriaMetrics :8428                                      │   │
-│  │                                                                             ◄───┼───┘
+│  │                                                                                 │◄──┘
 │  │   Time-series database                                      (Collector *        │
 │  │   • Stores all historical metrics                            pushes here)       │
 │  │   • PromQL query interface                                                      │
 │  │   • 365-day retention                                                           │
 │  │   • 7x better compression than Prometheus                                       │
-│  └──────────────────────────────▲──────────────────────────────────────────────────┘
-│                                 │
+│  └─────────────────────────────────────────────────────────────────────────────────┘
+│                                 ▲
 │                                 │ PromQL queries
 │                                 │ (Grafana initiates)
 │                                 │
-│    ┌────────────────────────────┴───────────────────────────────────────────────┐
-│    │                                                                            │
-│    │  ┌────────────────────────────────────────────────────────────────────┐    │
-│    │  │                        Grafana :3000                               │    │
-│    │  │                                                                    │    │
-│    │  │   Dashboard & Alerting                                             │    │
-│    │  │   • Queries VictoriaMetrics for historical data                    │    │
-│    │  │   • Queries StateExporter for near-real-time state (1s) & peers    │    │
-│    │  │   • Auto-provisioned dashboards                                    │    │
-│    │  │   • Email/webhook alerts                                           │    │
-│    │  └───────────────┬────────────────────────────────────────────────────┘    │
-│    │                  │                                                         │
-│    │                  │ GET /api/v1/query                                       │
-│    │                  │ (Grafana initiates)                                     │
-│    │                  ▼                                                         │
-│    │          ╔═══════════════════╗                                             │
-│    │          ║  State Exporter * ║                                             │
-│    │          ║  :9102            ║                                             │
-│    │          ║  (responds with   ║                                             │
-│    │          ║   instant state)  ║                                             │
-│    │          ╚═══════════════════╝                                             │
-│    │                                                                            │
-│    └────────────────────────────────────────────────────────────────────────────┘
+│    ┌────────────────────────────┴─────────────────────────────────────────────────┐
+│    │                                                                              │
+│    │    ┌────────────────────────────────────────────────────────────────────┐    │
+│    │    │                        Grafana :3000                               │    │
+│    │    │                                                                    │    │
+│    │    │   Dashboard & Alerting                                             │    │
+│    │    │   • Queries VictoriaMetrics for historical data                    │    │
+│    │    │   • Queries StateExporter for near-real-time state (1s) & peers    │    │
+│    │    │   • Auto-provisioned dashboards                                    │    │
+│    │    │   • Email/webhook alerts                                           │    │
+│    │    └────────────────────────┬───────────────────────────────────────────┘    │
+│    │                             │                                                │
+│    │                             │ GET /api/v1/query                              │
+│    │                             │ (Grafana initiates)                            │
+│    │                             ▼                                                │
+│    │                    ╔═══════════════════╗                                     │
+│    │                    ║  State Exporter * ║                                     │
+│    │                    ║  :9102            ║                                     │
+│    │                    ║  (responds with   ║                                     │
+│    │                    ║   instant state)  ║                                     │
+│    │                    ╚═══════════════════╝                                     │
+│    │                                                                              │
+│    └──────────────────────────────────────────────────────────────────────────────┘
 │                                     ▲
 │                                     │ HTTP :3000 (Web UI)
 │                                     │ (User initiates)
