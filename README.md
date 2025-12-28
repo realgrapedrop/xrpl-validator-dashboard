@@ -93,54 +93,7 @@ v3.0 is a **complete architectural rewrite** featuring:
 
 ### Overview
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  Docker Containers (All Services)                                            │
-│                                                                              │
-│                        direct query (/api/v1/query)                          │
-│  ┌──────────────────┐                                  ╔══════════════════╗  │
-│  │                  │─────────────────────────────────►║                  ║  │
-│  │ Grafana :3000    │       ┌────────────────────┐     ║ State Exporter * ║  │
-│  │                  │──────►│ VictoriaMetrics    │     ║ :9102            ║  │
-│  │                  │       │ :8428              │     ║                  ║  │
-│  │                  │       │                    │     ║ • /api/v1/query  ║  │
-│  │                  │       │                    │     ║ • near-real-time ║  │
-│  └──────────────────┘       └────────────────────┘     ╚════════┬═════════╝  │
-│           ▲                            ▲                        │            │
-│           │ HTTP :3000                 │ POST :8428             │            │
-│           │ (Web UI)                   │ /api/v1/import         │            │
-│           │                            │                        │            │
-│  ╔════════┴════════════════════════════┴═══════════════╗        │            │
-│  ║ Collector * (Python app - xrpl-py)                  ║        │            │
-│  ║                                                     ║        │            │
-│  ║ ┌─────────────────────┐  ┌─────────────────────┐    ║        │            │
-│  ║ │ AsyncWebsocketClient│  │ AsyncJsonRpcClient  │    ║        │            │
-│  ║ │ • ledger stream     │  │ • server_info (5s)  │    ║        │            │
-│  ║ │ • server stream     │  │ • peers (60s)       │    ║        │            │
-│  ║ │ • validations       │  │ • server_state (5m) │    ║        │            │
-│  ║ └─────────────────────┘  └─────────────────────┘    ║        │            │
-│  ╚══════════┬══════════════════════┬═══════════════════╝        │            │
-│             │                      │                            │            │
-│  ┌──────────┴──────────┐   ┌───────┴─────────────┐              │            │
-│  │ vmagent :8427       │   │ Node Exporter :9100 │              │            │
-│  │ (scrapes exporters) │──►│ Uptime Exp * :9101  │              │            │
-│  │                     │   │ State Exp *  :9102  │              │            │
-│  └──────────┬──────────┘   └───────┬─────────────┘              │            │
-│             │                      │                            │            │
-└─────────────┼──────────────────────┼────────────────────────────┼────────────┘
-              │                      │                            │
-              │ WebSocket :6006      │ HTTP :5005                 │ HTTP :5005
-              │ (subscribe/listen)   │ (polling)                  │ (state/peers)
-              ▼                      ▼                            ▼
-        ┌────────────────────────────────────────────────────────────────┐
-        │  rippled (External)                                            │
-        │                                                                │
-        │  WebSocket Admin API :6006  +  HTTP JSON-RPC API :5005         │
-        └────────────────────────────────────────────────────────────────┘
-
-Legend:  ┌───┐ Open Source    ╔═══╗ Custom Code *
-         └───┘                ╚═══╝
-```
+![XRPL Validator Monitor Architecture](images/xrpl-validator-monitor-architecture.png)
 
 **For detailed architecture documentation, see [Architecture Overview](docs/ARCHITECTURE.md)**
 
