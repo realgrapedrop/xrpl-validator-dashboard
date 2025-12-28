@@ -101,7 +101,7 @@ v3.0 is a **complete architectural rewrite** featuring:
 │  ┌──────────────────┐                                  ╔══════════════════╗  │
 │  │                  │─────────────────────────────────►║                  ║  │
 │  │ Grafana :3000    │       ┌────────────────────┐     ║ State Exporter * ║  │
-│  │                  │◄──────│ VictoriaMetrics    │     ║ :9102            ║  │
+│  │                  │──────►│ VictoriaMetrics    │     ║ :9102            ║  │
 │  │                  │       │ :8428              │     ║                  ║  │
 │  │                  │       │                    │     ║ • /api/v1/query  ║  │
 │  │                  │       │                    │     ║ • near-real-time ║  │
