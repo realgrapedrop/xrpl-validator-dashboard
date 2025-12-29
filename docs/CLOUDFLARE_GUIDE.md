@@ -1,10 +1,23 @@
-# Cloudflare Tunnel Setup Guide
+# **__CLOUDFLARE TUNNEL SETUP GUIDE__**
 
 *Expose your Grafana dashboard publicly using Cloudflare Tunnel.*
 
 ---
 
-## Overview
+# Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Grafana Configuration](#grafana-configuration)
+- [Tunnel Setup](#tunnel-setup)
+- [Multiple Tunnels](#multiple-tunnels)
+- [Useful Commands](#useful-commands)
+- [Troubleshooting](#troubleshooting)
+- [Optional: Cloudflare Worker for Clean URLs](#optional-cloudflare-worker-for-clean-urls)
+
+---
+
+# Overview
 
 Cloudflare Tunnel creates a secure connection from your server to Cloudflare's edge without opening firewall ports.
 
@@ -47,7 +60,7 @@ Cloudflare Tunnel creates a secure connection from your server to Cloudflare's e
 
 ---
 
-## Prerequisites
+# Prerequisites
 
 1. **Cloudflare account** with a domain
 2. **cloudflared** installed:
@@ -67,7 +80,7 @@ Cloudflare Tunnel creates a secure connection from your server to Cloudflare's e
 
 ---
 
-## Grafana Configuration
+# Grafana Configuration
 
 Add these environment variables to enable public read-only access:
 
@@ -82,7 +95,17 @@ Restart Grafana after adding these settings.
 
 ---
 
-## Tunnel Setup
+# Tunnel Setup
+
+**In This Section:**
+- [Step 1: Create Tunnel](#step-1-create-tunnel)
+- [Step 2: Create Config File](#step-2-create-config-file)
+- [Step 3: Create DNS Record](#step-3-create-dns-record)
+- [Step 4: Test Tunnel](#step-4-test-tunnel)
+- [Step 5: Create Systemd Service](#step-5-create-systemd-service)
+- [Step 6: Enable and Start](#step-6-enable-and-start)
+
+---
 
 ### Step 1: Create Tunnel
 
@@ -113,6 +136,18 @@ ingress:
   - service: http_status:404
 ```
 
+**Example:**
+
+```yaml
+tunnel: a1aec802-96a1-4b36-b87f-0bfcf169c213
+credentials-file: /home/grapedrop/.cloudflared/a1aec802-96a1-4b36-b87f-0bfcf169c213.json
+connections: 4
+
+ingress:
+  - hostname: monitor.grapedrop.xyz
+    service: http://127.0.0.1:3000
+  - service: http_status:404
+```
 
 ### Step 3: Create DNS Record
 
@@ -174,7 +209,7 @@ systemctl status cloudflared-TUNNEL_NAME
 
 ---
 
-## Multiple Tunnels
+# Multiple Tunnels
 
 Each tunnel gets its own:
 - Config file: `~/.cloudflared/config-TUNNEL_NAME.yml`
@@ -184,7 +219,7 @@ Never rely on the default `config.yml` or run without `--config` flag when manag
 
 ---
 
-## Useful Commands
+# Useful Commands
 
 ```bash
 # List tunnels
@@ -205,7 +240,7 @@ sudo systemctl restart cloudflared-TUNNEL_NAME
 
 ---
 
-## Troubleshooting
+# Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -216,7 +251,7 @@ sudo systemctl restart cloudflared-TUNNEL_NAME
 
 ---
 
-## Optional: Cloudflare Worker for Clean URLs
+# Optional: Cloudflare Worker for Clean URLs
 
 If you want a clean URL without `?kiosk` parameters visible, deploy a Cloudflare Worker that wraps the dashboard in an iframe. See the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/) for details.
 

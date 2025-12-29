@@ -122,6 +122,13 @@ volumes:
 
 # Configuration
 
+**In This Section:**
+- [Network Configuration](#network-configuration)
+- [Required Environment Variables](#required-environment-variables)
+- [Optional Environment Variables](#optional-environment-variables)
+
+---
+
 ### Network Configuration
 
 **For Docker rippled** (rippled in a container):
@@ -164,6 +171,13 @@ LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
 ```
 
 # Deployment Scenarios
+
+**In This Section:**
+- [Scenario 1: Default Setup (Host Networking)](#scenario-1-default-setup-host-networking)
+- [Scenario 2: Rippled-In-A-Box (All-in-One Container Stack)](#scenario-2-rippled-in-a-box-all-in-one-container-stack)
+- [Scenario 3: Native Python Deployment](#scenario-3-native-python-deployment)
+
+---
 
 ### Scenario 1: Default Setup (Host Networking)
 
@@ -297,6 +311,14 @@ python -m src.monitor.main
 ```
 
 # Troubleshooting
+
+**In This Section:**
+- [Docker Socket Permission Denied](#docker-socket-permission-denied)
+- [NuDB Path Not Found](#nudb-path-not-found)
+- [Connection Refused to rippled](#connection-refused-to-rippled)
+- [Validation Metrics Not Appearing](#validation-metrics-not-appearing)
+
+---
 
 ### Docker Socket Permission Denied
 

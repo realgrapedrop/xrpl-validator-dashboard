@@ -20,6 +20,14 @@
 
 This section introduces alert concepts and helps you understand what's available.
 
+**In This Section:**
+- [Introduction](#introduction)
+- [How Grafana Alerts Work](#how-grafana-alerts-work)
+- [What Alerts Provide](#what-alerts-provide)
+- [Alert Rules Overview](#alert-rules-overview)
+
+---
+
 # Introduction
 
 Alerts are your validator's safety net - they notify you when something needs attention, so you don't have to constantly watch the dashboard.
@@ -212,6 +220,16 @@ XRPL Monitor includes **14 pre-configured alert rules** covering critical valida
 # Email Alerts
 
 Email is the most universal notification method - works everywhere, no third-party accounts needed (besides email itself).
+
+**In This Section:**
+- [Prerequisites](#prerequisites)
+- [Step 1: Get SMTP Credentials](#step-1-get-smtp-credentials)
+- [Step 2: Configure SMTP in .env File](#step-2-configure-smtp-in-env-file)
+- [Step 3: Configure Email Contact Point](#step-3-configure-email-contact-point)
+- [Step 4: Recreate Grafana Container](#step-4-recreate-grafana-container)
+- [Step 5: Test Email Delivery](#step-5-test-email-delivery)
+
+---
 
 # Prerequisites
 
@@ -412,6 +430,19 @@ Webhooks send real-time notifications to chat platforms (Discord, Slack, Teams) 
 - 🎨 Rich formatting (colors, embeds, buttons)
 - 💬 Team collaboration (shared channels)
 - 🔗 Clickable links and actions
+
+**In This Section:**
+- [Quick Start: Test Webhooks First](#quick-start-test-webhooks-first)
+- [Discord Webhooks](#discord-webhooks-recommended-for-xrpl-community)
+- [Slack Webhooks](#slack-webhooks)
+- [Microsoft Teams Webhooks](#microsoft-teams-webhooks)
+- [Telegram Webhooks](#telegram-webhooks)
+- [PagerDuty (24/7 On-Call)](#pagerduty-247-on-call)
+- [SMS Alerts (TextBee)](#sms-alerts-textbee---free-option)
+- [Generic Webhook](#generic-webhook-custom-integrations)
+- [Enabling Multiple Channels](#enabling-multiple-channels-simultaneously)
+
+---
 
 # Quick Start: Test Webhooks First
 
@@ -785,6 +816,111 @@ Find the PagerDuty section (around line 163) and **uncomment it**:
 
 ---
 
+# SMS Alerts (TextBee - Free Option)
+
+For direct SMS alerts without paid services like Twilio, [TextBee](https://textbee.dev) offers a free tier that converts an Android phone into an SMS gateway.
+
+### Why TextBee?
+
+- **Free tier:** 50 messages/day, 300/month (plenty for validator alerts)
+- **No carrier costs:** Uses your existing phone/plan
+- **Simple REST API:** Works with Grafana webhooks
+- **Self-hosted:** Your data stays on your device
+
+### Free Tier Limits
+
+| Limit | Free | Pro ($6.99/mo) |
+|-------|------|----------------|
+| Messages/day | 50 | Unlimited |
+| Messages/month | 300 | 5,000 |
+| Devices | 1 | 5 |
+
+### Requirements
+
+- Android phone (can be an old spare phone)
+- TextBee app installed
+- Phone connected to WiFi or mobile data
+
+### Step 1: Set Up TextBee
+
+1. Create account at [textbee.dev](https://textbee.dev)
+2. Download TextBee app from [Google Play](https://play.google.com/store/apps/details?id=com.textbee.android)
+3. Open the app and sign in
+4. Your device will appear in the TextBee dashboard
+5. Copy your **API Key** and **Device ID** from the dashboard
+
+### Step 2: Test the API
+
+```bash
+# Test sending an SMS (replace with your values)
+curl -X POST "https://api.textbee.dev/api/v1/gateway/devices/YOUR_DEVICE_ID/send-sms" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receivers": ["+1234567890"],
+    "smsBody": "Test alert from XRPL Monitor"
+  }'
+```
+
+### Step 3: Configure Grafana Webhook
+
+Edit `config/grafana/provisioning/alerting/contact-points.yaml` and add a new contact point:
+
+```yaml
+  - orgId: 1
+    name: textbee-sms
+    receivers:
+      - uid: textbee-receiver
+        type: webhook
+        settings:
+          url: https://api.textbee.dev/api/v1/gateway/devices/YOUR_DEVICE_ID/send-sms
+          httpMethod: POST
+        disableResolveMessage: false
+```
+
+**Note:** TextBee uses `x-api-key` header for authentication. You may need to use a webhook proxy or n8n/Pipedream to transform the request and add the API key header.
+
+### Alternative: Use Pipedream as Webhook Proxy
+
+Since Grafana's webhook doesn't support custom headers like `x-api-key`, use Pipedream as a proxy:
+
+1. Create a Pipedream workflow with HTTP trigger
+2. Add a step to forward to TextBee API with your API key
+3. Use the Pipedream webhook URL in Grafana
+
+Example Pipedream code step:
+
+```javascript
+export default defineComponent({
+  async run({ steps, $ }) {
+    const response = await fetch(
+      `https://api.textbee.dev/api/v1/gateway/devices/${process.env.TEXTBEE_DEVICE_ID}/send-sms`,
+      {
+        method: 'POST',
+        headers: {
+          'x-api-key': process.env.TEXTBEE_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          receivers: ['+1234567890'],  // Your phone number
+          smsBody: `🚨 ${steps.trigger.event.body.status}: ${steps.trigger.event.body.alerts[0]?.labels?.alertname || 'Alert'}`
+        })
+      }
+    );
+    return response.json();
+  }
+});
+```
+
+### Tips
+
+- **Use a spare Android phone** dedicated to SMS alerts
+- **Keep it plugged in** and connected to WiFi
+- **Test monthly** to ensure the phone is still working
+- **Monitor TextBee dashboard** for delivery status
+
+---
+
 # Generic Webhook (Custom Integrations)
 
 Send JSON alerts to any HTTP endpoint - perfect for custom scripts, IFTTT, Zapier, n8n, or custom applications.
@@ -913,6 +1049,13 @@ contactPoints:
 # Testing & Validation
 
 This section covers testing your alert setup and understanding notifications.
+
+**In This Section:**
+- [Understanding contact-points.yaml](#understanding-contact-pointsyaml)
+- [Testing Your Alert Setup](#testing-your-alert-setup)
+- [Understanding Alert Notifications](#understanding-alert-notifications)
+
+---
 
 # Understanding contact-points.yaml
 
@@ -1264,6 +1407,12 @@ Description: The validator server state is not 'proposing'. Current state: full
 
 This section covers day-to-day management of alerts.
 
+**In This Section:**
+- [Managing Alert Fatigue](#managing-alert-fatigue)
+- [Troubleshooting](#troubleshooting)
+
+---
+
 # Managing Alert Fatigue
 
 Too many alerts = alert fatigue = ignoring important alerts. Here's how to tune your alerts effectively.
@@ -1600,6 +1749,14 @@ docker compose logs grafana --tail 100
 # Advanced Topics
 
 This section covers customization and advanced configurations.
+
+**In This Section:**
+- [Advanced Configuration](#advanced-configuration)
+- [Notification Channel Comparison](#notification-channel-comparison)
+- [Security Best Practices](#security-best-practices)
+- [Integration Examples](#integration-examples)
+
+---
 
 # Advanced Configuration
 
@@ -2098,6 +2255,12 @@ sqlite3 alerts.db "SELECT * FROM alerts WHERE severity='critical' ORDER BY times
 # Reference
 
 Quick reference materials and frequently asked questions.
+
+**In This Section:**
+- [FAQ](#faq)
+- [Additional Resources](#additional-resources)
+
+---
 
 # FAQ
 

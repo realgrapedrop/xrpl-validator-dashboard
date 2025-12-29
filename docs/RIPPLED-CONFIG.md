@@ -29,6 +29,13 @@ You should see `admin = 127.0.0.1` (or your monitor's IP address) in both sectio
 
 # Understanding Admin Access
 
+**In This Section:**
+- [Admin Commands vs Public Commands](#admin-commands-vs-public-commands)
+- [Why Admin Access Matters for Monitoring](#why-admin-access-matters-for-monitoring)
+- [WebSocket vs HTTP Admin Access](#websocket-vs-http-admin-access)
+
+---
+
 ### Admin Commands vs Public Commands
 
 rippled has two types of API commands:
@@ -70,6 +77,14 @@ This hybrid approach ensures reliable peer metrics collection while maintaining 
 ---
 
 # Example Configurations
+
+**In This Section:**
+- [Scenario 1: Same-Host Deployment (Recommended)](#scenario-1-same-host-deployment-recommended)
+- [Scenario 2: Docker rippled with Monitor on Host](#scenario-2-docker-rippled-with-monitor-on-host)
+- [Scenario 3: All-in-One Docker Stack (Rippled-In-A-Box)](#scenario-3-all-in-one-docker-stack-rippled-in-a-box)
+- [Scenario 4: Remote Monitoring (Advanced)](#scenario-4-remote-monitoring-advanced)
+
+---
 
 ### Scenario 1: Same-Host Deployment (Recommended)
 
@@ -271,6 +286,13 @@ RIPPLED_HTTP_URL=http://10.0.1.50:5005
 
 # How the Monitor Collects Metrics
 
+**In This Section:**
+- [Metric Collection Methods](#metric-collection-methods)
+- [Peer Metrics Collection (Detailed Flow)](#peer-metrics-collection-detailed-flow)
+- [Database Size Collection (NuDB Metrics)](#database-size-collection-nudb-metrics)
+
+---
+
 ### Metric Collection Methods
 
 The monitor uses multiple methods to collect comprehensive metrics:
@@ -379,6 +401,13 @@ async def _peers_poller(self):
 
 # Security Considerations
 
+**In This Section:**
+- [Admin Port Exposure](#admin-port-exposure)
+- [Admin Access Risk Levels](#admin-access-risk-levels)
+- [Best Practices](#best-practices)
+
+---
+
 ### Admin Port Exposure
 
 **Default Validator Security Posture:**
@@ -426,6 +455,15 @@ To                         Action      From
 ---
 
 # Troubleshooting
+
+**In This Section:**
+- [Problem: Peer metrics showing "No data"](#problem-peer-metrics-showing-no-data)
+- [Problem: "Forbidden" response on WebSocket but HTTP works](#problem-forbidden-response-on-websocket-but-http-works)
+- [Problem: NuDB size metrics not updating](#problem-nudb-size-metrics-not-updating)
+- [Problem: Monitor cannot connect to rippled](#problem-monitor-cannot-connect-to-rippled)
+- [Verify Your Configuration](#verify-your-configuration)
+
+---
 
 ### Problem: Peer metrics showing "No data"
 

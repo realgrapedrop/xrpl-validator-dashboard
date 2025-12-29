@@ -147,6 +147,12 @@ Arrow Direction: Shows who initiates the request (initiator ──► target)
 
 # Data Flow - Detailed
 
+**In This Section:**
+- [1. WebSocket Flow (Real-Time Events)](#1-websocket-flow-real-time-events)
+- [2. HTTP Polling Flow (Supplementary Metrics)](#2-http-polling-flow-supplementary-metrics)
+
+---
+
 ### 1. WebSocket Flow (Real-Time Events)
 
 ```
@@ -218,6 +224,20 @@ VictoriaMetrics stores time-series data
 ---
 
 # Component Details
+
+**In This Section:**
+- [1. main.py (Orchestrator)](#1-mainpy-orchestrator)
+- [2. XRPLWebSocketClient](#2-xrplwebsocketclient-srcclientsxrpl_clientpy)
+- [3. HTTPPoller](#3-httppoller-srcmonitorhttp_pollerpy)
+- [3.1. Connection Resilience - WebSocket Auto-Reconnect](#31-connection-resilience---websocket-auto-reconnect)
+- [3.2. Connection Resilience - HTTP RPC Retry Logic](#32-connection-resilience---http-rpc-retry-logic)
+- [3.3. Multi-Layer Resilience - Defense in Depth](#33-multi-layer-resilience---defense-in-depth)
+- [3.5. State Exporter](#35-state-exporter-srcexportersstate_exporterpy)
+- [3.6. Uptime Exporter](#36-uptime-exporter-srcexportersuptime_exporterpy)
+- [4. Event Handlers](#4-event-handlers)
+- [5. VictoriaMetrics Client](#5-victoriametrics-client-srcclientsvictoria_clientpy)
+
+---
 
 ### 1. main.py (Orchestrator)
 
@@ -1079,6 +1099,13 @@ async def health_check() -> bool:
 
 # Technology Choices
 
+**In This Section:**
+- [Why xrpl-py?](#why-xrpl-py)
+- [Why VictoriaMetrics?](#why-victoriametrics)
+- [Why Async Python?](#why-async-python)
+
+---
+
 ### Why xrpl-py?
 
 - ✅ **Official library** - Maintained by XRPL team
@@ -1166,6 +1193,13 @@ services:
 
 # Error Handling Strategy
 
+**In This Section:**
+- [Connection Errors](#connection-errors)
+- [Data Errors](#data-errors)
+- [Fatal Errors](#fatal-errors)
+
+---
+
 ### Connection Errors
 
 **WebSocket disconnect:**
@@ -1202,6 +1236,12 @@ services:
 
 # Performance Characteristics
 
+**In This Section:**
+- [Resource Usage](#resource-usage)
+- [Throughput](#throughput)
+
+---
+
 ### Resource Usage
 
 | Resource | v2.0 (actual) | v3.0 (actual) | Change |
@@ -1228,6 +1268,13 @@ services:
 ---
 
 # Security Considerations
+
+**In This Section:**
+- [rippled API Access](#rippled-api-access)
+- [Grafana](#grafana)
+- [VictoriaMetrics](#victoriametrics)
+
+---
 
 ### rippled API Access
 

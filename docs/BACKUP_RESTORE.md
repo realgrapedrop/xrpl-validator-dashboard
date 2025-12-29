@@ -49,6 +49,13 @@ ls -lh data/grafana-backups/
 
 # Backup Process
 
+**In This Section:**
+- [What Gets Backed Up](#what-gets-backed-up)
+- [Creating a Backup](#creating-a-backup)
+- [Automated Backup Before Risky Operations](#automated-backup-before-risky-operations)
+
+---
+
 ### What Gets Backed Up
 
 The backup script creates a complete snapshot including:
@@ -95,6 +102,13 @@ docker compose up -d grafana
 
 # Restore Process
 
+**In This Section:**
+- [Before Restoring](#before-restoring)
+- [Restoring a Backup](#restoring-a-backup)
+- [Verify Restoration](#verify-restoration)
+
+---
+
 ### Before Restoring
 
 ⚠️ **WARNING:** Restore will:
@@ -140,6 +154,12 @@ After restore, check:
 4. Variables populated: Dashboard Settings → Variables
 
 # Backup Storage
+
+**In This Section:**
+- [Local Backups](#local-backups)
+- [Off-Site Backups](#off-site-backups)
+
+---
 
 ### Local Backups
 
@@ -191,6 +211,12 @@ tar -czf manual-backup-$(date +%Y%m%d).tar.gz manual-backup-$(date +%Y%m%d)/
 
 # Troubleshooting
 
+**In This Section:**
+- [Backup Script Fails](#backup-script-fails)
+- [Restore Script Fails](#restore-script-fails)
+
+---
+
 ### Backup Script Fails
 
 **Error: "Grafana container is not running"**
@@ -238,6 +264,13 @@ crontab -e
 ```
 
 # Recovery Scenarios
+
+**In This Section:**
+- [Scenario 1: Accidentally Deleted Folders](#scenario-1-accidentally-deleted-folders)
+- [Scenario 2: Dashboard Configuration Lost](#scenario-2-dashboard-configuration-lost)
+- [Scenario 3: Database Corrupted](#scenario-3-database-corrupted)
+
+---
 
 ### Scenario 1: Accidentally Deleted Folders
 

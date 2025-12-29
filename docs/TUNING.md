@@ -22,6 +22,12 @@
 
 # Quick Start
 
+**In This Section:**
+- [Check Current Resource Usage](#check-current-resource-usage)
+- [Apply Tuning Changes](#apply-tuning-changes)
+
+---
+
 ### Check Current Resource Usage
 
 ```bash
@@ -55,6 +61,15 @@ docker compose up -d --force-recreate <container-name>
 # Resource Limits Tuning
 
 Resource limits prevent containers from consuming excessive resources and protect your rippled validator.
+
+**In This Section:**
+- [Configuration File](#configuration-file)
+- [Default Limits (Optimized - Recommended)](#default-limits-optimized---recommended)
+- [Tuning for Different Hardware](#tuning-for-different-hardware)
+- [CPU vs Memory Trade-offs](#cpu-vs-memory-trade-offs)
+- [Apply Changes](#apply-changes)
+
+---
 
 ### Configuration File
 
@@ -181,6 +196,14 @@ docker inspect xrpl-monitor-grafana | grep -A 5 "Memory\|Cpu"
 # VictoriaMetrics Optimization
 
 VictoriaMetrics is the time-series database - optimizing it improves query speed and reduces disk usage.
+
+**In This Section:**
+- [Configuration File](#configuration-file-1)
+- [Key Parameters](#key-parameters)
+- [Example Configurations](#example-configurations)
+- [Apply VictoriaMetrics Changes](#apply-victoriametrics-changes)
+
+---
 
 ### Configuration File
 
@@ -321,6 +344,15 @@ docker logs xrpl-monitor-victoria | grep -E "memory|cache|retention"
 
 Grafana serves the dashboards - optimize for responsiveness and concurrent viewers.
 
+**In This Section:**
+- [Configuration Files](#configuration-files)
+- [Resource Allocation](#resource-allocation)
+- [Dashboard Refresh Rate](#dashboard-refresh-rate)
+- [Query Timeout](#query-timeout)
+- [Concurrent Connections](#concurrent-connections)
+
+---
+
 ### Configuration Files
 
 - `docker-compose.yml` (project root) - Resource limits
@@ -404,6 +436,14 @@ environment:
 
 The collector gathers metrics from rippled - adjust polling intervals based on your needs.
 
+**In This Section:**
+- [Configuration File](#configuration-file-2)
+- [Default Configuration](#default-configuration)
+- [Logging Levels](#logging-levels)
+- [Reduce Collector Load](#reduce-collector-load)
+
+---
+
 ### Configuration File
 
 **Edit:** `.env` (project root)
@@ -461,6 +501,16 @@ collector:
 # Log Verbosity & Storage
 
 Understanding log output rates and storage requirements helps you plan capacity and adjust verbosity for your deployment.
+
+**In This Section:**
+- [Current Configuration](#current-configuration)
+- [Log Output Analysis](#log-output-analysis)
+- [Storage Projections](#storage-projections)
+- [Changing Log Levels](#changing-log-levels)
+- [Impact of Different Log Levels](#impact-of-different-log-levels)
+- [Recommendations](#recommendations)
+
+---
 
 ### Current Configuration
 
@@ -654,6 +704,13 @@ With Docker log rotation configured:
 
 Optimize disk performance for VictoriaMetrics data storage.
 
+**In This Section:**
+- [Use SSD Storage](#use-ssd-storage)
+- [Volume Driver Options](#volume-driver-options)
+- [Filesystem Tuning](#filesystem-tuning)
+
+---
+
 ### Use SSD Storage
 
 VictoriaMetrics benefits from fast disk I/O:
@@ -720,6 +777,14 @@ For multi-validator deployments, allocate unique ports for each instance (e.g., 
 
 Track the performance of the monitoring stack itself.
 
+**In This Section:**
+- [Container Resource Usage](#container-resource-usage)
+- [VictoriaMetrics Internal Metrics](#victoriametrics-internal-metrics)
+- [Grafana Performance](#grafana-performance-1)
+- [Check Logs](#check-logs)
+
+---
+
 ### Container Resource Usage
 
 ```bash
@@ -775,6 +840,15 @@ docker compose logs --tail=100 --timestamps
 ---
 
 # Common Scenarios
+
+**In This Section:**
+- [Scenario 1: Dashboard is Slow to Load](#scenario-1-dashboard-is-slow-to-load)
+- [Scenario 2: High Memory Usage](#scenario-2-high-memory-usage)
+- [Scenario 3: Disk Filling Up](#scenario-3-disk-filling-up)
+- [Scenario 4: Multiple Concurrent Viewers](#scenario-4-multiple-concurrent-viewers)
+- [Scenario 5: Running on Low-Resource VPS](#scenario-5-running-on-low-resource-vps)
+
+---
 
 ### Scenario 1: Dashboard is Slow to Load
 
@@ -912,6 +986,14 @@ victoria-metrics:
 ---
 
 # Troubleshooting Performance Issues
+
+**In This Section:**
+- [Slow Queries](#slow-queries)
+- [High CPU Usage](#high-cpu-usage)
+- [Memory Leaks](#memory-leaks)
+- [Connection Timeouts](#connection-timeouts)
+
+---
 
 ### Slow Queries
 

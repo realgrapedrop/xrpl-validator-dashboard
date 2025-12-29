@@ -19,6 +19,12 @@
 
 # Prerequisites
 
+**In This Section:**
+- [System Requirements](#system-requirements)
+- [rippled Requirements](#rippled-requirements)
+
+---
+
 ### System Requirements
 
 | Requirement | Specification |
@@ -59,6 +65,16 @@ See [rippled Configuration Guide](RIPPLED-CONFIG.md) for details.
 ---
 
 # Installation
+
+**In This Section:**
+- [Pre-Installation Checklist](#pre-installation-checklist)
+- [Step 1: Install Docker](#step-1-install-docker-if-needed)
+- [Step 2: Clone Repository](#step-2-clone-repository)
+- [Step 3: Run Installer](#step-3-run-installer)
+- [Step 4: Verify Installation](#step-4-verify-installation)
+- [Step 5: Access Dashboard](#step-5-access-dashboard)
+
+---
 
 ### Pre-Installation Checklist
 
@@ -168,6 +184,12 @@ Change the password on first login.
 
 # Uninstalling
 
+**In This Section:**
+- [Clean Uninstall](#clean-uninstall)
+- [Manual Uninstall](#manual-uninstall)
+
+---
+
 ### Clean Uninstall
 
 ```bash
@@ -195,7 +217,16 @@ docker network rm xrpl-monitor-network 2>/dev/null || true
 
 # Updates
 
-After installation, updates are applied in two simple steps:
+After installation, updates are applied in two simple steps.
+
+**In This Section:**
+- [Step 1: Pull Latest Code](#step-1-pull-latest-code)
+- [Step 2: Apply Updates](#step-2-apply-updates)
+- [Check for Available Updates](#check-for-available-updates)
+- [Dashboard Preservation](#dashboard-preservation)
+- [Using manage.sh](#using-managesh)
+
+---
 
 ### Step 1: Pull Latest Code
 
@@ -321,7 +352,7 @@ GF_SMTP_FROM_ADDRESS=your-email@gmail.com
 
 Then restart: `docker compose restart grafana`
 
-See [ALERTS.md](ALERTS.md) for webhook alerts (Discord, Slack, etc.).
+See [ALERTS.md](ALERTS.md) for webhook alerts (Discord, Slack, etc.) and [SMS alerts using TextBee](ALERTS.md#sms-alerts-textbee---free-option) (free option).
 
 ### Rollback
 
@@ -362,6 +393,12 @@ You'll be prompted for your Grafana username (default: `admin`) and password. Th
 
 If you're running XRPL Monitor v2.0, simply uninstall it and install v3.0 fresh.
 
+**In This Section:**
+- [Why a Clean Install?](#why-a-clean-install)
+- [Migration Steps](#migration-steps)
+
+---
+
 ### Why a Clean Install?
 
 v3.0 is a complete rewrite with a different architecture:
@@ -392,6 +429,20 @@ Your validator continues running normally throughout this process—the monitori
 ---
 
 # Troubleshooting
+
+**In This Section:**
+- [Docker Not Found](#docker-not-found)
+- [Port Already in Use](#port-already-in-use)
+- [Collector Can't Connect to rippled](#collector-cant-connect-to-rippled)
+- [Dashboard Shows No Data](#dashboard-shows-no-data)
+- [Permission Denied: /var/lib/rippled](#permission-denied-varlibrippled)
+- [.env Error: "command not found"](#env-error-command-not-found)
+- [Merge Conflicts on git pull](#merge-conflicts-on-git-pull)
+- [Services Unhealthy After Update](#services-unhealthy-after-update)
+- [Quick Health Check](#quick-health-check)
+- [Firewall Issues (Linux Mint / UFW)](#firewall-issues-linux-mint--ufw)
+
+---
 
 ### Docker Not Found
 
