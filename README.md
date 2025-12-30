@@ -97,6 +97,8 @@ v3.0 is a **complete architectural rewrite** featuring:
 
 **For detailed architecture documentation, see [Architecture Overview](docs/ARCHITECTURE.md)**
 
+**Note:** *For security-conscious deployments isolating validator and monitor, see [Hardened Architecture Guide](docs/HARDENED_ARCHITECTURE.md)*
+
 ---
 
 ## Technology Stack & Resource Requirements Overview
