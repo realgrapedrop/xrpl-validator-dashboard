@@ -93,7 +93,7 @@ v3.0 is a **complete architectural rewrite** featuring:
 
 ### Overview
 
-![XRPL Validator Monitor Architecture](images/xrpl-validator-monitor-architecture.png)
+![XRPL Validator Monitor Architecture](images/xrpl-monitor-basic-architecture.png)
 
 **For detailed architecture documentation, see [Architecture Overview](docs/ARCHITECTURE.md)**
 
