@@ -11,6 +11,7 @@
 - [Uninstalling](#uninstalling)
 - [Updates](#updates)
 - [Migrating from v2.0](#migrating-from-v20)
+- [Hardened Architecture](#hardened-architecture)
 - [Troubleshooting](#troubleshooting)
 - [Getting Help](#getting-help)
 - [Related Documentation](#related-documentation)
@@ -425,6 +426,26 @@ sudo ./install.sh
 ```
 
 Your validator continues running normally throughout this process—the monitoring dashboard is independent of rippled.
+
+---
+
+# Hardened Architecture
+
+For security-conscious operators, we recommend separating the validator and monitoring stack onto different hosts. This eliminates Docker from the validator host, reducing attack surface.
+
+**Benefits:**
+- No Docker daemon running on validator (eliminates container escape risk)
+- Dedicated validator resources (no resource contention)
+- Network isolation between validator and monitoring
+- Follows XRPL Foundation security recommendations
+
+**Architecture:**
+- **Host 1 (Validator):** rippled only, no Docker, minimal software
+- **Host 2 (Monitor):** Docker stack with Grafana, VictoriaMetrics, collectors
+
+The monitor connects to the validator's admin API ports (5005, 6006) over a private network, with firewall rules restricting access.
+
+**For complete setup instructions, see [Hardened Architecture Guide](HARDENED_ARCHITECTURE.md)**
 
 ---
 
