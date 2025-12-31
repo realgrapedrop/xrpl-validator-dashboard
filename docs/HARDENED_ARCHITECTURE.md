@@ -1,4 +1,4 @@
-# **__HARDENED ARCHITECTURE GUIDE__**
+# **__HARDENED ARCHITECTURE GUIDE__** 
 
 *Separate monitoring from your validator for maximum security.*
 
@@ -167,17 +167,17 @@ Bind admin ports to private interface only (not 0.0.0.0).
 [port_ws_admin_local]
 port = 6006
 ip = 10.0.0.10           # Bind to private interface only (NOT 0.0.0.0)
-admin = 10.0.0.10        # Whitelist: only this IP can run admin commands
+admin = 10.0.0.10, 10.0.0.20   # Whitelist: validator (local) + monitor host
 protocol = ws
 
 [port_rpc_admin_local]
 port = 5005
 ip = 10.0.0.10           # Bind to private interface only (NOT 0.0.0.0)
-admin = 10.0.0.10        # Whitelist: only this IP can run admin commands
+admin = 10.0.0.10, 10.0.0.20   # Whitelist: validator (local) + monitor host
 protocol = http
 ```
 
-**Replace `10.0.0.10` with your validator's private LAN IP.**
+**Replace `10.0.0.10` with your validator's private IP, and `10.0.0.20` with your monitor host's IP.**
 
 **Why both `ip` and `admin`?**
 - `ip` is network-level: determines what connections are physically possible
