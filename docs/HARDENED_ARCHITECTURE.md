@@ -50,30 +50,59 @@ This guide describes a hardened deployment where the XRPL validator and monitori
 ### Detailed Network Topology
 
 ```
-┌─────────────────────────────────────┐     ┌─────────────────────────────────────┐
-│         HOST 1: VALIDATOR           │     │        HOST 2: MONITORING           │
-│         (No Docker)                 │     │        (Docker Stack)               │
-│                                     │     │                                     │
-│  ┌─────────────────────────────┐    │     │    ┌─────────────────────────────┐  │
-│  │         rippled             │    │     │    │       Collector             │  │
-│  │                             │    │     │    │   (WebSocket + HTTP client) │  │
-│  │  • Validator key            │    │     │    └──────────────┬──────────────┘  │
-│  │  • Peer port 51235 (public) │    │     │                   │                 │
-│  │  • Admin WS 6006 (private)  │◄───┼─────┼───────────────────┘                 │
-│  │  • Admin HTTP 5005 (private)│◄───┼─────┼───────────────────┐                 │
-│  └─────────────────────────────┘    │     │    ┌──────────────┴──────────────┐  │
-│                                     │     │    │    State Exporter           │  │
-│  Firewall: Only allow Host 2 IP     │     │    │    Uptime Exporter          │  │
-│  to ports 5005, 6006                │     │    │    VictoriaMetrics          │  │
-│                                     │     │    │    Grafana (:3000)          │  │
-└─────────────────────────────────────┘     │    │    vmagent                  │  │
-                                            │    │    Node Exporter            │  │
-         Private LAN / VPN                  │    └─────────────────────────────┘  │
-         (10.0.0.0/24 or similar)           │                                     │
-                                            │  Firewall: Only allow your IP       │
-                                            │  to Grafana port 3000               │
-                                            └─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                       INFRASTRUCTURE LAN (10.0.0.0/24)                          │
+│                                                                                 │
+│  ┌─────────────────────────────┐      ┌─────────────────────────────────────┐   │
+│  │     HOST 1: VALIDATOR       │      │        HOST 2: MONITORING           │   │
+│  │     10.0.0.10               │      │        10.0.0.20                    │   │
+│  │     (No Docker)             │      │        (Docker Stack)               │   │
+│  │                             │      │                                     │   │
+│  │  ┌───────────────────────┐  │      │   ┌─────────────────────────────┐   │   │
+│  │  │       rippled         │  │      │   │  Collector                  │   │   │
+│  │  │                       │  │      │   │  Uptime Exporter            │   │   │
+│  │  │  • Validator key      │  │      │   └──────────────┬──────────────┘   │   │
+│  │  │  • Peer port 51235    │  │      │                  │ WS :6006         │   │
+│  │  │  • Admin WS 6006      │◄─┼──────┼──────────────────┘                  │   │
+│  │  │  • Admin HTTP 5005    │◄─┼──────┼──────────────────┐                  │   │
+│  │  └───────────────────────┘  │      │                  │ HTTP :5005       │   │
+│  │                             │      │   ┌──────────────┴──────────────┐   │   │
+│  │  Firewall:                  │      │   │  State Exporter             │   │   │
+│  │  • Allow Host 2 → 5005,6006 │      │   │  Node Exporter              │   │   │
+│  │  • Allow Internet → 51235   │      │   └─────────────────────────────┘   │   │
+│  └─────────────────────────────┘      │                                     │   │
+│                                       │   ┌─────────────────────────────┐   │   │
+│                                       │   │  VictoriaMetrics            │   │   │
+│                                       │   │  vmagent                    │   │   │
+│                                       │   └─────────────────────────────┘   │   │
+│                                       │                                     │   │
+│                                       │   ┌─────────────────────────────┐   │   │
+│                                       │   │  Grafana (:3000)            │   │   │
+│                                       │   └─────────────────────────────┘   │   │
+│                                       │                                     │   │
+│                                       │   Firewall:                         │   │
+│                                       │   • Allow Host 3 → 3000             │   │
+│                                       └──────────────────┬──────────────────┘   │
+│                                                          │                      │
+│                                                          │ :3000                │
+│                                                          │                      │
+│  ┌───────────────────────────────────────────────────────┴──────────────────┐   │
+│  │                      HOST 3: USER WORKSTATION                            │   │
+│  │                      10.0.0.30                                           │   │
+│  │                                                                          │   │
+│  │   • Web browser accessing Grafana dashboard (http://10.0.0.20:3000)      │   │
+│  │   • SSH access to Host 1 and Host 2 for administration                   │   │
+│  └──────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Points:**
+- All three hosts are on the same private LAN (10.0.0.0/24)
+- Host firewalls restrict access between hosts (defense in depth)
+- Host 1 only allows Host 2 to access admin ports (5005, 6006)
+- Host 2 only allows Host 3 to access Grafana (port 3000)
+- For additional isolation, see [Advanced: VLAN Isolation](#advanced-vlan-isolation)
 
 ---
 
@@ -99,6 +128,15 @@ This guide describes a hardened deployment where the XRPL validator and monitori
 | 9100 | Node Exporter | System metrics | localhost only | Host 2 system stats |
 | 9101 | Uptime Exporter | rippled uptime | localhost only | Formats uptime display |
 | 9102 | State Exporter | Real-time state | localhost only | 1-second state updates |
+
+### Host 3: User Workstation (10.0.0.30)
+
+| Port | Component | Purpose | Connects To | Notes |
+|------|-----------|---------|-------------|-------|
+| - | Web Browser | Grafana dashboard | Host 2:3000 | Or use Cloudflare Tunnel for remote access |
+| - | SSH Client | Administration | Host 1:22, Host 2:22 | Key-based authentication only |
+
+**Note:** In this base setup, all hosts are on the same LAN. Host-level firewalls provide security between hosts. For additional network-level isolation, see [Advanced: VLAN Isolation](#advanced-vlan-isolation).
 
 ---
 
@@ -245,66 +283,99 @@ sudo ufw enable
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
-# Allow SSH
-sudo ufw allow from YOUR_MGMT_IP to any port 22
+# Allow SSH from Host 3 (user workstation)
+sudo ufw allow from 10.0.0.30 to any port 22
 
-# Allow Grafana from your IP only
-sudo ufw allow from YOUR_IP to any port 3000
-
-# Or allow Grafana publicly if using authentication
-# sudo ufw allow 3000/tcp
+# Allow Grafana from Host 3 only
+sudo ufw allow from 10.0.0.30 to any port 3000
 
 sudo ufw enable
 ```
+
+**Replace `10.0.0.30` with your workstation's IP address.**
 
 ---
 
 # Advanced: VLAN Isolation
 
-For maximum security, place the validator and monitoring hosts in an isolated VLAN, separate from your management workstation.
+For maximum security, place the validator and monitoring hosts in an isolated VLAN, separate from your management workstation. This provides network-level isolation in addition to host-level firewalls.
+
+### Detailed VLAN Network Topology
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           NETWORK ARCHITECTURE                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌──────────────────────┐                                                   │
-│  │   VLAN 10: MGMT      │     Your workstation                              │
-│  │   192.168.10.0/24    │     192.168.10.50                                 │
-│  └──────────┬───────────┘                                                   │
-│             │                                                               │
-│             │ Allowed: SSH (22), Grafana (3000)                             │
-│             │                                                               │
-│  ┌──────────▼────────────────────────────────────────────────────────────┐  │
-│  │                        ROUTER / FIREWALL                              │  │
-│  │                    (Inter-VLAN routing rules)                         │  │
-│  └──────────┬────────────────────────────────────────────────────────────┘  │
-│             │                                                               │
-│             │ Allowed: Only whitelisted traffic                             │
-│             │                                                               │
-│  ┌──────────▼────────────────────────────────────────────────────────────┐  │
-│  │                    VLAN 20: INFRASTRUCTURE                            │  │
-│  │                       10.20.0.0/24                                    │  │
-│  │                                                                       │  │
-│  │   ┌─────────────────────┐      ┌─────────────────────┐                │  │
-│  │   │   Host 1: Validator │      │   Host 2: Monitor   │                │  │
-│  │   │   10.20.0.10        │◄────►│   10.20.0.20        │                │  │
-│  │   │                     │      │                     │                │  │
-│  │   │   • rippled         │      │   • Docker stack    │                │  │
-│  │   │   • No Docker       │      │   • Grafana :3000   │                │  │
-│  │   │   • Ports 5005,6006 │      │   • VictoriaMetrics │                │  │
-│  │   └─────────────────────┘      └─────────────────────┘                │  │
-│  │                                                                       │  │
-│  │   Only Host 2 can reach Host 1 admin ports                            │  │
-│  │   No outbound to internet except XRPL peers (51235)                   │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌──────────────────────┐                                                   │
-│  │   INTERNET           │     XRPL peer connections only (port 51235)       │
-│  └──────────────────────┘                                                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                       VLAN 10: MANAGEMENT (192.168.10.0/24)                     │
+│                                                                                 │
+│  ┌──────────────────────────────────────────────────────────────────────────┐   │
+│  │                      HOST 3: USER WORKSTATION                            │   │
+│  │                      192.168.10.50                                       │   │
+│  │                                                                          │   │
+│  │   • Web browser accessing Grafana dashboard                              │   │
+│  │   • SSH access to Host 1 and Host 2 for administration                   │   │
+│  └──────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                 │
+└─────────────────────────────────────┬───────────────────────────────────────────┘
+                                      │
+                                      │ :22 (SSH), :3000 (Grafana)
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           ROUTER / FIREWALL                                     │
+│                       (Inter-VLAN routing rules)                                │
+│                                                                                 │
+│   • Allow Host 3 → Host 1:22, Host 2:22 (SSH)                                   │
+│   • Allow Host 3 → Host 2:3000 (Grafana)                                        │
+│   • Allow Host 2 → Host 1:5005, 6006 (rippled admin)                            │
+│   • Allow Host 1 → Internet:51235, 443 (XRPL peers, UNL updates)                │
+│   • Block all other inter-VLAN traffic                                          │
+└─────────────────────────────────────┬───────────────────────────────────────────┘
+                                      │
+                                      │ :5005, :6006 (rippled admin)
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                       VLAN 20: INFRASTRUCTURE (10.20.0.0/24)                    │
+│                                                                                 │
+│  ┌─────────────────────────────┐      ┌─────────────────────────────────────┐   │
+│  │     HOST 1: VALIDATOR       │      │        HOST 2: MONITORING           │   │
+│  │     10.20.0.10              │      │        10.20.0.20                   │   │
+│  │     (No Docker)             │      │        (Docker Stack)               │   │
+│  │                             │      │                                     │   │
+│  │  ┌───────────────────────┐  │      │   ┌─────────────────────────────┐   │   │
+│  │  │       rippled         │  │      │   │  Collector                  │   │   │
+│  │  │                       │  │      │   │  Uptime Exporter            │   │   │
+│  │  │  • Validator key      │  │      │   └──────────────┬──────────────┘   │   │
+│  │  │  • Peer port 51235    │  │      │                  │ WS :6006         │   │
+│  │  │  • Admin WS 6006      │◄─┼──────┼──────────────────┘                  │   │
+│  │  │  • Admin HTTP 5005    │◄─┼──────┼──────────────────┐                  │   │
+│  │  └───────────────────────┘  │      │                  │ HTTP :5005       │   │
+│  │                             │      │   ┌──────────────┴──────────────┐   │   │
+│  │  Firewall:                  │      │   │  State Exporter             │   │   │
+│  │  • Allow Host 2 → 5005,6006 │      │   │  Node Exporter              │   │   │
+│  │  • Allow Internet → 51235   │      │   └─────────────────────────────┘   │   │
+│  │                             │      │                                     │   │
+│  └─────────────────────────────┘      │   ┌─────────────────────────────┐   │   │
+│                 │ :51235              │   │  VictoriaMetrics            │   │   │
+│                 ▼                     │   │  vmagent                    │   │   │
+│          ┌─────────────────┐          │   └─────────────────────────────┘   │   │
+│          │    INTERNET     │          │                                     │   │
+│          └─────────────────┘          │   ┌─────────────────────────────┐   │   │
+│                                       │   │  Grafana (:3000)            │   │   │
+│                                       │   └──────────────┬──────────────┘   │   │
+│                                       │                  │                  │   │
+│                                       │   Firewall:      │ :3000            │   │
+│                                       │   • Allow VLAN 10 → 3000            │   │
+│                                       └──────────────────┼──────────────────┘   │
+│                                                          │                      │
+│                                                          │ (via Router)         │
+│                                                          └──► To Host 3         │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Differences from Base Setup:**
+- Host 3 is on a **separate VLAN** (192.168.10.0/24) from infrastructure
+- All traffic between VLANs goes through **router/firewall**
+- Inter-VLAN traffic is **logged and auditable**
+- If Host 2 is compromised, attacker **cannot reach Host 3** (different network segment)
 
 ### Inter-VLAN Firewall Rules
 
@@ -464,17 +535,27 @@ curl -s "http://localhost:8428/api/v1/query?query=xrpl_ledger_sequence" | jq '.d
 - [ ] Docker installed with non-root user in docker group
 - [ ] `.env` configured with validator's private IP
 - [ ] Grafana password changed from default
-- [ ] Firewall restricts Grafana access to your IP only
+- [ ] Firewall restricts Grafana access to Host 3 IP only
 - [ ] No public exposure of VictoriaMetrics (port 8428)
 - [ ] SSH key-only authentication
 - [ ] Automatic security updates enabled
 
+### Host 3 (User Workstation)
+
+- [ ] On same LAN as Host 1 and Host 2 (10.0.0.0/24)
+- [ ] SSH keys configured for Host 1 and Host 2 access
+- [ ] Browser bookmarked to Grafana URL (http://10.0.0.20:3000)
+- [ ] VPN configured (if accessing remotely)
+
 ### Network
 
-- [ ] Hosts on same private LAN or VPN
+- [ ] All hosts on same private LAN (10.0.0.0/24)
 - [ ] No admin ports exposed to public internet
-- [ ] Monitoring traffic isolated from public traffic
-- [ ] (Optional) VLAN isolation with inter-VLAN firewall rules
+- [ ] Host-level firewalls configured:
+  - [ ] Host 1: Allow Host 2 → 5005, 6006
+  - [ ] Host 2: Allow Host 3 → 3000
+  - [ ] All hosts: Allow SSH from Host 3
+- [ ] (Optional) VLAN isolation for additional security - see [Advanced: VLAN Isolation](#advanced-vlan-isolation)
 
 ---
 
