@@ -462,6 +462,7 @@ The monitor connects to the validator's admin API ports (5005, 6006) over a priv
 - [Services Unhealthy After Update](#services-unhealthy-after-update)
 - [Quick Health Check](#quick-health-check)
 - [Firewall Issues (Linux Mint / UFW)](#firewall-issues-linux-mint--ufw)
+- [Validator Metrics "waiting" After Converting from Stock Node](#validator-metrics-waiting-after-converting-from-stock-node)
 
 ---
 
@@ -545,6 +546,36 @@ sudo ufw allow from 172.16.0.0/12 to any
 ```
 
 **Note:** If running XRPL Monitor on the same machine as rippled (recommended), firewall rules typically aren't needed for localhost connections.
+
+### Validator Metrics "waiting" After Converting from Stock Node
+
+If you initially installed the dashboard with rippled running as a stock node (no validator keys) and later configured it as a validator, the validator-specific metrics may show "waiting":
+
+- Validations Sent: waiting
+- Validation Rate: waiting
+- Agreements (1h/24h): waiting
+- Missed (1h/24h): waiting
+
+![Validator metrics showing waiting](../images/validator-metrics-waiting.png)
+
+**Why this happens:** The collector detects validator status at startup. If rippled wasn't a validator during initial install, the collector doesn't automatically detect the change.
+
+**Solution:** Restart the collector to force re-detection:
+
+```bash
+cd ~/xrpl-validator-dashboard
+docker compose restart collector
+```
+
+Or restart the entire stack:
+
+```bash
+cd ~/xrpl-validator-dashboard
+./manage.sh
+# Select option 7: Restart All Services
+```
+
+After restarting, wait 60 seconds for metrics to populate. The validator panels should now show data.
 
 ---
 
