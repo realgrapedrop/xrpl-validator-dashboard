@@ -890,6 +890,8 @@ online_delete=16384
 advisory_delete=0
 ```
 
+**Note:** `advisory_delete=0` is optional and can be omitted as it is the default behavior. When set to 0, rippled automatically deletes old ledgers when the count exceeds `online_delete`. Setting it to 1 disables automatic deletion and requires an external `can_delete` API command to trigger cleanup, which is useful for backup coordination.
+
 **3. Restart rippled:**
 
 ```bash
