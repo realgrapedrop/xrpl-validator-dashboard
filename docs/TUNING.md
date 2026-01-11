@@ -793,7 +793,7 @@ The `online_delete` setting in rippled controls how many ledgers are retained be
 
 ### The Problem: I/O Storms from Low online_delete
 
-A community member discovered that their validator was dropping ledgers despite running on high-spec hardware (150k IOPS NVMe, 80 cores, 128 GB RAM). The dashboard's Storage Disk panels revealed a sawtooth I/O pattern with IOPS spiking to 30,000+ every 30 minutes.
+Even on high-spec hardware (150k IOPS NVMe, 80 cores, 128 GB RAM), validators may experience dropped ledgers. The dashboard's Storage Disk panels reveal the cause: a sawtooth I/O pattern with IOPS spiking to 30,000+ every 30 minutes.
 
 The root cause: the default `online_delete` value (512) triggers frequent garbage collection events that overwhelm the disk.
 
