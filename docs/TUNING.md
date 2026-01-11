@@ -778,7 +778,7 @@ For multi-validator deployments, allocate unique ports for each instance (e.g., 
 
 The `online_delete` setting in rippled controls how many ledgers are retained before old ledgers are deleted. This setting has a significant impact on disk I/O patterns and can affect validator performance.
 
-**Note:** This issue was identified by [shortthefomo](https://github.com/shortthefomo) and documented in [rippled issue #6202](https://github.com/XRPLF/rippled/issues/6202).
+**Note:** This finding was identified by [shortthefomo](https://github.com/shortthefomo) and documented in [rippled issue #6202](https://github.com/XRPLF/rippled/issues/6202). This section was added to help other validators benefit from this discovery.
 
 **In This Section:**
 - [The Problem: I/O Storms from Low online_delete](#the-problem-io-storms-from-low-online_delete)
