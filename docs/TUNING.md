@@ -14,6 +14,7 @@
 - [Log Verbosity & Storage](#log-verbosity--storage)
 - [Disk I/O Optimization](#disk-io-optimization)
 - [Network Tuning](#network-tuning)
+- [rippled online_delete Tuning](#rippled-online_delete-tuning)
 - [Monitoring Your Monitor](#monitoring-your-monitor)
 - [Common Scenarios](#common-scenarios)
 - [Troubleshooting Performance Issues](#troubleshooting-performance-issues)
@@ -773,6 +774,134 @@ For multi-validator deployments, allocate unique ports for each instance (e.g., 
 
 ---
 
+# rippled online_delete Tuning
+
+The `online_delete` setting in rippled controls how many ledgers are retained before old ledgers are deleted. This setting has a significant impact on disk I/O patterns and can affect validator performance.
+
+**In This Section:**
+- [The Problem: I/O Storms from Low online_delete](#the-problem-io-storms-from-low-online_delete)
+- [How online_delete Affects Disk I/O](#how-online_delete-affects-disk-i-o)
+- [Why NuDB Makes This Worse](#why-nudb-makes-this-worse)
+- [Impact on Validator Performance](#impact-on-validator-performance)
+- [Recommended Values](#recommended-values)
+- [Trade-offs](#trade-offs)
+- [How to Change online_delete](#how-to-change-online_delete)
+
+---
+
+### The Problem: I/O Storms from Low online_delete
+
+A community member discovered that their validator was dropping ledgers despite running on high-spec hardware (150k IOPS NVMe, 80 cores, 128 GB RAM). The dashboard's Storage Disk panels revealed a sawtooth I/O pattern with IOPS spiking to 30,000+ every 30 minutes.
+
+The root cause: the default `online_delete` value (512) triggers frequent garbage collection events that overwhelm the disk.
+
+**Sawtooth Pattern (Low online_delete):**
+```
+IOPS
+30k ┤        ╭─╮        ╭─╮        ╭─╮        ╭─╮
+    │       ╱  ╲       ╱  ╲       ╱  ╲       ╱  ╲    ← Delete storms
+15k ┤      ╱    ╲     ╱    ╲     ╱    ╲     ╱    ╲
+    │     ╱      ╲   ╱      ╲   ╱      ╲   ╱      ╲
+ 0k ┼────╱────────╲─╱────────╲─╱────────╲─╱────────╲──
+    └────┴─────────┴─────────┴─────────┴─────────┴────► Time
+         ~30min    ~30min    ~30min    ~30min
+```
+
+**Smooth Pattern (High online_delete):**
+```
+IOPS
+30k ┤
+    │
+15k ┤
+    │  ────────────────────────────────────────────  ← Steady state
+ 0k ┼
+    └──────────────────────────────────────────────────► Time
+```
+
+### How online_delete Affects Disk I/O
+
+| Factor | Low online_delete (512) | High online_delete (16384) |
+|--------|-------------------------|----------------------------|
+| Ledgers retained | ~512 (~30 min) | ~16384 (~14-18 hours) |
+| Delete frequency | Every ~30 minutes | Every ~14-18 hours |
+| Ledgers deleted per event | Small batches, frequently | Larger batches, rarely |
+| I/O pattern | Sawtooth (spiky) | Smooth (steady-state) |
+| Delete overhead | Constant context switching | Amortized over long periods |
+
+### Why NuDB Makes This Worse
+
+NuDB (the database type used by rippled for ledger storage) is optimized for append-mostly workloads:
+
+- **Writes are fast:** Sequential appends are efficient
+- **Deletes are expensive:** Requires compaction/reorganization
+- **Frequent small deletes = worst case for NuDB**
+
+By increasing `online_delete`, you allow NuDB to operate in its optimal mode (appending) for longer periods before incurring deletion overhead.
+
+### Impact on Validator Performance
+
+| Metric | During Delete Storm | Normal Operation |
+|--------|---------------------|------------------|
+| I/O latency | Spikes to 10-100+ ms | 1-2 ms |
+| Consensus participation | May miss rounds | Full participation |
+| Agreement % | Drops | Stable |
+| server_state | May flicker | Steady proposing |
+
+A validator can have perfect agreement scores most of the time but experience periodic drops during these I/O storms. The dashboard's Storage Disk panels make this pattern visible.
+
+### Recommended Values
+
+| Scenario | online_delete | Rationale |
+|----------|---------------|-----------|
+| Default (not recommended) | 512-2000 | Causes I/O storms |
+| Minimum stable | 8192 | ~8 hours between deletes |
+| **Recommended for validators** | **16384** | **~14-18 hours between deletes** |
+| Conservative | 32768 | ~1.5 days between deletes |
+| Maximum practical | 50000-100000 | Days between deletes, more disk used |
+
+### Trade-offs
+
+| online_delete Value | Disk Space | I/O Pattern | Delete Frequency |
+|---------------------|------------|-------------|------------------|
+| 512 | ~250 MB | Sawtooth (bad) | Every 30 min |
+| 2000 | ~1 GB | Spiky | Every 2 hours |
+| 16384 | ~8-12 GB | Smooth | Every 14-18 hours |
+| 32768 | ~16-24 GB | Very smooth | Every 1.5 days |
+
+**The trade-off is minimal:** Even at 16384, you're only using ~8-12 GB more disk space in exchange for dramatically smoother I/O and more stable validation.
+
+### How to Change online_delete
+
+**1. Edit your rippled.cfg:**
+
+```bash
+sudo nano /etc/opt/ripple/rippled.cfg
+```
+
+**2. Find or add the [node_db] section:**
+
+```ini
+[node_db]
+type=NuDB
+path=/var/lib/rippled/db/nudb
+online_delete=16384
+advisory_delete=0
+```
+
+**3. Restart rippled:**
+
+```bash
+sudo systemctl restart rippled
+```
+
+**4. Verify the change:**
+
+After rippled syncs, monitor the Storage Disk panels in the dashboard. The sawtooth pattern should disappear over the next several hours as the new retention period takes effect.
+
+**Note:** The first delete cycle after increasing `online_delete` will still occur at the previous threshold. The smooth I/O pattern will be visible after the ledger count exceeds the new threshold.
+
+---
+
 # Monitoring Your Monitor
 
 Track the performance of the monitoring stack itself.
@@ -1219,5 +1348,5 @@ If you're experiencing performance issues:
 
 ---
 
-**Last Updated:** November 19, 2025
+**Last Updated:** January 11, 2026
 **Tested With:** XRPL Validator Dashboard v3.0, VictoriaMetrics latest, Grafana 12.1.1
