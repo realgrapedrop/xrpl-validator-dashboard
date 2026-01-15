@@ -393,9 +393,14 @@ This is expected and occurs for several technical reasons:
 - **XRPL Monitor:** Records what your node sees/sends in real-time
 - **XRPScan:** Records what the broader network observes (may miss some validations due to network conditions)
 
-**4. Restart Effects**
-- **XRPL Monitor:** Counters persist across monitor restarts, reset on rippled restart (smart restart detection)
-- **XRPScan:** Maintains continuous history from multiple network observers
+**4. Restart Effects (Validator Restarts)**
+- **XRPL Monitor:** When rippled restarts, its internal counters reset to zero. The dashboard can only report what rippled knows, so 24h metrics will only reflect data since the restart.
+- **XRPScan:** Observes validations from the network's perspective, so it counts ALL ledgers your validator missed during the restart window (while rippled was down and reconnecting).
+
+**Example:** If your validator was down for 90 seconds during a restart (~23 ledgers at 4s/ledger):
+- XRPScan 24h missed: 41 (includes 23 missed during restart + 18 missed after)
+- Dashboard 24h missed: 18 (only counts misses since rippled came back online)
+- The difference (23) represents ledgers that closed while your validator was restarting
 
 **Which is more accurate for YOUR validator?**
 - **XRPL Monitor** gives you the ground truth of what your validator is actually producing - real-time local metrics straight from your validator's WebSocket stream
