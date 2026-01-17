@@ -156,7 +156,8 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 **Automatic Validator Key Detection**:
 - Dashboard auto-detects validator public key from rippled
 - Supports stock node to validator conversion without reinstall
-- Pubkey panel shows "Stock Node" for non-validators, auto-updates when validator token is added
+- Pubkey panel updates automatically when validator token is added
+- Validation metrics (Validations Sent, Agreements, Missed) begin populating once validator starts proposing
 
 **Smarter Data Collection Status**:
 - Data Collection panel now shows connection state: "Streaming", "Syncing", or "No Stream"
