@@ -81,7 +81,9 @@ class MonitorConfig:
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
 
         # Validator key (optional - for filtering our validations)
-        self.our_validator_key = os.getenv('VALIDATOR_PUBLIC_KEY', None)
+        # Treat "none", "None", empty string as not configured (triggers auto-detection)
+        validator_key_env = os.getenv('VALIDATOR_PUBLIC_KEY', '')
+        self.our_validator_key = validator_key_env if validator_key_env.lower() not in ('', 'none') else None
 
         # Docker container name (optional - for peer metrics fallback)
         # If rippled runs in Docker and peers API is restricted, use docker exec
@@ -135,6 +137,56 @@ async def health_metrics_task(state_manager: StateManager, xrpl_client, victoria
 
     except Exception as e:
         logger.error(f"Health metrics task error: {e}", exc_info=True)
+
+
+async def validator_key_detector(xrpl_client, validations_handler, check_interval: int = 300):
+    """
+    Background task to detect validator key changes at runtime
+
+    This allows the collector to automatically detect when:
+    - A stock node is converted to a validator
+    - The validator key is changed
+
+    Runs every 5 minutes (300s) by default.
+    """
+    current_key = validations_handler.our_validator_key
+
+    try:
+        while not shutdown_event.is_set():
+            try:
+                server_info = await xrpl_client.get_server_info()
+                if server_info:
+                    raw_key = server_info.get('pubkey_validator', '')
+                    # rippled returns "none" for stock nodes - treat as no key
+                    new_key = raw_key if raw_key and raw_key.lower() != 'none' else None
+
+                    # Detect key added (stock node -> validator)
+                    if new_key and new_key != current_key:
+                        if current_key:
+                            logger.info(f"Validator key changed: {current_key[:20]}... -> {new_key[:20]}...")
+                        else:
+                            logger.info(f"✓ Validator key detected: {new_key[:20]}... (was stock node)")
+
+                        validations_handler.set_our_validator_key(new_key)
+                        current_key = new_key
+
+                    # Detect key removal (validator -> stock node)
+                    elif not new_key and current_key:
+                        logger.warning(f"Validator key removed (now running as stock node)")
+                        validations_handler.set_our_validator_key(None)
+                        current_key = None
+
+            except Exception as e:
+                logger.debug(f"Validator key check failed: {e}")
+
+            # Wait for next check or shutdown
+            try:
+                await asyncio.wait_for(shutdown_event.wait(), timeout=check_interval)
+            except asyncio.TimeoutError:
+                pass
+
+    except asyncio.CancelledError:
+        logger.debug("Validator key detector cancelled")
 
 
 async def health_check_handler(request):
@@ -291,11 +343,13 @@ async def run_monitor(config: MonitorConfig):
                     if response.status_code == 200:
                         data = response.json()
                         result = data.get('result', {})
-                        if "info" in result and result["info"].get("pubkey_validator"):
-                            config.our_validator_key = result["info"]["pubkey_validator"]
-                            logger.info(f"✓ Auto-detected validator key: {config.our_validator_key}")
+                        pubkey = result.get("info", {}).get("pubkey_validator", "")
+                        # rippled returns "none" for stock nodes - treat as not configured
+                        if pubkey and pubkey.lower() != "none":
+                            config.our_validator_key = pubkey
+                            logger.info(f"✓ Auto-detected validator key: {config.our_validator_key[:20]}...")
                         else:
-                            logger.info("No validator key configured and rippled has no pubkey_validator - running in stock node mode")
+                            logger.info("Running in stock node mode (no validator key detected)")
             except Exception as e:
                 logger.warning(f"Could not auto-detect validator key: {e}")
 
@@ -371,6 +425,12 @@ async def run_monitor(config: MonitorConfig):
         health_metrics = asyncio.create_task(health_metrics_task(state_manager, xrpl_client, victoria_client))
         reconciliation_task = asyncio.create_task(validations_handler.reconcile_pending_ledgers())
         logger.info("✓ Started reconciliation task (validation agreements with grace period)")
+
+        # Start validator key detector (auto-detect stock-to-validator conversions)
+        validator_key_task = asyncio.create_task(
+            validator_key_detector(xrpl_client, validations_handler, check_interval=300)
+        )
+        logger.info("✓ Started validator key detector (checks every 5 minutes)")
 
         # Start HTTP poller
         await http_poller.start(shutdown_event)

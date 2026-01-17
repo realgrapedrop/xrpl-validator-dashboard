@@ -63,6 +63,8 @@ current_metrics = {
     # Server info metrics
     'build_version': '',
     'pubkey_validator': '',
+    # Node mode (validator vs stock_node)
+    'node_mode': 'unknown',
     # New real-time metrics (from server_info)
     'ledger_sequence': 0,
     'ledger_age': 0,
@@ -178,6 +180,15 @@ class MetricsHandler(BaseHTTPRequestHandler):
             lines.append('# HELP xrpl_pubkey_realtime Real-time validator public key (1=current)')
             lines.append('# TYPE xrpl_pubkey_realtime gauge')
             lines.append(f'xrpl_pubkey_realtime{{instance="{INSTANCE}",pubkey="{pubkey_validator}"}} 1')
+
+        # xrpl_node_mode_realtime (validator vs stock_node)
+        with metrics_lock:
+            node_mode = current_metrics['node_mode']
+        lines.append('# HELP xrpl_node_mode_realtime Node mode indicator (1=current mode)')
+        lines.append('# TYPE xrpl_node_mode_realtime gauge')
+        for mode in ['validator', 'stock_node', 'unknown']:
+            value = 1 if mode == node_mode else 0
+            lines.append(f'xrpl_node_mode_realtime{{instance="{INSTANCE}",mode="{mode}"}} {value}')
 
         # === New real-time metrics ===
         # xrpl_ledger_sequence_realtime
@@ -381,6 +392,28 @@ class MetricsHandler(BaseHTTPRequestHandler):
                         "pubkey": pubkey_validator
                     },
                     "value": [timestamp, "1"]
+                })
+        elif 'xrpl_node_mode_realtime' in query:
+            # Check if query filters by mode label
+            mode_filter = None
+            match = re.search(r'mode\s*=\s*["\']?(\w+)["\']?', query)
+            if match:
+                mode_filter = match.group(1)
+
+            with metrics_lock:
+                node_mode = current_metrics['node_mode']
+
+            for mode in ['validator', 'stock_node', 'unknown']:
+                if mode_filter and mode != mode_filter:
+                    continue
+                value = 1 if mode == node_mode else 0
+                result.append({
+                    "metric": {
+                        "__name__": "xrpl_node_mode_realtime",
+                        "instance": INSTANCE,
+                        "mode": mode
+                    },
+                    "value": [timestamp, str(value)]
                 })
         # === New real-time metrics ===
         elif 'xrpl_ledger_sequence_realtime' in query:
@@ -733,12 +766,20 @@ async def run_state_polling_loop(client: httpx.AsyncClient):
                 # Proposers from consensus_info
                 proposers = consensus_result.get('proposers', 0) if consensus_result else 0
 
+                # Determine node mode based on pubkey_validator
+                # rippled returns "none" for stock nodes, or the actual key for validators
+                if not pubkey_validator or pubkey_validator.lower() == 'none':
+                    node_mode = 'stock_node'
+                else:
+                    node_mode = 'validator'
+
                 # Update global metrics (thread-safe)
                 with metrics_lock:
                     current_metrics['state_value'] = state_value
                     current_metrics['state_name'] = server_state
                     current_metrics['build_version'] = build_version
                     current_metrics['pubkey_validator'] = pubkey_validator
+                    current_metrics['node_mode'] = node_mode
                     # New metrics
                     current_metrics['ledger_sequence'] = ledger_sequence
                     current_metrics['ledger_age'] = ledger_age

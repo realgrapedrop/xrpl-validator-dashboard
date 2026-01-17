@@ -278,6 +278,29 @@ import_dashboards_via_api() {
         fi
     fi
 
+    # Import light mode dashboard if it exists
+    local light_dashboard="config/grafana/provisioning/dashboards/xrpl-validator-light-mode.json"
+    if [ -f "$light_dashboard" ]; then
+        local import_payload
+        import_payload=$(jq 'del(.id) | .version = 0 | {dashboard: ., overwrite: true}' "$light_dashboard" 2>/dev/null)
+
+        if [ -n "$import_payload" ]; then
+            local response
+            response=$(echo "$import_payload" | curl -s -w "\n%{http_code}" \
+                -X POST "http://localhost:${grafana_port}/api/dashboards/db" \
+                -u "admin:admin" \
+                -H "Content-Type: application/json" \
+                -d @- 2>&1)
+
+            local http_code=$(echo "$response" | tail -n1)
+
+            if [ "$http_code" = "200" ] || [ "$http_code" = "412" ]; then
+                print_status "Light mode dashboard imported"
+                log "Dashboard imported: xrpl-validator-light-mode.json"
+            fi
+        fi
+    fi
+
     return 0
 }
 

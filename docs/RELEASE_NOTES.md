@@ -151,6 +151,25 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 
 # Changelog
 
+### v3.0.3
+
+**Automatic Validator Key Detection**:
+- Dashboard auto-detects validator public key from rippled
+- Supports stock node to validator conversion without reinstall
+- Pubkey panel shows "Stock Node" for non-validators, auto-updates when validator token is added
+
+**Smarter Data Collection Status**:
+- Data Collection panel now shows connection state: "Streaming", "Syncing", or "No Stream"
+- "Streaming" (green) = rippled in full/proposing state, real-time data flowing
+- "Syncing" (yellow) = rippled connected but catching up (connected/syncing/tracking)
+- "No Stream" (red) = no connection to rippled
+
+**Light Mode Dashboard**:
+- Light mode dashboard now included in fresh installations
+- Fixed Agreements (24h) panel text size to match other panels
+
+---
+
 ### v3.0.2
 
 **Dashboard Preservation on Update**:

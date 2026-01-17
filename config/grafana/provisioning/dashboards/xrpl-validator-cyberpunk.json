@@ -425,9 +425,9 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoria"
+        "uid": "state-exporter"
       },
-      "description": "Active data collection status. Checks if ledger events are being received and processed from WebSocket stream. Verifies data freshness (updated within\n  last 60 seconds).",
+      "description": "Data collection status based on rippled state.\n\n• Streaming: rippled is fully synced and producing data\n• Syncing: rippled is starting up and syncing with the network\n• No Stream: rippled is not responding or collector is down",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -436,18 +436,39 @@
           "mappings": [
             {
               "options": {
-                "0": {
+                "from": 0,
+                "to": 1,
+                "result": {
                   "color": "#9D00FF",
                   "index": 0,
-                  "text": "Unhealthy"
-                },
-                "1": {
-                  "color": "#FF00FF",
-                  "index": 1,
-                  "text": "Healthy"
+                  "text": "No Stream"
                 }
               },
-              "type": "value"
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 2,
+                "to": 4,
+                "result": {
+                  "color": "#00FFFF",
+                  "index": 1,
+                  "text": "Syncing"
+                }
+              },
+              "type": "range"
+            },
+            {
+              "options": {
+                "from": 5,
+                "to": 7,
+                "result": {
+                  "color": "#FF00FF",
+                  "index": 2,
+                  "text": "Streaming"
+                }
+              },
+              "type": "range"
             }
           ],
           "noValue": "Data Collection: No Stream",
@@ -456,15 +477,15 @@
             "steps": [
               {
                 "color": "#9D00FF",
-                "value": 0
+                "value": null
               },
               {
-                "color": "#9D00FF",
-                "value": 0
+                "color": "#00FFFF",
+                "value": 2
               },
               {
                 "color": "#FF00FF",
-                "value": 1
+                "value": 5
               }
             ]
           },
@@ -504,7 +525,7 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "clamp_max((time() - timestamp(xrpl_ledgers_closed_total)) < bool 60, 1)",
+          "expr": "xrpl_state_realtime_value",
           "instant": true,
           "legendFormat": "Data Collection:",
           "range": false,
@@ -3695,7 +3716,9 @@
           "values": false
         },
         "showPercentChange": false,
-        "text": {},
+        "text": {
+          "valueSize": 55
+        },
         "textMode": "auto",
         "wideLayout": true
       },

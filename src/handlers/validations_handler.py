@@ -949,15 +949,16 @@ class ValidationsHandler:
         self.ledger_handler = ledger_handler
         logger.info("Ledger handler reference set for validation hash comparison")
 
-    def set_our_validator_key(self, key: str):
+    def set_our_validator_key(self, key: Optional[str]):
         """
-        Set our validator's public key
+        Set our validator's public key (can be called at runtime for dynamic detection)
 
         Args:
-            key: Validator public key (starts with 'nH')
+            key: Validator public key (starts with 'nH'), or None for stock node mode
         """
         self.our_validator_key = key
-        logger.info(f"Our validator key set: {key}")
+        if key:
+            logger.info(f"Validator key configured: {key[:20]}...")
 
     # =========================================================================
     # PENDING LEDGER RECONCILIATION (Option 2: Full Reconciliation)
