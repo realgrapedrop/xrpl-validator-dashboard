@@ -1,6 +1,6 @@
 # XRPL Validator Dashboard v3.0
 
-Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 40+ metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
+Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 41 metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
 
 **Real-time monitoring and alerting for XRPL validator nodes**
 
@@ -62,7 +62,7 @@ v3.0 is a **complete architectural rewrite** featuring:
 - **97% Less Disk Usage** - ~290 MB vs 9.5 GB (30-day retention)
 
 ### Monitoring & Performance
-- **40+ Metrics** - Comprehensive validator, network, and system monitoring
+- **41 Metrics** - Comprehensive validator, network, and system monitoring
 - **Enhanced Monitoring** - Network validation tracking, consensus performance, peer events
 - **1-Second Refresh** - Real-time dashboard updates for ledger tracking
 - **State Persistence** - Smart counter & gauge recovery with rippled restart detection
