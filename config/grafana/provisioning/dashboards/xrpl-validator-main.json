@@ -32,7 +32,7 @@
     {
       "gridPos": {
         "h": 2,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -49,6 +49,115 @@
       "pluginVersion": "12.3.0",
       "transparent": true,
       "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "state-exporter"
+      },
+      "description": "Upgrade status based on peer version comparison and amendment_blocked flag.\n\nStatus levels:\n\n✅ Current: Running current version, no action needed\n\n⚠️ Behind: Newer version available, upgrade soon\n\n⛔ Blocked: Amendment blocked, upgrade required\n\n🚨 Critical: Blocked and behind, upgrade immediately\n\nNote: Status changes may take 5-7 minutes to reflect due to peer crawl interval and rippled detection time.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "✅ Current"
+                },
+                "1": {
+                  "color": "yellow",
+                  "index": 1,
+                  "text": "⚠️ Behind"
+                },
+                "2": {
+                  "color": "orange",
+                  "index": 2,
+                  "text": "⛔ Blocked"
+                },
+                "3": {
+                  "color": "dark-red",
+                  "index": 3,
+                  "text": "🚨 Critical"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "Rippled: -",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "orange",
+                "value": 2
+              },
+              {
+                "color": "dark-red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "id": 409,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 20
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_upgrade_status_realtime",
+          "instant": true,
+          "legendFormat": "Rippled:",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "type": "stat"
     },
     {
       "datasource": {

@@ -67,7 +67,7 @@ Grafana alerting has three simple parts:
 
 | Component | What It Does | Your Action |
 |-----------|--------------|-------------|
-| **Alert Rules** | Define WHEN to alert (e.g., "peer count < 10 for 20 min") | Already configured - 14 rules included |
+| **Alert Rules** | Define WHEN to alert (e.g., "peer count < 10 for 20 min") | Already configured - 16 rules included |
 | **Notification Policy** | Routes alerts to contact points | Already configured - sends all to default |
 | **Contact Points** | Define WHERE to send (email, Discord, Slack, etc.) | **You configure this** |
 
@@ -149,6 +149,8 @@ XRPL Monitor includes **14 pre-configured alert rules** covering critical valida
 | 12 | **Memory Usage Critical** | 🔴 | Critical | Memory usage > 90% | 2 min | System running out of RAM | Stop non-essential services, investigate memory leak, add RAM |
 | 13 | **Disk Space Warning** | 🟡 | Warning | Disk usage > 85% | 2 min | Running low on disk space | Delete logs, clean up old data, expand disk |
 | 14 | **Validator CPU High** | 🟡 | Warning | rippled CPU > 90% | 1 min | Validator CPU constrained | Check container limits, reduce load, add cores |
+| 15 | **Amendment Blocked** | 🔴 | Critical | amendment_blocked = 1 | 1 min | Validator non-functional until upgraded | Upgrade rippled immediately - validator cannot participate in consensus |
+| 16 | **Upgrade Recommended** | 🟡 | Warning | >60% peers on higher version | 30 min | Newer rippled version available | Plan upgrade soon - majority of network has upgraded |
 
 ### Alert Categories
 
@@ -171,6 +173,10 @@ XRPL Monitor includes **14 pre-configured alert rules** covering critical valida
 - Memory Usage Critical
 - Disk Space Warning
 - Validator CPU High
+
+**Upgrade Monitoring (2 alerts):**
+- Amendment Blocked (validator non-functional)
+- Upgrade Recommended (>60% peers ahead)
 
 ### How Alerts Work (Flow Diagram)
 

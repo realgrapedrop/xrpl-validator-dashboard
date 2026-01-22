@@ -263,7 +263,7 @@ The installer performs five main phases:
 1. **Pre-Installation Checks** - Verifies Docker is installed, checks port availability, installs Docker Compose if needed
 2. **Configuration** - Prompts for Grafana port and optional email alerts
 3. **Service Deployment** - Pulls container images from Docker Hub, creates volumes, starts all services
-4. **Auto-Provisioning** - Configures datasource, imports dashboard, provisions 14 alert rules
+4. **Auto-Provisioning** - Configures datasource, imports dashboard, provisions 16 alert rules
 5. **Verification** - Reports access URL, credentials, and service status
 
 **What you need before installing:**
@@ -1132,10 +1132,11 @@ Alerts are auto-configured! You just need to add your notification channel:
 - Custom Webhook: Uncomment generic webhook section
 
 **What alerts are configured?**
-14 alert rules across 3 categories:
+16 alert rules across 4 categories:
 - 5 Critical Monitoring: Validator not proposing, Agreement < 90%, Unhealthy state, WebSocket/HTTP down
 - 3 Network Monitoring: Low peer count, high disconnections, connectivity issues
 - 6 Performance Monitoring: High load factor, I/O latency, peer latency, memory usage, disk space, validator CPU
+- 2 Upgrade Monitoring: Amendment blocked, upgrade recommended (>60% peers ahead)
 
 See `config/grafana/provisioning/alerting/rules.yaml` for full details.
 

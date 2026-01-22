@@ -1455,9 +1455,19 @@ UPTIME_EXPORTER_PORT=$UPTIME_EXPORTER_PORT
 STATE_EXPORTER_PORT=$STATE_EXPORTER_PORT
 VMAGENT_PORT=$VMAGENT_PORT
 COLLECTOR_PORT=$COLLECTOR_PORT
+
+# Peer Version Check (polls /crawl endpoint to detect if upgrade needed)
+# Set to 0 to disable, or 51235 (default rippled peer port) to enable
+PEER_CRAWL_PORT=51235
 EOF
 
     print_status ".env file created"
+
+    # Fix ownership if running as sudo (so manage.sh can modify .env later)
+    if [ -n "$SUDO_USER" ]; then
+        chown "$SUDO_USER:$SUDO_USER" .env
+        log "Fixed .env ownership to $SUDO_USER"
+    fi
 
     # === GENERATE CONFIG FILES FROM TEMPLATES ===
     print_info "Configuring ports..."
@@ -1483,6 +1493,12 @@ EOF
     else
         print_error "datasource.yml.template not found!"
         exit 1
+    fi
+
+    # Fix ownership of generated config files if running as sudo
+    if [ -n "$SUDO_USER" ]; then
+        chown "$SUDO_USER:$SUDO_USER" config/vmagent/scrape.yml 2>/dev/null
+        chown "$SUDO_USER:$SUDO_USER" config/grafana/provisioning/datasources/datasource.yml 2>/dev/null
     fi
 
     print_status "Ports configured"

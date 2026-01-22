@@ -16,6 +16,7 @@
 - [DB State Accounting Metrics](#db-state-accounting-metrics)
 - [Performance Metrics](#performance-metrics)
 - [Monitor Health Metrics](#monitor-health-metrics)
+- [State Exporter Metrics](#state-exporter-metrics)
 - [Understanding Metric Relationships](#understanding-metric-relationships)
 - [Metric Collection Architecture](#metric-collection-architecture)
 
@@ -23,11 +24,11 @@
 
 # Overview
 
-The dashboard displays **40 validator-specific panels** covering all aspects of validator health and performance.
+The dashboard displays **41 validator-specific panels** covering all aspects of validator health and performance.
 
 | Panel Type | Count | Examples |
 |------------|-------|----------|
-| **Stat** | 18 | Agreements, Validations Sent, Pubkey, State, Uptime |
+| **Stat** | 19 | Agreements, Validations Sent, Pubkey, Rippled, State, Uptime |
 | **Gauge** | 12 | UNL Expiry, Peer Latency, Load Factor, Proposers, Quorum |
 | **Time Series** | 10 | Activity Rates, IO Latency, Consensus Converge Time |
 | **Total** | **40** | All panels include threshold/range documentation |
@@ -40,6 +41,7 @@ The dashboard displays **40 validator-specific panels** covering all aspects of 
 | **Server** | 6 | WebSocket `server` stream + HTTP `server_info` (5s) |
 | **Ledger** | 5 | WebSocket `ledger` stream (instant) |
 | **Storage** | 2 | HTTP `server_state` (5min polling) + filesystem |
+| **Upgrade** | 1 | State Exporter peer crawl + `server_info` (5min) |
 | **Info** | 1 | HTTP `server_info` (network fee settings) |
 
 **51-63% of metrics come from real-time WebSocket streams.**
@@ -85,19 +87,20 @@ All XRPL validator metrics at a glance. For detailed explanations, see the secti
 | 27 | **Pubkey** | Server | Stat | Your validator public key (updates every 5-60s) |
 | 28 | **Quorum** | Performance | Gauge | Number of validations needed for quorum |
 | 29 | **Release Version** | Server | Stat | rippled build version (updates every 5-60s after upgrade) |
-| 30 | **State** | Server | Stat | Current rippled state (DISCONNECTED, FULL, PROPOSING, etc.) - Real-time via State Exporter (~1s latency) |
-| 31 | **Total Peers** | Network | Gauge | Number of peer connections (healthy: 10-30, real-time updates every 5s) |
-| 32 | **Transaction Rate** (1h) | Ledger | Gauge | Transactions per second on the network (1-hour view) |
-| 33 | **Transaction Rate** (24h) | Ledger | Time Series | TPS trend (Low: 5-15, Normal: 15-40, High: 40-100, Spike: >100) |
-| 34 | **UNL Expiry** | Network | Gauge | Days until Validator List (UNL) expires (real-time, updates every 2s) |
-| 35 | **Uptime** | Server | Stat | Time since rippled started (displayed as Xd:Xh:Xm) |
-| 36 | **Validation Rate** (1h) | Validation | Stat | How many validations YOUR validator sends per minute (1-hour view) |
-| 37 | **Validation Rate** (24h) | Validation | Time Series | Your validation rate trend (Healthy: 12-18/min, Low: 10-12/min, Critical: <10/min) |
-| 38 | **Validator CPU Load** | Performance | Time Series | rippled CPU usage (Normal: 5-30%, High: 30-80%, Investigate: >100% sustained) |
-| 39 | **Validations Sent** | Validation | Stat | Validations sent by YOUR validator since rippled restarted (smart counter with restart detection) |
-| 40 | **XRP Fees** | Info | Stat | Network fee information (updates every 5-60s) |
+| 30 | **Rippled** | Upgrade | Stat | Upgrade status: ✅ Current, ⚠️ Behind, ⛔ Blocked, 🚨 Critical (5-7 min detection) |
+| 31 | **State** | Server | Stat | Current rippled state (DISCONNECTED, FULL, PROPOSING, etc.) - Real-time via State Exporter (~1s latency) |
+| 32 | **Total Peers** | Network | Gauge | Number of peer connections (healthy: 10-30, real-time updates every 5s) |
+| 33 | **Transaction Rate** (1h) | Ledger | Gauge | Transactions per second on the network (1-hour view) |
+| 34 | **Transaction Rate** (24h) | Ledger | Time Series | TPS trend (Low: 5-15, Normal: 15-40, High: 40-100, Spike: >100) |
+| 35 | **UNL Expiry** | Network | Gauge | Days until Validator List (UNL) expires (real-time, updates every 2s) |
+| 36 | **Uptime** | Server | Stat | Time since rippled started (displayed as Xd:Xh:Xm) |
+| 37 | **Validation Rate** (1h) | Validation | Stat | How many validations YOUR validator sends per minute (1-hour view) |
+| 38 | **Validation Rate** (24h) | Validation | Time Series | Your validation rate trend (Healthy: 12-18/min, Low: 10-12/min, Critical: <10/min) |
+| 39 | **Validator CPU Load** | Performance | Time Series | rippled CPU usage (Normal: 5-30%, High: 30-80%, Investigate: >100% sustained) |
+| 40 | **Validations Sent** | Validation | Stat | Validations sent by YOUR validator since rippled restarted (smart counter with restart detection) |
+| 41 | **XRP Fees** | Info | Stat | Network fee information (updates every 5-60s) |
 
-**Total: 40 panels** in the XRPL Validator dashboard row covering all aspects of validator monitoring.
+**Total: 41 panels** in the XRPL Validator dashboard row covering all aspects of validator monitoring.
 
 ---
 
@@ -1237,6 +1240,136 @@ xrpl_pubkey_realtime{instance="validator",pubkey="nHD3hEnshArWJFtFoHtDKbMdoTr1Fy
 ```
 
 **Why this exists**: Same as build_version - avoids VictoriaMetrics stale series showing both old and new pubkey values during key rotation.
+
+### Upgrade Status Metrics
+
+The State Exporter monitors rippled version status by crawling peer versions and checking for amendment blocking. These metrics power the **Rippled** dashboard panel.
+
+### `xrpl_upgrade_status_realtime`
+
+**Type**: Gauge
+**Unit**: Status code (0-3)
+**Source**: State Exporter (calculated from peer crawl + server_info)
+**Port**: 9102
+**Update Frequency**: Every 5 minutes (peer crawl interval)
+
+Combined upgrade status indicating whether your rippled version needs updating.
+
+**Value mapping**:
+
+| Value | Status | Display | Meaning |
+|-------|--------|---------|---------|
+| 0 | Current | ✅ Current | Running current version, no action needed |
+| 1 | Behind | ⚠️ Behind | >60% of peers on newer version, upgrade soon |
+| 2 | Blocked | ⛔ Blocked | Amendment blocked, upgrade required |
+| 3 | Critical | 🚨 Critical | Both behind AND blocked, upgrade immediately |
+
+**Formula**: `upgrade_status = upgrade_recommended + (amendment_blocked × 2)`
+
+**Detection timing**: Status changes may take 5-7 minutes to reflect due to:
+- Peer crawl interval (every 5 minutes)
+- rippled amendment_blocked detection time (can take several minutes after restart)
+
+**Example**:
+```
+xrpl_upgrade_status_realtime{instance="validator"} 0
+```
+
+### `xrpl_amendment_blocked_realtime`
+
+**Type**: Gauge
+**Unit**: Boolean (0 or 1)
+**Source**: State Exporter (from `server_info` API)
+**Port**: 9102
+
+Whether rippled is amendment blocked.
+
+**Values**:
+- `0` = Not blocked - validator operating normally
+- `1` = Blocked - validator non-functional, upgrade required immediately
+
+**What it means**: When an amendment is enabled on the network that your rippled version doesn't support, your node becomes "amendment blocked" and cannot participate in consensus until upgraded.
+
+**Example**:
+```
+xrpl_amendment_blocked_realtime{instance="validator"} 0
+```
+
+### `xrpl_upgrade_recommended_realtime`
+
+**Type**: Gauge
+**Unit**: Boolean (0 or 1)
+**Source**: State Exporter (calculated from peer version comparison)
+**Port**: 9102
+
+Whether an upgrade is recommended based on peer versions.
+
+**Values**:
+- `0` = Current - your version matches majority of peers
+- `1` = Upgrade recommended - >60% of peers running higher version
+
+**Threshold**: The 60% threshold mirrors rippled's internal upgrade notification logic.
+
+**Example**:
+```
+xrpl_upgrade_recommended_realtime{instance="validator"} 0
+```
+
+### `xrpl_peers_higher_version_realtime`
+
+**Type**: Gauge
+**Unit**: Count
+**Source**: State Exporter (from `/crawl` endpoint on port 51235)
+**Port**: 9102
+
+Number of crawled peers running a higher rippled version than yours.
+
+**Example**:
+```
+xrpl_peers_higher_version_realtime{instance="validator"} 0
+```
+
+### `xrpl_peers_higher_version_pct_realtime`
+
+**Type**: Gauge
+**Unit**: Percentage (0-100)
+**Source**: State Exporter (calculated from peer crawl)
+**Port**: 9102
+
+Percentage of crawled peers running a higher rippled version.
+
+**Example**:
+```
+xrpl_peers_higher_version_pct_realtime{instance="validator"} 0.0
+```
+
+### `xrpl_crawl_peer_count_realtime`
+
+**Type**: Gauge
+**Unit**: Count
+**Source**: State Exporter (from `/crawl` endpoint on port 51235)
+**Port**: 9102
+
+Number of peers discovered via the peer crawl endpoint.
+
+**Note**: This may differ from `xrpl_peer_count_realtime` as `/crawl` returns peers visible to the overlay network, not just direct connections.
+
+**Example**:
+```
+xrpl_crawl_peer_count_realtime{instance="validator"} 10
+```
+
+### Upgrade Status Configuration
+
+To enable peer version crawling, set `PEER_CRAWL_PORT` in your `.env` file:
+
+```bash
+PEER_CRAWL_PORT=51235
+```
+
+If not set or set to 0, peer version comparison is disabled and only amendment blocking is monitored.
+
+**Port 51235** is the default rippled peer protocol port where the `/crawl` endpoint is available.
 
 ---
 

@@ -243,7 +243,7 @@ The stack includes safe resource limits to prevent runaway containers:
 | [Alert Configuration Guide](docs/ALERTS.md) | Email/webhook notifications and custom alerts |
 | [Performance Tuning Guide](docs/TUNING.md) | Optimize for your hardware and workload |
 | [Frequently Asked Questions](docs/FAQ.md) | Common questions and troubleshooting |
-| [Metrics Reference](docs/METRICS.md) | Complete metrics documentation (40 panels) |
+| [Metrics Reference](docs/METRICS.md) | Complete metrics documentation (41 panels) |
 | [Release Notes](docs/RELEASE_NOTES.md) | Version history and changelog |
 | [Contributing to XRPL Monitor](docs/CONTRIBUTING.md) | Guidelines for contributing to development |
 | [Cloudflare Deployment Guide](docs/CLOUDFLARE_GUIDE.md) | Public dashboard deployment with Cloudflare |

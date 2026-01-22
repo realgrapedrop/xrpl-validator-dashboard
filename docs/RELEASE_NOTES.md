@@ -1,6 +1,6 @@
 # **__RELEASE NOTES__**
 
-*What's new in XRPL Monitor v3.0 - December 2025.*
+*What's new in XRPL Monitor v3.0 - January 2026.*
 
 ---
 
@@ -49,7 +49,7 @@
 
 - One-command deployment: `sudo ./install.sh`
 - Host networking for easy access to local rippled
-- 14 auto-provisioned alert rules
+- 16 auto-provisioned alert rules
 
 ### Enhanced Dashboard
 
@@ -151,6 +151,48 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 
 # Changelog
 
+### v3.0.4
+
+**Rippled Version Monitoring Panel**:
+
+New "Rippled" panel monitors your rippled version status and alerts when upgrades are needed:
+
+| Status | Display | Meaning |
+|--------|---------|---------|
+| Current | ✅ Current | Running current version, no action needed |
+| Behind | ⚠️ Behind | >60% of peers on newer version, upgrade soon |
+| Blocked | ⛔ Blocked | Amendment blocked, upgrade required |
+| Critical | 🚨 Critical | Behind AND blocked, upgrade immediately |
+
+**How it works**:
+- Crawls peer versions via rippled's `/crawl` endpoint (port 51235)
+- Monitors `amendment_blocked` status from `server_info`
+- Combines both signals: `upgrade_status = upgrade_recommended + (amendment_blocked × 2)`
+- Status changes may take 5-7 minutes due to peer crawl interval and rippled detection time
+
+**New Alert Rules**:
+- **Amendment Blocked**: Fires immediately when rippled is amendment blocked
+- **Upgrade Recommended**: Fires after 30 minutes if >60% of peers on higher version
+
+**Configuration**:
+```bash
+# Add to .env to enable peer version monitoring
+PEER_CRAWL_PORT=51235
+```
+
+**Existing users**: Run `./manage.sh` → Option 10 (Update) after `git pull` to add the new panel.
+
+**Permission Fix for .env File**:
+
+Users who ran `sudo ./install.sh` may have `.env` owned by root, preventing `./manage.sh` from modifying it.
+
+- `manage.sh` now auto-detects root-owned `.env` files
+- Prompts user to fix permissions with a one-time `sudo chown` command
+- `install.sh` now sets `.env` ownership to the user who ran sudo (not root)
+- Fix only runs once - subsequent runs skip if permissions are correct
+
+---
+
 ### v3.0.3
 
 **Automatic Validator Key Detection**:
@@ -218,7 +260,7 @@ Only Grafana settings (password, dashboard customizations) will reset.
 - Official xrpl-py library integration
 - VictoriaMetrics replaces SQLite + Prometheus
 - Docker Compose deployment
-- 14 auto-provisioned alert rules
+- 16 auto-provisioned alert rules
 - 92% reduction in HTTP requests
 - 97% reduction in disk usage
 

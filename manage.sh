@@ -1250,6 +1250,37 @@ update_dashboard_menu() {
     if [ -f .env ]; then
         source .env
     fi
+
+    # Fix .env ownership if not writable (one-time fix for existing installations)
+    if [ -f .env ] && [ ! -w .env ]; then
+        echo ""
+        print_warning ".env file is owned by root and not writable by your user."
+        echo ""
+        echo "  This is a one-time fix to update file permissions so you can run"
+        echo "  manage.sh without sudo in the future. Your sudo password is required."
+        echo ""
+        if sudo chown "$USER:$USER" .env; then
+            print_status "Fixed .env ownership to $USER:$USER"
+            echo "  You will not be asked again."
+            echo ""
+        else
+            print_error "Failed to fix .env ownership. Please run manually:"
+            echo "  sudo chown $USER:$USER .env"
+            echo ""
+        fi
+    fi
+
+    # Add PEER_CRAWL_PORT if not present (new feature for version check)
+    if [ -f .env ] && ! grep -q "^PEER_CRAWL_PORT=" .env; then
+        print_info "Adding PEER_CRAWL_PORT setting for version check feature..."
+        echo "" >> .env
+        echo "# Peer Version Check (polls /crawl endpoint to detect if upgrade needed)" >> .env
+        echo "# Set to 0 to disable, or 51235 (default rippled peer port) to enable" >> .env
+        echo "PEER_CRAWL_PORT=51235" >> .env
+        source .env  # Re-source to pick up new variable
+        print_status "PEER_CRAWL_PORT=51235 added to .env"
+    fi
+
     export NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT:-9100}
     export UPTIME_EXPORTER_PORT=${UPTIME_EXPORTER_PORT:-9101}
     export STATE_EXPORTER_PORT=${STATE_EXPORTER_PORT:-9102}

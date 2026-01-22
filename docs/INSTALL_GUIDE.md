@@ -149,7 +149,7 @@ The installer will:
 4. Auto-detect rippled endpoints
 5. Pull container images
 6. Start all services
-7. Provision Grafana datasource, dashboard, and 14 alert rules
+7. Provision Grafana datasource, dashboard, and 16 alert rules
 
 **Installation time:** < 5 minutes
 

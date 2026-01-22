@@ -127,6 +127,7 @@ services:
       - EXPORTER_PORT=${STATE_EXPORTER_PORT:-9102}
       - INSTANCE_LABEL=validator
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PEER_CRAWL_PORT=${PEER_CRAWL_PORT:-0}
     restart: unless-stopped
     network_mode: "host"
     cpus: "0.1"

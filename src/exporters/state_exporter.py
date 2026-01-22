@@ -30,6 +30,10 @@ import httpx
 HTTP_URL = os.getenv("XRPL_HTTP_URL", "http://localhost:5005")
 POLL_INTERVAL = float(os.getenv("POLL_INTERVAL", "2"))
 PEERS_POLL_INTERVAL = float(os.getenv("PEERS_POLL_INTERVAL", "5"))
+# Peer version crawl (via /crawl endpoint on peer protocol port)
+# Default disabled (port 0), set PEER_CRAWL_PORT to enable (e.g., 51235)
+PEER_CRAWL_PORT = int(os.getenv("PEER_CRAWL_PORT", "0"))
+PEER_CRAWL_INTERVAL = float(os.getenv("PEER_CRAWL_INTERVAL", "300"))  # 5 minutes
 EXPORTER_PORT = int(os.getenv("EXPORTER_PORT", "9103"))
 INSTANCE = os.getenv("INSTANCE_LABEL", "validator")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -75,6 +79,8 @@ current_metrics = {
     'validation_quorum': 0,
     # UNL expiry (days until validator list expires)
     'unl_expiry_days': 0,
+    # Amendment blocked status (critical - validator non-functional if True)
+    'amendment_blocked': 0,
     # Proposers (from consensus_info)
     'proposers': 0,
     # Peer metrics
@@ -83,7 +89,13 @@ current_metrics = {
     'peers_outbound': 0,
     'peers_insane': 0,
     'peer_latency_p90': 0,
-    'peers_timestamp': time.time()
+    'peers_timestamp': time.time(),
+    # Peer version crawl metrics (from /crawl endpoint)
+    'crawl_peer_count': 0,
+    'peers_higher_version': 0,
+    'peers_higher_version_pct': 0.0,
+    'upgrade_recommended': 0,  # 1 if >60% of peers on higher version
+    'crawl_timestamp': 0
 }
 metrics_lock = threading.Lock()
 
@@ -145,6 +157,7 @@ class MetricsHandler(BaseHTTPRequestHandler):
             load_factor = current_metrics['load_factor']
             validation_quorum = current_metrics['validation_quorum']
             unl_expiry_days = current_metrics['unl_expiry_days']
+            amendment_blocked = current_metrics['amendment_blocked']
             proposers = current_metrics['proposers']
             # Peer metrics
             peer_count = current_metrics['peer_count']
@@ -236,6 +249,41 @@ class MetricsHandler(BaseHTTPRequestHandler):
         lines.append('# TYPE xrpl_unl_expiry_days_realtime gauge')
         lines.append(f'xrpl_unl_expiry_days_realtime{{instance="{INSTANCE}"}} {unl_expiry_days}')
 
+        # xrpl_amendment_blocked_realtime (CRITICAL - 1 means validator is non-functional)
+        lines.append('# HELP xrpl_amendment_blocked_realtime Amendment blocked status (1=blocked, 0=ok)')
+        lines.append('# TYPE xrpl_amendment_blocked_realtime gauge')
+        lines.append(f'xrpl_amendment_blocked_realtime{{instance="{INSTANCE}"}} {amendment_blocked}')
+
+        # === Version upgrade metrics (from /crawl endpoint) ===
+        with metrics_lock:
+            crawl_peer_count = current_metrics['crawl_peer_count']
+            peers_higher_version = current_metrics['peers_higher_version']
+            peers_higher_version_pct = current_metrics['peers_higher_version_pct']
+            upgrade_recommended = current_metrics['upgrade_recommended']
+
+        if PEER_CRAWL_PORT > 0:
+            lines.append('# HELP xrpl_crawl_peer_count_realtime Number of peers from /crawl endpoint')
+            lines.append('# TYPE xrpl_crawl_peer_count_realtime gauge')
+            lines.append(f'xrpl_crawl_peer_count_realtime{{instance="{INSTANCE}"}} {crawl_peer_count}')
+
+            lines.append('# HELP xrpl_peers_higher_version_realtime Number of peers running higher rippled version')
+            lines.append('# TYPE xrpl_peers_higher_version_realtime gauge')
+            lines.append(f'xrpl_peers_higher_version_realtime{{instance="{INSTANCE}"}} {peers_higher_version}')
+
+            lines.append('# HELP xrpl_peers_higher_version_pct_realtime Percentage of peers running higher rippled version')
+            lines.append('# TYPE xrpl_peers_higher_version_pct_realtime gauge')
+            lines.append(f'xrpl_peers_higher_version_pct_realtime{{instance="{INSTANCE}"}} {peers_higher_version_pct}')
+
+            lines.append('# HELP xrpl_upgrade_recommended_realtime Upgrade recommended (1 if >60% of peers on higher version)')
+            lines.append('# TYPE xrpl_upgrade_recommended_realtime gauge')
+            lines.append(f'xrpl_upgrade_recommended_realtime{{instance="{INSTANCE}"}} {upgrade_recommended}')
+
+            # Pre-computed version status: 0=Current, 1=Behind, 2=Blocked
+            version_status = upgrade_recommended + (amendment_blocked * 2)
+            lines.append('# HELP xrpl_upgrade_status_realtime Upgrade status (0=Current, 1=Behind, 2=Blocked, 3=Critical)')
+            lines.append('# TYPE xrpl_upgrade_status_realtime gauge')
+            lines.append(f'xrpl_upgrade_status_realtime{{instance="{INSTANCE}"}} {version_status}')
+
         # === Peer metrics ===
         # xrpl_peer_count_realtime
         lines.append('# HELP xrpl_peer_count_realtime Real-time total peer count')
@@ -293,6 +341,7 @@ class MetricsHandler(BaseHTTPRequestHandler):
             load_factor = current_metrics['load_factor']
             validation_quorum = current_metrics['validation_quorum']
             unl_expiry_days = current_metrics['unl_expiry_days']
+            amendment_blocked = current_metrics['amendment_blocked']
             proposers = current_metrics['proposers']
             # Peer metrics
             peer_count = current_metrics['peer_count']
@@ -488,6 +537,67 @@ class MetricsHandler(BaseHTTPRequestHandler):
                 },
                 "value": [timestamp, str(unl_expiry_days)]
             })
+        elif 'xrpl_amendment_blocked_realtime' in query:
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_amendment_blocked_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(amendment_blocked)]
+            })
+        # === Version upgrade metrics ===
+        elif 'xrpl_crawl_peer_count_realtime' in query:
+            with metrics_lock:
+                crawl_peer_count = current_metrics['crawl_peer_count']
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_crawl_peer_count_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(crawl_peer_count)]
+            })
+        elif 'xrpl_peers_higher_version_realtime' in query:
+            with metrics_lock:
+                peers_higher_version = current_metrics['peers_higher_version']
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_peers_higher_version_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(peers_higher_version)]
+            })
+        elif 'xrpl_peers_higher_version_pct_realtime' in query:
+            with metrics_lock:
+                peers_higher_version_pct = current_metrics['peers_higher_version_pct']
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_peers_higher_version_pct_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(peers_higher_version_pct)]
+            })
+        elif 'xrpl_upgrade_recommended_realtime' in query:
+            with metrics_lock:
+                upgrade_recommended = current_metrics['upgrade_recommended']
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_upgrade_recommended_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(upgrade_recommended)]
+            })
+        elif 'xrpl_upgrade_status_realtime' in query:
+            with metrics_lock:
+                upgrade_recommended = current_metrics['upgrade_recommended']
+                amendment_blocked = current_metrics['amendment_blocked']
+            upgrade_status = upgrade_recommended + (amendment_blocked * 2)
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_upgrade_status_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(upgrade_status)]
+            })
         else:
             # Unknown metric - return empty result
             pass
@@ -530,7 +640,8 @@ async def fetch_server_state(client: httpx.AsyncClient) -> dict:
         'reserve_inc_xrp': 0,
         'load_factor': 0,
         'validation_quorum': 0,
-        'unl_expiry_days': 0
+        'unl_expiry_days': 0,
+        'amendment_blocked': 0
     }
 
     try:
@@ -588,6 +699,11 @@ async def fetch_server_state(client: httpx.AsyncClient) -> dict:
                     except Exception as e:
                         logger.debug(f"Error parsing validator_list expiration: {e}")
 
+                # Extract amendment_blocked status (CRITICAL - validator non-functional if True)
+                # This field appears in server_info when the server is running old software
+                # and a new amendment has been enabled that it doesn't understand
+                amendment_blocked = 1 if info.get('amendment_blocked', False) else 0
+
                 return {
                     'server_state': server_state,
                     'state_value': state_value,
@@ -600,7 +716,8 @@ async def fetch_server_state(client: httpx.AsyncClient) -> dict:
                     'reserve_inc_xrp': reserve_inc_xrp,
                     'load_factor': load_factor,
                     'validation_quorum': validation_quorum,
-                    'unl_expiry_days': unl_expiry_days
+                    'unl_expiry_days': unl_expiry_days,
+                    'amendment_blocked': amendment_blocked
                 }
             else:
                 logger.warning(f"Unexpected response format: {data}")
@@ -728,6 +845,162 @@ async def fetch_consensus_info(client: httpx.AsyncClient) -> dict:
         return None
 
 
+def parse_version(version_str: str) -> tuple:
+    """
+    Parse rippled version string into comparable tuple.
+
+    Examples:
+        "rippled-2.3.0" -> (2, 3, 0, '')
+        "rippled-2.3.0-rc1" -> (2, 3, 0, 'rc1')
+        "2.3.0" -> (2, 3, 0, '')
+
+    Returns tuple (major, minor, patch, prerelease) for comparison.
+    """
+    # Remove "rippled-" prefix if present
+    if version_str.startswith('rippled-'):
+        version_str = version_str[8:]
+
+    # Handle pre-release versions (e.g., 2.3.0-rc1)
+    prerelease = ''
+    if '-' in version_str:
+        version_str, prerelease = version_str.split('-', 1)
+
+    try:
+        parts = version_str.split('.')
+        major = int(parts[0]) if len(parts) > 0 else 0
+        minor = int(parts[1]) if len(parts) > 1 else 0
+        patch = int(parts[2]) if len(parts) > 2 else 0
+        return (major, minor, patch, prerelease)
+    except (ValueError, IndexError):
+        return (0, 0, 0, '')
+
+
+def compare_versions(v1: tuple, v2: tuple) -> int:
+    """
+    Compare two version tuples.
+
+    Returns:
+        -1 if v1 < v2
+         0 if v1 == v2
+         1 if v1 > v2
+
+    Pre-release versions are considered lower than release versions:
+    (2, 3, 0, 'rc1') < (2, 3, 0, '')
+    """
+    # Compare major, minor, patch
+    for i in range(3):
+        if v1[i] < v2[i]:
+            return -1
+        if v1[i] > v2[i]:
+            return 1
+
+    # Same major.minor.patch - compare prerelease
+    # Empty prerelease = release version (higher)
+    # Non-empty prerelease = pre-release (lower)
+    if v1[3] == '' and v2[3] != '':
+        return 1  # v1 is release, v2 is pre-release
+    if v1[3] != '' and v2[3] == '':
+        return -1  # v1 is pre-release, v2 is release
+    if v1[3] < v2[3]:
+        return -1
+    if v1[3] > v2[3]:
+        return 1
+    return 0
+
+
+async def fetch_peer_versions(client: httpx.AsyncClient) -> dict:
+    """
+    Fetch peer versions from rippled /crawl endpoint.
+
+    The /crawl endpoint exposes connected peer information including their
+    rippled versions. This is used to detect when an upgrade may be needed.
+
+    Returns:
+        dict with keys: peer_versions (list of version strings), peer_count
+        Returns None if endpoint not accessible
+    """
+    if PEER_CRAWL_PORT == 0:
+        return None  # Peer crawl disabled
+
+    # Parse HTTP_URL to get host
+    parsed = urlparse(HTTP_URL)
+    host = parsed.hostname or 'localhost'
+    crawl_url = f"https://{host}:{PEER_CRAWL_PORT}/crawl"
+
+    try:
+        # /crawl endpoint uses HTTPS with self-signed cert
+        response = await client.get(
+            crawl_url,
+            timeout=30.0,
+            follow_redirects=True
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Extract peer versions from overlay.active
+            overlay = data.get('overlay', {})
+            active_peers = overlay.get('active', [])
+
+            versions = []
+            for peer in active_peers:
+                version = peer.get('version', '')
+                if version:
+                    versions.append(version)
+
+            return {
+                'peer_versions': versions,
+                'peer_count': len(versions)
+            }
+        else:
+            logger.warning(f"/crawl endpoint returned {response.status_code}")
+            return None
+
+    except httpx.ConnectError:
+        logger.debug(f"/crawl endpoint not reachable at {crawl_url}")
+        return None
+    except httpx.TimeoutException:
+        logger.warning(f"/crawl endpoint timeout at {crawl_url}")
+        return None
+    except Exception as e:
+        logger.debug(f"Error fetching /crawl: {e}")
+        return None
+
+
+def calculate_upgrade_status(my_version: str, peer_versions: list) -> dict:
+    """
+    Calculate upgrade recommendation based on peer versions.
+
+    If >60% of peers are running a higher version, an upgrade is recommended.
+
+    Returns:
+        dict with keys: peers_higher, peers_higher_pct, upgrade_recommended
+    """
+    if not my_version or not peer_versions:
+        return {
+            'peers_higher': 0,
+            'peers_higher_pct': 0.0,
+            'upgrade_recommended': 0
+        }
+
+    my_parsed = parse_version(my_version)
+    peers_higher = 0
+
+    for peer_version in peer_versions:
+        peer_parsed = parse_version(peer_version)
+        if compare_versions(my_parsed, peer_parsed) < 0:
+            peers_higher += 1
+
+    peers_higher_pct = (peers_higher / len(peer_versions) * 100) if peer_versions else 0.0
+    upgrade_recommended = 1 if peers_higher_pct > 60 else 0
+
+    return {
+        'peers_higher': peers_higher,
+        'peers_higher_pct': round(peers_higher_pct, 1),
+        'upgrade_recommended': upgrade_recommended
+    }
+
+
 # Track last state for change detection
 last_state = None
 last_peer_count = None
@@ -762,6 +1035,7 @@ async def run_state_polling_loop(client: httpx.AsyncClient):
                 load_factor = server_result.get('load_factor', 0)
                 validation_quorum = server_result.get('validation_quorum', 0)
                 unl_expiry_days = server_result.get('unl_expiry_days', 0)
+                amendment_blocked = server_result.get('amendment_blocked', 0)
 
                 # Proposers from consensus_info
                 proposers = consensus_result.get('proposers', 0) if consensus_result else 0
@@ -789,6 +1063,7 @@ async def run_state_polling_loop(client: httpx.AsyncClient):
                     current_metrics['load_factor'] = load_factor
                     current_metrics['validation_quorum'] = validation_quorum
                     current_metrics['unl_expiry_days'] = unl_expiry_days
+                    current_metrics['amendment_blocked'] = amendment_blocked
                     current_metrics['proposers'] = proposers
                     current_metrics['timestamp'] = time.time()
 
@@ -844,13 +1119,80 @@ async def run_peers_polling_loop(client: httpx.AsyncClient):
             await asyncio.sleep(PEERS_POLL_INTERVAL)
 
 
+async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
+    """Poll rippled /crawl endpoint for peer versions every PEER_CRAWL_INTERVAL seconds"""
+    global current_metrics
+
+    if PEER_CRAWL_PORT == 0:
+        logger.info("Peer version crawl disabled (PEER_CRAWL_PORT=0)")
+        return
+
+    logger.info(f"Starting peer version crawl loop: port {PEER_CRAWL_PORT} every {PEER_CRAWL_INTERVAL}s")
+
+    # Wait for build_version to be populated by state polling loop
+    # (prevents race condition on startup)
+    while True:
+        with metrics_lock:
+            my_version = current_metrics['build_version']
+        if my_version:
+            logger.info(f"Peer version crawl ready: our version is {my_version}")
+            break
+        await asyncio.sleep(2)
+
+    # Create a separate client with SSL verification disabled for /crawl endpoint
+    async with httpx.AsyncClient(verify=False) as crawl_client:
+        while True:
+            try:
+                # Get our current version
+                with metrics_lock:
+                    my_version = current_metrics['build_version']
+
+                # Fetch peer versions from /crawl endpoint
+                result = await fetch_peer_versions(crawl_client)
+
+                if result and my_version:
+                    # Calculate upgrade status
+                    upgrade_info = calculate_upgrade_status(my_version, result['peer_versions'])
+
+                    # Update global metrics (thread-safe)
+                    with metrics_lock:
+                        current_metrics['crawl_peer_count'] = result['peer_count']
+                        current_metrics['peers_higher_version'] = upgrade_info['peers_higher']
+                        current_metrics['peers_higher_version_pct'] = upgrade_info['peers_higher_pct']
+                        current_metrics['upgrade_recommended'] = upgrade_info['upgrade_recommended']
+                        current_metrics['crawl_timestamp'] = time.time()
+
+                    # Log if upgrade is recommended
+                    if upgrade_info['upgrade_recommended']:
+                        logger.warning(
+                            f"Upgrade recommended: {upgrade_info['peers_higher_pct']:.1f}% of "
+                            f"{result['peer_count']} peers running higher version than {my_version}"
+                        )
+                    else:
+                        logger.debug(
+                            f"Version check: {upgrade_info['peers_higher']} of "
+                            f"{result['peer_count']} peers on higher version "
+                            f"({upgrade_info['peers_higher_pct']:.1f}%)"
+                        )
+
+                await asyncio.sleep(PEER_CRAWL_INTERVAL)
+
+            except Exception as e:
+                logger.error(f"Error in peer version crawl loop: {e}", exc_info=True)
+                await asyncio.sleep(PEER_CRAWL_INTERVAL)
+
+
 async def run_polling_loops():
-    """Run both state and peers polling loops concurrently"""
+    """Run state, peers, and peer version crawl polling loops concurrently"""
     async with httpx.AsyncClient() as client:
-        await asyncio.gather(
+        tasks = [
             run_state_polling_loop(client),
             run_peers_polling_loop(client)
-        )
+        ]
+        # Only add peer version crawl if enabled
+        if PEER_CRAWL_PORT > 0:
+            tasks.append(run_peer_version_crawl_loop(client))
+        await asyncio.gather(*tasks)
 
 
 def run_http_server():

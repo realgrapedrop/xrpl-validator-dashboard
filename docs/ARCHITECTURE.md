@@ -877,6 +877,7 @@ Tested with simulated rippled failure (stopped container):
 - `xrpl_state_realtime{instance="validator",state="..."}` - Per-state gauge (1=current, 0=other)
 - `xrpl_build_version_realtime{instance="validator",version="..."}` - Current rippled version (always 1)
 - `xrpl_pubkey_realtime{instance="validator",pubkey="..."}` - Validator public key (always 1)
+- `xrpl_amendment_blocked_realtime{instance="validator"}` - Amendment blocked status (0=ok, 1=blocked)
 
 *Peer metrics (5s polling):*
 - `xrpl_peer_count_realtime{instance="validator"}` - Total connected peers
@@ -884,6 +885,13 @@ Tested with simulated rippled failure (stopped container):
 - `xrpl_peers_outbound_realtime{instance="validator"}` - Outbound peer connections
 - `xrpl_peers_insane_realtime{instance="validator"}` - Peers on wrong fork
 - `xrpl_peer_latency_p90_realtime{instance="validator"}` - P90 peer latency (ms)
+
+*Upgrade status metrics (5min peer crawl):*
+- `xrpl_upgrade_status_realtime{instance="validator"}` - Combined status (0=Current, 1=Behind, 2=Blocked, 3=Critical)
+- `xrpl_upgrade_recommended_realtime{instance="validator"}` - Upgrade recommended (1 if >60% peers ahead)
+- `xrpl_peers_higher_version_realtime{instance="validator"}` - Count of peers on higher version
+- `xrpl_peers_higher_version_pct_realtime{instance="validator"}` - Percentage of peers on higher version
+- `xrpl_crawl_peer_count_realtime{instance="validator"}` - Peers discovered via /crawl endpoint
 
 **State Value Mapping:**
 | State | Value | Description |
