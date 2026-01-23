@@ -893,6 +893,11 @@ Tested with simulated rippled failure (stopped container):
 - `xrpl_peers_higher_version_pct_realtime{instance="validator"}` - Percentage of peers on higher version
 - `xrpl_crawl_peer_count_realtime{instance="validator"}` - Peers discovered via /crawl endpoint
 
+*UNL Health metrics (60s polling):*
+- `xrpl_cert_expiry_days_realtime{instance="validator",url="..."}` - Days until UNL publisher SSL cert expires
+- `xrpl_unl_status_active_realtime{instance="validator"}` - Whether cached UNL is active (1=active, 0=inactive)
+- `xrpl_unl_expiry_days_realtime{instance="validator"}` - Days until cached UNL expires
+
 **State Value Mapping:**
 | State | Value | Description |
 |-------|-------|-------------|

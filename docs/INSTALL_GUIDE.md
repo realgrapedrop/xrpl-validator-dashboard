@@ -308,16 +308,18 @@ The `manage.sh` script is your primary tool for managing XRPL Monitor—includin
 
 ### Customizing Ports
 
-Edit `.env` to change ports:
+Edit `.env` to change ports (defaults shown):
 
 ```bash
-GRAFANA_PORT=3003
-NODE_EXPORTER_PORT=9104
-STATE_EXPORTER_PORT=9103
+GRAFANA_PORT=3000
 VICTORIA_METRICS_PORT=8428
+NODE_EXPORTER_PORT=9100
+UPTIME_EXPORTER_PORT=9101
+STATE_EXPORTER_PORT=9102
+COLLECTOR_PORT=8090
 ```
 
-Apply changes with `./manage.sh` → option 10 "Apply Updates".
+Apply changes with `./manage.sh` → option 10 "Update Dashboard".
 
 ### Upgrading Components
 

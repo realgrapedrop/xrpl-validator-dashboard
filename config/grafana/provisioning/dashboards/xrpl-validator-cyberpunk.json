@@ -55,7 +55,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Upgrade status based on peer version comparison and amendment_blocked flag.\n\nStatus levels:\n\n✅ Current: Running current version, no action needed\n\n⚠️ Behind: Newer version available, upgrade soon\n\n⛔ Blocked: Amendment blocked, upgrade required\n\n🚨 Critical: Blocked and behind, upgrade immediately\n\nNote: Status changes may take 5-7 minutes to reflect due to peer crawl interval and rippled detection time.",
+      "description": "Rippled version and amendment status.\n\nStates:\n- 🟢 Current: running latest version\n- 🟡 Behind: newer version available\n- 🟠 Blocked: amendment blocked\n- 🔴 Critical: blocked and behind",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -94,7 +94,7 @@
             "steps": [
               {
                 "color": "#00FFFF",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#FFAA00",
@@ -164,7 +164,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Overall health of the monitoring system state management. Checks if state backups are functioning and critical metrics are being persisted. 0=Failed,\n  0.5=Degraded, 1=OK.",
+      "description": "Overall monitoring system health.\n\nStates:\n- 🟢 OK: state backups working\n- 🟡 Degraded: partial functionality\n- 🔴 Failed: state management down",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -239,7 +239,7 @@
           "exemplar": false,
           "expr": "xrpl_state_health",
           "instant": true,
-          "legendFormat": "Health:",
+          "legendFormat": "Monitor Health:",
           "range": false,
           "refId": "A"
         }
@@ -252,7 +252,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "WebSocket connection health to rippled. Monitors heartbeat (ping every 30s), connection status, and auto-reconnection. If unhealthy, automatic\n  reconnection will attempt to restore connection.",
+      "description": "WebSocket connection to rippled.\n\nStates:\n- 🟢 Healthy: connected, heartbeat OK\n- 🔴 Down: connection failed\n- 🔴 Lost: no heartbeat response",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -354,7 +354,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "HTTP JSON-RPC connection health to rippled. Monitors uptime exporter scraping rippled's HTTP endpoint every 5 seconds. Detects failures within 3-6\n  seconds.",
+      "description": "HTTP JSON-RPC connection to rippled.\n\nStates:\n- 🟢 Healthy: endpoint responding\n- 🔴 Unhealthy: endpoint unreachable",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -445,7 +445,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Python collector process health. Monitors if the main monitoring application (main.py) is running and emitting metrics every 30 seconds. Container crash\n   or stop detected immediately.",
+      "description": "Python collector process health.\n\nStates:\n- 🟢 Healthy: emitting metrics\n- 🔴 Unhealthy: process stopped",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -536,7 +536,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Data collection status based on rippled state.\n\n• Streaming: rippled is fully synced and producing data\n• Syncing: rippled is starting up and syncing with the network\n• No Stream: rippled is not responding or collector is down",
+      "description": "Connection status between monitor and rippled.\n\nStates:\n- 🟢 Streaming: data flowing\n- 🟡 Syncing: catching up\n- 🔴 No Stream: disconnected",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -546,47 +546,47 @@
             {
               "options": {
                 "from": 0,
-                "to": 1,
                 "result": {
                   "color": "#9D00FF",
                   "index": 0,
                   "text": "No Stream"
-                }
+                },
+                "to": 1
               },
               "type": "range"
             },
             {
               "options": {
                 "from": 2,
-                "to": 4,
                 "result": {
                   "color": "#00FFFF",
                   "index": 1,
                   "text": "Syncing"
-                }
+                },
+                "to": 4
               },
               "type": "range"
             },
             {
               "options": {
                 "from": 5,
-                "to": 7,
                 "result": {
                   "color": "#FF00FF",
                   "index": 2,
                   "text": "Streaming"
-                }
+                },
+                "to": 7
               },
               "type": "range"
             }
           ],
-          "noValue": "Data Collection: No Stream",
+          "noValue": "Connection: No Stream",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "#9D00FF",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#00FFFF",
@@ -636,7 +636,7 @@
           "exemplar": false,
           "expr": "xrpl_state_realtime_value",
           "instant": true,
-          "legendFormat": "Data Collection:",
+          "legendFormat": "Connection:",
           "range": false,
           "refId": "A"
         }
@@ -649,7 +649,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "VictoriaMetrics database health. Verifies database can respond to queries and store metrics. If down, all dashboard panels will show 'No data'.",
+      "description": "VictoriaMetrics database health.\n\nStates:\n- 🟢 Healthy: queries responding\n- 🔴 Unhealthy: database offline",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2132,7 +2132,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 3,
         "x": 9,
         "y": 7
@@ -2153,7 +2153,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 35
+          "valueSize": 30
         },
         "textMode": "value",
         "wideLayout": true
@@ -2224,8 +2224,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 6,
+        "h": 2,
+        "w": 8,
         "x": 12,
         "y": 7
       },
@@ -2313,9 +2313,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
-        "w": 6,
-        "x": 18,
+        "h": 2,
+        "w": 4,
+        "x": 20,
         "y": 7
       },
       "id": 395,
@@ -2338,7 +2338,7 @@
         "showPercentChange": false,
         "text": {
           "titleSize": 12,
-          "valueSize": 20
+          "valueSize": 18
         },
         "textMode": "value_and_name",
         "wideLayout": true
@@ -2354,7 +2354,7 @@
           "exemplar": false,
           "expr": "xrpl_base_fee_xrp_realtime",
           "instant": true,
-          "legendFormat": "Base Fee",
+          "legendFormat": "Base",
           "range": false,
           "refId": "A"
         },
@@ -2368,7 +2368,7 @@
           "expr": "xrpl_reserve_base_xrp_realtime",
           "hide": false,
           "instant": true,
-          "legendFormat": "Reserve Base",
+          "legendFormat": "Reserve",
           "range": false,
           "refId": "B"
         },
@@ -2382,13 +2382,470 @@
           "expr": "xrpl_reserve_inc_xrp_realtime",
           "hide": false,
           "instant": true,
-          "legendFormat": "Reserve Increment",
+          "legendFormat": "Increment",
           "range": false,
           "refId": "C"
         }
       ],
       "title": "XRP Fees",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "state-exporter"
+      },
+      "description": "Connected peer counts.\n\nTotal = Outbound + Inbound",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#FF00FF",
+            "mode": "fixed"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "green",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 9,
+        "y": 9
+      },
+      "id": 500,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "top",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 18
+        },
+        "valueMode": "text"
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_peer_count_realtime",
+          "instant": true,
+          "legendFormat": "Total",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_peers_outbound_realtime",
+          "instant": true,
+          "legendFormat": "Outbound",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_peers_inbound_realtime",
+          "instant": true,
+          "legendFormat": "Inbound",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "Peer Count",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "state-exporter"
+      },
+      "description": "Days until SSL certificate or UNL content expires.\n\nStates:\n- 🟢 Green: >60 days (healthy)\n- 🟡 Yellow: 30-60 days (plan renewal)\n- 🔴 Red: <30 days (urgent)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00FFFF",
+            "mode": "fixed"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "max": 365,
+          "min": 0,
+          "noValue": "-",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "green",
+                "value": 60
+              }
+            ]
+          },
+          "unit": "suffix:d"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": []
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 14,
+        "y": 9
+      },
+      "id": 380,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "top",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 18
+        },
+        "valueMode": "text"
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_cert_expiry_days_realtime{url=\"unl.xrplf.org\"}",
+          "instant": true,
+          "legendFormat": "unl.xrplf.org",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_cert_expiry_days_realtime{url=\"vl.ripple.com\"}",
+          "instant": true,
+          "legendFormat": "vl.ripple.com",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_unl_expiry_days_realtime",
+          "instant": true,
+          "legendFormat": "Me",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "UNL Health",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Network activity metrics: ledger freshness, fee pressure, and throughput.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#00FF00",
+            "mode": "fixed"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ledger Age"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "max",
+                "value": 10
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 5
+                    },
+                    {
+                      "color": "red",
+                      "value": 8
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Load Factor"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "max",
+                "value": 1000
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 100
+                    },
+                    {
+                      "color": "red",
+                      "value": 500
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tx Rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "suffix: tps"
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 19,
+        "y": 9
+      },
+      "id": 502,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "top",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 18
+        },
+        "valueMode": "text"
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_ledger_age_realtime",
+          "instant": true,
+          "legendFormat": "Ledger Age",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_load_factor_realtime",
+          "instant": true,
+          "legendFormat": "Load Factor",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_transaction_rate",
+          "instant": true,
+          "legendFormat": "Tx Rate",
+          "range": false,
+          "refId": "C"
+        }
+      ],
+      "title": "Network Activity",
+      "type": "bargauge"
     },
     {
       "datasource": {
@@ -2420,7 +2877,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 0,
         "y": 10
@@ -2506,7 +2963,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 3,
         "y": 10
@@ -2571,16 +3028,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#9D00FF",
+                "color": "#FF00FF",
                 "value": 0
               },
               {
-                "color": "#FF00FF",
-                "value": 10
-              },
-              {
-                "color": "#FF00FF",
-                "value": 12
+                "color": "#9D00FF",
+                "value": 80
               }
             ]
           },
@@ -2589,7 +3042,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 6,
         "y": 10
@@ -2635,408 +3088,6 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Seconds since the last validated ledger closed. Should reset to 0 every 3-4 seconds as new ledgers close. High values indicate your validator may be falling behind the network.\n\nThresholds:\n- Green: ≤10 seconds\n- Yellow: 10-30 seconds\n- Red: >30 seconds",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "max": 60,
-          "min": 0,
-          "noValue": "Stale",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 10
-              },
-              {
-                "color": "#FF00FF",
-                "value": 30
-              },
-              {
-                "color": "#9D00FF",
-                "value": 31
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 9,
-        "y": 10
-      },
-      "id": 348,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_ledger_age_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Ledger Age",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Server load multiplier affecting transaction fees. 1.0 is normal baseline. High values indicate the server is under stress and may reject transactions or increase fees.\n\nThresholds:\n- Green: <100 (1.0x multiplier)\n- Yellow: 100-499 (1-5x multiplier)\n- Red: ≥500 (5x+ multiplier)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "max": 1000,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 100
-              },
-              {
-                "color": "#9D00FF",
-                "value": 500
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 12,
-        "y": 10
-      },
-      "id": 356,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_load_factor_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Load Factor",
-      "transformations": [
-        {
-          "id": "regression",
-          "options": {
-            "algorithm": "linear",
-            "order": 1,
-            "seriesCountMax": 0
-          }
-        }
-      ],
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Rate of peer disconnections per second. Some churn is normal as peers rotate. Sustained high rates indicate network instability, firewall issues, or connectivity problems.\n\nThresholds:\n- Green: <0.1/sec\n- Red: ≥0.1/sec",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 3,
-          "mappings": [],
-          "max": 0.15,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 0.1
-              },
-              {
-                "color": "#9D00FF",
-                "value": 0.12
-              }
-            ]
-          },
-          "unit": "ops"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 15,
-        "y": 10
-      },
-      "id": 390,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(xrpl_peer_disconnects_total[5m])",
-          "instant": true,
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Peer Disconnects",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Ledger DB size as percentage of root filesystem. Based on actual disk capacity for universal thresholds.\n\nThresholds:\n- Green: <60%\n- Yellow: 60-80%\n- Red: >80%",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 60
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 18,
-        "y": 10
-      },
-      "id": 381,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_ledger_db_bytes / on() node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Ledger DB",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "NuDB ledger database size as percentage of root filesystem. Based on actual disk capacity for universal thresholds.\n\nThresholds:\n- Green: <60%\n- Yellow: 60-80%\n- Red: >80%",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 60
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 21,
-        "y": 10
-      },
-      "id": 382,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_ledger_nudb_bytes / on() node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Ledger NuDB",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
         "uid": "victoria"
       },
       "description": "Percentage of ledgers where your validator agreed with network consensus in the last hour. More sensitive to recent issues than the 24h metric.\n\nThresholds:\n- Green: ≥98%\n- Yellow: 95-97%\n- Red: <95%",
@@ -3065,10 +3116,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 0,
-        "y": 14
+        "y": 13
       },
       "hideTimeOverride": true,
       "id": 341,
@@ -3139,10 +3190,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 3,
-        "y": 14
+        "y": 13
       },
       "hideTimeOverride": true,
       "id": 371,
@@ -3161,7 +3212,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 55
+          "valueSize": 50
         },
         "textMode": "auto",
         "wideLayout": true
@@ -3228,10 +3279,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 6,
-        "y": 14
+        "y": 13
       },
       "hideTimeOverride": true,
       "id": 344,
@@ -3250,7 +3301,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 55
+          "valueSize": 50
         },
         "textMode": "auto",
         "wideLayout": true
@@ -3277,55 +3328,93 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
+        "type": "datasource",
+        "uid": "-- Mixed --"
       },
-      "description": "Total number of peer rippled servers connected to your validator. Healthy validators typically maintain 21+ peers for reliable network participation.\n\nThresholds:\n- Green: ≥21 peers\n- Yellow: 19-20 peers\n- Red: <19 peers",
+      "description": "Peer connection health metrics.\n\n- Insane: peers with invalid data\n- Latency: P90 peer latency\n- Disconnects: count in last 5 min",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "#BF00FF",
+            "mode": "fixed"
           },
           "decimals": 0,
           "mappings": [],
-          "max": 100,
           "min": 0,
-          "noValue": "-",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#9D00FF",
+                "color": "green",
                 "value": 0
               },
               {
-                "color": "#9D00FF",
-                "value": 10
+                "color": "yellow",
+                "value": 1
               },
               {
-                "color": "#FF00FF",
-                "value": 19
+                "color": "dark-red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Latency"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
               },
               {
-                "color": "#FF00FF",
-                "value": 21
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 300
+                    },
+                    {
+                      "color": "dark-red",
+                      "value": 500
+                    }
+                  ]
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "gridPos": {
-        "h": 4,
-        "w": 3,
+        "h": 5,
+        "w": 5,
         "x": 9,
         "y": 14
       },
-      "id": 350,
+      "id": 501,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "top",
+        "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -3333,249 +3422,13 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
+        "showUnfilled": true,
         "sizing": "auto",
-        "text": {}
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_peer_count_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Total Peers",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Peers your validator actively connected TO. Your validator initiates and maintains these outbound connections. Important for network resilience.\n\nThresholds:\n- Green: ≥6 peers\n- Yellow: 5 peers\n- Red: <5 peers",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "max": 50,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#9D00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 2
-              },
-              {
-                "color": "#FF00FF",
-                "value": 5
-              },
-              {
-                "color": "#FF00FF",
-                "value": 6
-              }
-            ]
-          }
+        "text": {
+          "titleSize": 14,
+          "valueSize": 18
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 12,
-        "y": 14
-      },
-      "id": 354,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_peers_outbound_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Outbound Peers",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Peers that connected TO your validator. Higher inbound counts indicate your validator is well-connected and discoverable on the network.\n\nThresholds:\n- Green: ≥6 peers\n- Yellow: 5 peers\n- Red: <5 peers",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "max": 50,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#9D00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 2
-              },
-              {
-                "color": "#FF00FF",
-                "value": 5
-              },
-              {
-                "color": "#FF00FF",
-                "value": 6
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 15,
-        "y": 14
-      },
-      "id": 355,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_peers_inbound_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Inbound Peers",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Peers on a different ledger chain (wrong network fork). Usually 0-3 during normal operation. High counts may indicate a network split, misconfigured peers, or testnet connections.\n\nThresholds:\n- Green: <10 peers\n- Yellow: 10-19 peers\n- Red: ≥20 peers",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "max": 50,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 10
-              },
-              {
-                "color": "#9D00FF",
-                "value": 20
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 18,
-        "y": 14
-      },
-      "id": 383,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "valueMode": "text"
       },
       "pluginVersion": "12.3.0",
       "targets": [
@@ -3588,20 +3441,46 @@
           "exemplar": false,
           "expr": "xrpl_peers_insane_realtime",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "Insane",
           "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_peer_latency_p90_realtime",
+          "instant": true,
+          "legendFormat": "Latency",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_peer_disconnects_total",
+          "instant": true,
+          "legendFormat": "Disconnects",
+          "range": false,
+          "refId": "C"
         }
       ],
-      "title": "Insane Peers",
-      "type": "gauge"
+      "title": "Peer Health",
+      "type": "bargauge"
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
+        "type": "datasource",
+        "uid": "-- Mixed --"
       },
-      "description": "Network latency to connected peers (P90 - 90th percentile). More reliable than average as it filters out the slowest 10% outliers. Lower latency improves consensus participation.\n\nThresholds:\n- Green: <400ms\n- Yellow: 400-500ms\n- Red: >500ms",
+      "description": "Consensus metrics: validators proposing, votes needed, and converge time.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3609,9 +3488,6 @@
           },
           "decimals": 0,
           "mappings": [],
-          "max": 1000,
-          "min": 0,
-          "noValue": "-",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3621,33 +3497,154 @@
               },
               {
                 "color": "#FF00FF",
-                "value": 400
+                "value": 3
               },
               {
                 "color": "#FF00FF",
-                "value": 500
+                "value": 6
               },
               {
                 "color": "#9D00FF",
-                "value": 501
+                "value": 7
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Proposers"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "max",
+                "value": 40
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 25
+                    },
+                    {
+                      "color": "green",
+                      "value": 30
+                    }
+                  ]
+                }
               }
             ]
           },
-          "unit": "ms"
-        },
-        "overrides": []
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Quorum"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "max",
+                "value": 40
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 20
+                    },
+                    {
+                      "color": "green",
+                      "value": 25
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Consensus"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "max",
+                "value": 10
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 5
+                    },
+                    {
+                      "color": "red",
+                      "value": 8
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 21,
+        "h": 5,
+        "w": 5,
+        "x": 14,
         "y": 14
       },
-      "id": 349,
+      "id": 503,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "top",
+        "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -3655,9 +3652,13 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 18
+        },
+        "valueMode": "text"
       },
       "pluginVersion": "12.3.0",
       "targets": [
@@ -3668,25 +3669,145 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "xrpl_peer_latency_p90_realtime",
+          "expr": "xrpl_proposers_realtime",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "Proposers",
           "range": false,
           "refId": "A"
-        }
-      ],
-      "title": "Peer Latency",
-      "transformations": [
+        },
         {
-          "id": "regression",
-          "options": {
-            "algorithm": "linear",
-            "order": 1,
-            "seriesCountMax": 0
-          }
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_validation_quorum_realtime",
+          "instant": true,
+          "legendFormat": "Quorum",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_consensus_converge_time_seconds",
+          "instant": true,
+          "legendFormat": "Converge Time",
+          "range": false,
+          "refId": "C"
         }
       ],
-      "type": "gauge"
+      "title": "Consensus",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoria"
+      },
+      "description": "Ledger database disk usage as percentage of root filesystem.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#FF6600",
+            "mode": "fixed"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 19,
+        "y": 14
+      },
+      "id": 504,
+      "options": {
+        "displayMode": "basic",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "top",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 18
+        },
+        "valueMode": "text"
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_ledger_db_bytes / on() node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
+          "instant": true,
+          "legendFormat": "DB",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_ledger_nudb_bytes / on() node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
+          "instant": true,
+          "legendFormat": "NuDB",
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Ledger Database",
+      "type": "bargauge"
     },
     {
       "datasource": {
@@ -3727,10 +3848,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 0,
-        "y": 18
+        "y": 16
       },
       "hideTimeOverride": true,
       "id": 360,
@@ -3804,10 +3925,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 3,
-        "y": 18
+        "y": 16
       },
       "hideTimeOverride": true,
       "id": 374,
@@ -3826,7 +3947,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 55
+          "valueSize": 50
         },
         "textMode": "auto",
         "wideLayout": true
@@ -3892,10 +4013,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 3,
         "x": 6,
-        "y": 18
+        "y": 16
       },
       "hideTimeOverride": true,
       "id": 358,
@@ -3914,7 +4035,7 @@
         },
         "showPercentChange": false,
         "text": {
-          "valueSize": 55
+          "valueSize": 50
         },
         "textMode": "auto",
         "wideLayout": true
@@ -3944,17 +4065,48 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Network transactions processed per second (TPS). Indicates XRPL network activity level. Typical range is 10-40 TPS. Very high rates may stress validator resources.\n\nThresholds:\n- Green: <200 TPS\n- Yellow: 200-500 TPS\n- Red: >500 TPS",
+      "description": "Historical trend of YOUR validator's validation rate over time. Use to identify patterns in validation performance and correlate with other metrics.\n\nTarget ranges:\n- Healthy: 12-18/min (tracks ledger close rate)\n- Low: 10-12/min (some missed)\n- Critical: <10/min (investigate)",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "#9D00FF",
+            "mode": "fixed"
           },
-          "decimals": 0,
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
           "mappings": [],
-          "max": 1000,
-          "min": 0,
-          "noValue": "-",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -3963,44 +4115,34 @@
                 "value": 0
               },
               {
-                "color": "#FF00FF",
-                "value": 200
-              },
-              {
-                "color": "#FF00FF",
-                "value": 201
-              },
-              {
                 "color": "#9D00FF",
-                "value": 500
+                "value": 80
               }
             ]
-          },
-          "unit": "s"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 9,
-        "y": 18
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 19
       },
-      "id": 377,
+      "id": 387,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "colorMode": "background",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "12.3.0",
       "targets": [
@@ -4010,193 +4152,62 @@
             "uid": "victoria"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_transaction_rate",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
+          "expr": "rate(xrpl_validations_total[5m]) * 60",
+          "legendFormat": "Percentage of expected validations actually performed over time",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Transaction Rate",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Number of validators that proposed in the last consensus round. Should be close to or higher than quorum for healthy consensus. Low values may indicate network-wide issues.\n\nThresholds:\n- Green: ≥11 proposers\n- Yellow: 10 proposers\n- Red: <10 proposers",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 50,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#9D00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 4
-              },
-              {
-                "color": "#FF00FF",
-                "value": 10
-              },
-              {
-                "color": "#FF00FF",
-                "value": 11
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 12,
-        "y": 18
-      },
-      "id": 362,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_proposers_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Proposers",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "state-exporter"
-      },
-      "description": "Number of UNL validators required to reach consensus (80% of trusted validators). Determined by your validator list configuration. Default Ripple UNL typically requires 28-29.\n\nThresholds:\n- Green: 20-40 (healthy range)\n- Yellow: 19 (low end)\n- Red: <19 or >40 (abnormal)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 50,
-          "min": 0,
-          "noValue": "-",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#FF00FF",
-                "value": 19
-              },
-              {
-                "color": "#FF00FF",
-                "value": 20
-              },
-              {
-                "color": "#9D00FF",
-                "value": 41
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 15,
-        "y": 18
-      },
-      "id": 359,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "state-exporter"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_validation_quorum_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "A"
-        }
-      ],
-      "title": "Quorum",
-      "type": "gauge"
+      "title": "Validation Rate",
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Time in seconds for the last ledger to reach network consensus. Indicates how efficiently the network is agreeing on transactions. Longer times may signal network congestion or validator issues.\n\nThresholds:\n- Green: <6 seconds\n- Yellow: 6-7 seconds\n- Red: >7 seconds",
+      "description": "Historical trend of your validator's agreement with network consensus. Use to identify patterns in validation problems and verify fixes over time.\n\nTarget ranges:\n- Excellent: ≥99%\n- Good: 95-99%\n- Concerning: 90-95%\n- Critical: <90% (investigate immediately)",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "#0079ef",
+            "mode": "fixed"
           },
-          "decimals": 1,
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
           "mappings": [],
-          "max": 10,
-          "min": 0,
-          "noValue": "-",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -4205,44 +4216,33 @@
                 "value": 0
               },
               {
-                "color": "#FF00FF",
-                "value": 3
-              },
-              {
-                "color": "#FF00FF",
-                "value": 6
-              },
-              {
                 "color": "#9D00FF",
-                "value": 7
+                "value": 80
               }
             ]
-          },
-          "unit": "s"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 18,
-        "y": 18
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 19
       },
-      "id": 372,
+      "id": 388,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "12.3.0",
       "targets": [
@@ -4252,93 +4252,423 @@
             "uid": "victoria"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_consensus_converge_time_seconds",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
+          "expr": "xrpl_validation_agreement_pct_24h",
+          "legendFormat": "Historical validation agreement percentage over time",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Consensus",
-      "type": "gauge"
+      "title": "Agreement % Trend",
+      "transformations": [
+        {
+          "id": "regression",
+          "options": {
+            "algorithm": "linear",
+            "order": 1,
+            "seriesCountMax": 0
+          }
+        }
+      ],
+      "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "state-exporter"
+        "uid": "victoria"
       },
-      "description": "Days until Validator List (UNL) expires. List auto-updates from publishers. If critically low, check network connectivity to vl.ripple.com and vl.xrplf.org.\n\nThresholds:\n- Green: ≥30 days\n- Yellow: 14-29 days\n- Red: <14 days",
+      "description": "Time required for network to reach consensus on each ledger. Use to diagnose consensus delays and network participation problems over time.\n\nTypical ranges:\n- Fast: 2-3 seconds\n- Normal: 3-4 seconds\n- Slow: 4-6 seconds\n- Investigate: >6 seconds consistently",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "#dc4d53",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
-          "max": 365,
-          "min": 0,
-          "noValue": "-",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "#9D00FF",
+                "color": "#FF00FF",
                 "value": 0
               },
               {
-                "color": "#FF00FF",
-                "value": 14
-              },
-              {
-                "color": "#FF00FF",
-                "value": 30
+                "color": "#9D00FF",
+                "value": 80
               }
             ]
           },
-          "unit": "d"
+          "unit": "s"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 21,
-        "y": 18
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 19
       },
-      "id": 380,
+      "id": 391,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "pluginVersion": "12.3.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "state-exporter"
+            "uid": "victoria"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "xrpl_unl_expiry_days_realtime",
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
+          "expr": "xrpl_consensus_converge_time_seconds",
+          "legendFormat": "Time required to reach consensus on each ledger in seconds",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "UNL Expiry",
-      "type": "gauge"
+      "title": "Consensus Converge Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoria"
+      },
+      "description": "XRPL network transaction throughput over time. Use to correlate validator performance with network load and identify activity patterns.\n\nTypical ranges:\n- Low activity: 5-15 TPS\n- Normal: 15-40 TPS\n- High activity: 40-100 TPS\n- Spike: >100 TPS (network events)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#a63aff",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#FF00FF",
+                "value": 0
+              },
+              {
+                "color": "#9D00FF",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      },
+      "id": 389,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "expr": "xrpl_transaction_rate",
+          "legendFormat": "Network transaction throughput over time in TPS",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Transaction Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoria"
+      },
+      "description": "Historical trend of server load factor over time. Use to identify performance patterns, degradation trends, and capacity planning needs.\n\nTypical ranges:\n- Normal: ~1.0 (baseline)\n- Elevated: 1.0-2.0 (monitor)\n- High: 2.0-5.0 (investigate)\n- Critical: >5.0 (action needed)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#ffaa00",
+            "mode": "shades"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#FF00FF",
+                "value": 0
+              },
+              {
+                "color": "#9D00FF",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      },
+      "id": 393,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "expr": "xrpl_load_factor",
+          "legendFormat": "Historical view of server load factor over time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Load Factor Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoria"
+      },
+      "description": "Historical trend of peer connections. Use to identify connectivity patterns, network stability, and reachability issues over time.\n\nTypical ranges:\n- Healthy: 21-50 peers (stable)\n- Acceptable: 15-21 peers\n- Low: 10-15 peers (monitor)\n- Critical: <10 peers (investigate)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#29ceff",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#FF00FF",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "id": 386,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "editorMode": "code",
+          "expr": "xrpl_peer_count",
+          "legendFormat": "Total connected peer servers over time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Peer Count Over Time",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -4415,7 +4745,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 22
+        "y": 31
       },
       "id": 346,
       "options": {
@@ -4541,7 +4871,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 22
+        "y": 31
       },
       "id": 361,
       "options": {
@@ -4595,424 +4925,6 @@
         }
       ],
       "title": "Network TCP In / Out",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Validation activity rates over time. Compare your validator's output against network totals to ensure healthy participation.\n\nLines explained:\n- Green: Total network validations (~3000/min from all validators)\n- Yellow: YOUR validator's validations (~15-20/min)\n\nYour line should track steadily; drops indicate missed validations.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#0079ef",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 22
-      },
-      "id": 385,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "expr": "rate(xrpl_validations_checked_total[5m]) * 60",
-          "legendFormat": "Validations/min",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "expr": "rate(xrpl_validations_total[5m]) * 60",
-          "legendFormat": "Our Validations/min",
-          "refId": "B"
-        }
-      ],
-      "title": "Activity Rates",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Historical trend of server load factor over time. Use to identify performance patterns, degradation trends, and capacity planning needs.\n\nTypical ranges:\n- Normal: ~1.0 (baseline)\n- Elevated: 1.0-2.0 (monitor)\n- High: 2.0-5.0 (investigate)\n- Critical: >5.0 (action needed)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#ffaa00",
-            "mode": "shades"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineStyle": {
-              "fill": "solid"
-            },
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 24,
-        "x": 0,
-        "y": 29
-      },
-      "id": 393,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "expr": "xrpl_load_factor",
-          "legendFormat": "Historical view of server load factor over time",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Load Factor Over Time",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "XRPL network transaction throughput over time. Use to correlate validator performance with network load and identify activity patterns.\n\nTypical ranges:\n- Low activity: 5-15 TPS\n- Normal: 15-40 TPS\n- High activity: 40-100 TPS\n- Spike: >100 TPS (network events)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#a63aff",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 0,
-        "y": 34
-      },
-      "id": 389,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "expr": "xrpl_transaction_rate",
-          "legendFormat": "Network transaction throughput over time in TPS",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Transaction Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Historical trend of your validator's agreement with network consensus. Use to identify patterns in validation problems and verify fixes over time.\n\nTarget ranges:\n- Excellent: ≥99%\n- Good: 95-99%\n- Concerning: 90-95%\n- Critical: <90% (investigate immediately)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#0079ef",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 8,
-        "x": 8,
-        "y": 34
-      },
-      "id": 388,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "expr": "xrpl_validation_agreement_pct_24h",
-          "legendFormat": "Historical validation agreement percentage over time",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Agreement % Trend",
-      "transformations": [
-        {
-          "id": "regression",
-          "options": {
-            "algorithm": "linear",
-            "order": 1,
-            "seriesCountMax": 0
-          }
-        }
-      ],
       "type": "timeseries"
     },
     {
@@ -5080,10 +4992,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 7,
         "w": 8,
         "x": 16,
-        "y": 34
+        "y": 31
       },
       "id": 392,
       "options": {
@@ -5131,213 +5043,11 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Historical trend of YOUR validator's validation rate over time. Use to identify patterns in validation performance and correlate with other metrics.\n\nTarget ranges:\n- Healthy: 12-18/min (tracks ledger close rate)\n- Low: 10-12/min (some missed)\n- Critical: <10/min (investigate)",
+      "description": "Validation activity rates over time. Compare your validator's output against network totals to ensure healthy participation.\n\nLines explained:\n- Green: Total network validations (~3000/min from all validators)\n- Yellow: YOUR validator's validations (~15-20/min)\n\nYour line should track steadily; drops indicate missed validations.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "#9D00FF",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 39
-      },
-      "id": 387,
-      "options": {
-        "colorMode": "background",
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "expr": "rate(xrpl_validations_total[5m]) * 60",
-          "legendFormat": "Percentage of expected validations actually performed over time",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Validation Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Time required for network to reach consensus on each ledger. Use to diagnose consensus delays and network participation problems over time.\n\nTypical ranges:\n- Fast: 2-3 seconds\n- Normal: 3-4 seconds\n- Slow: 4-6 seconds\n- Investigate: >6 seconds consistently",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#dc4d53",
-            "mode": "fixed"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#FF00FF",
-                "value": 0
-              },
-              {
-                "color": "#9D00FF",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 39
-      },
-      "id": 391,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoria"
-          },
-          "editorMode": "code",
-          "expr": "xrpl_consensus_converge_time_seconds",
-          "legendFormat": "Time required to reach consensus on each ledger in seconds",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Consensus Converge Time",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoria"
-      },
-      "description": "Historical trend of peer connections. Use to identify connectivity patterns, network stability, and reachability issues over time.\n\nTypical ranges:\n- Healthy: 21-50 peers (stable)\n- Acceptable: 15-21 peers\n- Low: 10-15 peers (monitor)\n- Critical: <10 peers (investigate)",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "#29ceff",
+            "fixedColor": "#0079ef",
             "mode": "fixed"
           },
           "custom": {
@@ -5389,12 +5099,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 39
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 38
       },
-      "id": 386,
+      "id": 385,
       "options": {
         "legend": {
           "calcs": [],
@@ -5404,7 +5114,7 @@
         },
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -5415,14 +5125,21 @@
             "type": "prometheus",
             "uid": "victoria"
           },
-          "editorMode": "code",
-          "expr": "xrpl_peer_count",
-          "legendFormat": "Total connected peer servers over time",
-          "range": true,
+          "expr": "rate(xrpl_validations_checked_total[5m]) * 60",
+          "legendFormat": "Validations/min",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoria"
+          },
+          "expr": "rate(xrpl_validations_total[5m]) * 60",
+          "legendFormat": "Our Validations/min",
+          "refId": "B"
         }
       ],
-      "title": "Peer Count Over Time",
+      "title": "Activity Rates",
       "type": "timeseries"
     },
     {
@@ -5431,7 +5148,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 43
       },
       "id": 263,
       "panels": [
@@ -5486,7 +5203,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -5736,7 +5453,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -5965,7 +5682,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -6092,7 +5809,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -6150,7 +5867,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 44
       },
       "id": 265,
       "panels": [
@@ -6205,7 +5922,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -6574,7 +6291,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7098,7 +6815,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7227,7 +6944,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7357,7 +7074,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7484,7 +7201,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7616,7 +7333,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7751,7 +7468,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7854,7 +7571,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -7958,7 +7675,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -8120,7 +7837,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 47
+        "y": 45
       },
       "id": 266,
       "panels": [
@@ -8175,7 +7892,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -8313,7 +8030,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -8459,7 +8176,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -8576,7 +8293,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -8724,7 +8441,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -8740,7 +8457,7 @@
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#00FFFF",
+                      "fixedColor": "green",
                       "mode": "fixed"
                     }
                   }
@@ -8873,7 +8590,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -9023,7 +8740,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -9158,7 +8875,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -9322,7 +9039,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -9439,7 +9156,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -9573,10 +9290,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -9981,7 +9698,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10086,7 +9803,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 46
       },
       "id": 267,
       "panels": [
@@ -10140,7 +9857,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10269,7 +9986,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10399,7 +10116,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10571,7 +10288,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10650,7 +10367,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 47
       },
       "id": 293,
       "panels": [
@@ -10704,7 +10421,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10840,7 +10557,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -10943,7 +10660,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -11093,7 +10810,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -11211,7 +10928,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -11329,10 +11046,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -11443,7 +11160,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 48
       },
       "id": 312,
       "panels": [
@@ -11498,10 +11215,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -11619,7 +11336,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -11808,7 +11525,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -11911,10 +11628,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -12065,7 +11782,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -12214,7 +11931,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -12322,7 +12039,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 49
       },
       "id": 269,
       "panels": [
@@ -12377,7 +12094,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -12495,7 +12212,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -12670,7 +12387,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -12873,7 +12590,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -12977,7 +12694,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -13081,7 +12798,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -13188,7 +12905,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 50
       },
       "id": 304,
       "panels": [
@@ -13243,7 +12960,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -13423,7 +13140,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -13547,10 +13264,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -13656,7 +13373,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -13735,7 +13452,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 51
       },
       "id": 296,
       "panels": [
@@ -13789,7 +13506,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14029,7 +13746,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14133,7 +13850,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14237,7 +13954,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14300,7 +14017,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 52
       },
       "id": 270,
       "panels": [
@@ -14354,7 +14071,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14496,7 +14213,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14642,7 +14359,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14789,7 +14506,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -14907,7 +14624,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15050,7 +14767,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15197,7 +14914,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15344,7 +15061,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15463,7 +15180,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15541,7 +15258,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 53
       },
       "id": 271,
       "panels": [
@@ -15596,7 +15313,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15743,7 +15460,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15848,7 +15565,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -15966,7 +15683,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16029,7 +15746,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 54
       },
       "id": 272,
       "panels": [
@@ -16083,7 +15800,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16215,7 +15932,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16345,7 +16062,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16475,7 +16192,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16605,7 +16322,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16721,7 +16438,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16837,7 +16554,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -16954,7 +16671,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17084,7 +16801,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17200,7 +16917,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17304,7 +17021,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17407,7 +17124,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17553,7 +17270,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17639,7 +17356,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17717,7 +17434,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17786,7 +17503,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 55
       },
       "id": 273,
       "panels": [
@@ -17841,7 +17558,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -17991,7 +17708,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18111,7 +17828,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18216,7 +17933,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18336,7 +18053,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18456,7 +18173,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18588,7 +18305,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18720,10 +18437,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -18828,7 +18545,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -18928,7 +18645,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 56
       },
       "id": 274,
       "panels": [
@@ -18982,7 +18699,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 0
                   }
                 ]
@@ -19114,11 +18831,11 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 0
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -19257,7 +18974,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 0
                   }
                 ]
@@ -19389,11 +19106,11 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 0
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -19526,7 +19243,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 0
                   }
                 ]
@@ -19737,11 +19454,11 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 0
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -19902,7 +19619,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20018,7 +19735,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20171,7 +19888,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20321,7 +20038,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20442,7 +20159,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20562,7 +20279,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20689,7 +20406,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 57
       },
       "id": 279,
       "panels": [
@@ -20743,10 +20460,10 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 80
                   }
                 ]
@@ -20851,7 +20568,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -20955,7 +20672,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -21128,7 +20845,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   }
                 ]
               },
@@ -21265,14 +20982,14 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "#FF00FF"
+                    "color": "green"
                   },
                   {
-                    "color": "#9D00FF",
+                    "color": "dark-red",
                     "value": 0
                   },
                   {
-                    "color": "#FF00FF",
+                    "color": "green",
                     "value": 1
                   }
                 ]
@@ -21377,7 +21094,6 @@
         "type": "datasource"
       },
       {
-        "allowCustomValue": true,
         "current": {
           "text": "node",
           "value": "node"
@@ -21492,6 +21208,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard Cyberpunk",
   "uid": "xrpl-validator-monitor-cyberpunk",
-  "version": 3,
+  "version": 14,
   "weekStart": ""
 }

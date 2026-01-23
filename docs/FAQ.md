@@ -22,6 +22,9 @@
 - [How does the Collector calculate validation metrics?](#how-does-the-collector-calculate-validation-metrics)
 - [What's the difference between real-time WebSocket metrics vs polling?](#whats-the-difference-between-real-time-websocket-metrics-vs-polling)
 - [How accurate are the metrics?](#how-accurate-are-the-metrics)
+- [What is the UNL Health panel?](#what-is-the-unl-health-panel)
+- [What do the XRPLF, Ripple, and "Me" gauges mean?](#what-do-the-xrplf-ripple-and-me-gauges-mean)
+- [What should I do if I get a UNL alert?](#what-should-i-do-if-i-get-a-unl-alert)
 
 ### [Architecture & Technology](#architecture--technology)
 - [Why use Grafana for dashboards?](#why-use-grafana-for-dashboards)
@@ -500,6 +503,73 @@ The Collector uses two methods depending on the metric:
 - Filesystem metrics lag by up to 5 minutes (polling interval)
 - Validation counters and sliding windows are recovered from VictoriaMetrics on monitor restart
 - Validations Sent counter resets to 0 if rippled restarted (tracks validations since rippled restart)
+
+### What is the UNL Health panel?
+
+The **UNL Health** panel monitors the health of your validator's Unique Node List (UNL) - the list of trusted validators your node relies on for consensus.
+
+**What is a UNL?**
+- Every XRPL validator maintains a list of other validators it trusts
+- This list is published by UNL publishers (like XRPL Foundation and Ripple)
+- Your validator downloads this list and caches it locally
+- The list has an expiration date and must be refreshed periodically
+
+**Why monitor UNL Health?**
+- If UNL publisher SSL certificates expire, rippled can't fetch updated lists
+- If your cached UNL expires and can't be refreshed, consensus participation is affected
+- Early warning allows you to be aware of potential issues before they impact your validator
+
+**What the panel shows:**
+- Three bar gauges showing days until expiration
+- Color thresholds: Green (>30 days), Yellow (15-30), Orange (7-15), Red (<7)
+
+### What do the XRPLF, Ripple, and "Me" gauges mean?
+
+The UNL Health panel displays three metrics:
+
+| Gauge | What It Measures | Source |
+|-------|------------------|--------|
+| **XRPLF** | Days until unl.xrplf.org SSL certificate expires | SSL cert check |
+| **Ripple** | Days until vl.ripple.com SSL certificate expires | SSL cert check |
+| **Me** | Days until your validator's cached UNL expires | rippled server_info |
+
+**XRPLF and Ripple gauges:**
+- These track the SSL certificates of the two main UNL publishers
+- You cannot control these - they are managed by XRPL Foundation and Ripple
+- Monitoring them gives you awareness if a publisher's cert is about to expire
+
+**"Me" gauge:**
+- This tracks your validator's locally cached copy of the UNL
+- The value counts down as time passes
+- It resets (goes back up) when rippled successfully fetches a fresh UNL from publishers
+- Typical range: 0-30 days (UNLs are usually valid for ~30 days)
+
+### What should I do if I get a UNL alert?
+
+**UNL Publisher Certificate Expiring Soon (Warning)**
+
+This alert fires when any UNL publisher's SSL certificate is less than 30 days from expiration.
+
+*What to do:*
+- **Monitor only** - You cannot control publisher certificates
+- Be aware that if the cert expires, rippled may not be able to fetch UNL updates
+- The publishers (XRPL Foundation, Ripple) typically renew their certificates well before expiration
+- If a cert does expire, the XRPL community will likely be aware and discussing it
+
+**UNL Status Inactive (Critical)**
+
+This alert fires when your validator's cached UNL status becomes inactive.
+
+*What to do:*
+1. **Check network connectivity** - Can your validator reach the UNL publishers?
+   ```bash
+   curl -I https://vl.ripple.com
+   curl -I https://unl.xrplf.org
+   ```
+2. **Check rippled logs** - Look for UNL fetch errors
+3. **Verify firewall settings** - Ensure outbound HTTPS (port 443) is allowed
+4. **Check rippled status** - Is rippled running and healthy?
+5. **Restart rippled** if needed - Sometimes a restart resolves transient issues
 
 ---
 

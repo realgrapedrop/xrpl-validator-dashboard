@@ -24,24 +24,23 @@
 
 # Overview
 
-The dashboard displays **41 validator-specific panels** covering all aspects of validator health and performance.
+The dashboard displays **31 validator-specific panels** covering all aspects of validator health and performance.
 
 | Panel Type | Count | Examples |
 |------------|-------|----------|
-| **Stat** | 19 | Agreements, Validations Sent, Pubkey, Rippled, State, Uptime |
-| **Gauge** | 12 | UNL Expiry, Peer Latency, Load Factor, Proposers, Quorum |
-| **Time Series** | 10 | Activity Rates, IO Latency, Consensus Converge Time |
-| **Total** | **40** | All panels include threshold/range documentation |
+| **Stat** | 15 | Agreements, Validations Sent, Pubkey, State, Uptime, Current Ledger |
+| **Bar Gauge** | 6 | Peer Count, UNL Health, Peer Health, Consensus, Ledger Database, Network Activity |
+| **Time Series** | 10 | Activity Rates, IO Latency, Consensus Converge Time, Validation Rate |
+| **Total** | **31** | All panels include threshold/range documentation |
 
 | Category | Panels | Source |
 |----------|--------|--------|
-| **Validation** | 10 | WebSocket `validations` stream (real-time) + derived metrics |
-| **Network** | 9 | WebSocket `peer_status` + HTTP `peers` + State Exporter |
-| **Performance** | 7 | HTTP `server_info` (5s) + WebSocket streams |
-| **Server** | 6 | WebSocket `server` stream + HTTP `server_info` (5s) |
-| **Ledger** | 5 | WebSocket `ledger` stream (instant) |
-| **Storage** | 2 | HTTP `server_state` (5min polling) + filesystem |
-| **Upgrade** | 1 | State Exporter peer crawl + `server_info` (5min) |
+| **Validation** | 9 | WebSocket `validations` stream (real-time) + derived metrics |
+| **Network** | 5 | WebSocket `peer_status` + HTTP `peers` + State Exporter |
+| **Performance** | 6 | HTTP `server_info` (5s) + WebSocket streams |
+| **Server** | 5 | WebSocket `server` stream + HTTP `server_info` (5s) |
+| **Ledger** | 4 | WebSocket `ledger` stream (instant) |
+| **Storage** | 1 | HTTP `server_state` (5min polling) + filesystem |
 | **Info** | 1 | HTTP `server_info` (network fee settings) |
 
 **51-63% of metrics come from real-time WebSocket streams.**
@@ -54,7 +53,7 @@ The dashboard also includes **118 system monitoring panels** from Node Exporter 
 
 All XRPL validator metrics at a glance. For detailed explanations, see the sections below.
 
-**Note:** The dashboard "XRPL Validator" row contains 40 monitoring panels. Some panels appear multiple times in different dashboard locations to show different time ranges (e.g., Transaction Rate and Validation Rate appear in both 1-hour and 24-hour views). The dashboard also includes additional system monitoring panels from Node Exporter that track server hardware (CPU, memory, disk, network).
+**Note:** The dashboard "XRPL Validator" row contains 31 monitoring panels. Several metrics have been consolidated into bar gauge panels for cleaner visualization (e.g., Peer Count combines Total/Inbound/Outbound/Insane peers). The dashboard also includes additional system monitoring panels from Node Exporter that track server hardware (CPU, memory, disk, network).
 
 | # | Panel Name | Category | PanelType | Explanation |
 |---|------------|----------|-----------|-------------|
@@ -64,43 +63,33 @@ All XRPL validator metrics at a glance. For detailed explanations, see the secti
 | 4 | **Agreements % (1h)** | Validation | Stat | Percentage of validators that agreed with your validations in the last hour |
 | 5 | **Agreements (24h)** | Validation | Stat | How many validators agreed with your validations in the last 24 hours |
 | 6 | **Agreements % (24h)** | Validation | Stat | Percentage of validators that agreed with your validations in the last 24 hours |
-| 7 | **Consensus** | Performance | Gauge | Consensus health and performance metrics (24-hour view) |
+| 7 | **Consensus** | Performance | Bar Gauge | Proposers and Quorum metrics consolidated (shows trusted validators proposing and validations needed) |
 | 8 | **Consensus Converge Time** | Performance | Time Series | Time to reach consensus (Fast: 2-3s, Normal: 3-4s, Slow: 4-6s, Investigate: >6s) |
 | 9 | **Current Ledger** | Ledger | Stat | Current validated ledger index (blockchain height) |
-| 10 | **Inbound Peers** | Network | Gauge | Peers connecting TO your validator (real-time, updates every 5s) |
-| 11 | **Insane Peers** | Network | Gauge | Peers with divergent ledger views (real-time, updates every 5s) |
-| 12 | **IO Latency** | Performance | Time Series | Disk I/O latency (NVMe: <5ms, SSD: 5-15ms, Acceptable: 15-30ms, Investigate: >30ms) |
-| 13 | **Ledger Age** | Ledger | Gauge | Age of the last validated ledger in seconds |
-| 14 | **Ledger DB** | Storage | Stat | SQL ledger database disk usage |
-| 15 | **Ledger NuDB** | Storage | Stat | NuDB key-value store disk usage |
-| 16 | **Ledgers Per Minute** | Ledger | Stat | How fast the XRPL network is closing ledgers (15-20/min normal) |
-| 17 | **Load Factor** | Server | Gauge | Server load multiplier (1.0 = normal, >5 = high load) |
-| 18 | **Load Factor Over Time** | Server | Time Series | Load factor trend (Normal: ~1.0, Elevated: 1-2, High: 2-5, Critical: >5) |
-| 19 | **Missed (1h)** | Validation | Stat | Validation rounds YOUR validator missed in the last hour |
-| 20 | **Missed (24h)** | Validation | Stat | Validation rounds YOUR validator missed in the last 24 hours |
-| 21 | **Network TCP In / Out** | Network | Time Series | TCP traffic (Idle: 100-500, Normal: 500-2000, High: 2000+ seg/s) |
-| 22 | **Outbound Peers** | Network | Gauge | Peers your validator connects TO (real-time, updates every 5s) |
-| 23 | **Peer Count Over Time** | Network | Time Series | Peer connection trend (Healthy: 21-50, Acceptable: 15-21, Critical: <10) |
-| 24 | **Peer Disconnects** | Network | Stat | Cumulative peer disconnections |
-| 25 | **Peer Latency** | Network | Gauge | P90 network latency to peers in milliseconds (real-time, updates every 5s) |
-| 26 | **Proposers** | Performance | Gauge | Number of trusted validators proposing |
-| 27 | **Pubkey** | Server | Stat | Your validator public key (updates every 5-60s) |
-| 28 | **Quorum** | Performance | Gauge | Number of validations needed for quorum |
-| 29 | **Release Version** | Server | Stat | rippled build version (updates every 5-60s after upgrade) |
-| 30 | **Rippled** | Upgrade | Stat | Upgrade status: ✅ Current, ⚠️ Behind, ⛔ Blocked, 🚨 Critical (5-7 min detection) |
-| 31 | **State** | Server | Stat | Current rippled state (DISCONNECTED, FULL, PROPOSING, etc.) - Real-time via State Exporter (~1s latency) |
-| 32 | **Total Peers** | Network | Gauge | Number of peer connections (healthy: 10-30, real-time updates every 5s) |
-| 33 | **Transaction Rate** (1h) | Ledger | Gauge | Transactions per second on the network (1-hour view) |
-| 34 | **Transaction Rate** (24h) | Ledger | Time Series | TPS trend (Low: 5-15, Normal: 15-40, High: 40-100, Spike: >100) |
-| 35 | **UNL Expiry** | Network | Gauge | Days until Validator List (UNL) expires (real-time, updates every 2s) |
-| 36 | **Uptime** | Server | Stat | Time since rippled started (displayed as Xd:Xh:Xm) |
-| 37 | **Validation Rate** (1h) | Validation | Stat | How many validations YOUR validator sends per minute (1-hour view) |
-| 38 | **Validation Rate** (24h) | Validation | Time Series | Your validation rate trend (Healthy: 12-18/min, Low: 10-12/min, Critical: <10/min) |
-| 39 | **Validator CPU Load** | Performance | Time Series | rippled CPU usage (Normal: 5-30%, High: 30-80%, Investigate: >100% sustained) |
-| 40 | **Validations Sent** | Validation | Stat | Validations sent by YOUR validator since rippled restarted (smart counter with restart detection) |
-| 41 | **XRP Fees** | Info | Stat | Network fee information (updates every 5-60s) |
+| 10 | **IO Latency** | Performance | Time Series | Disk I/O latency (NVMe: <5ms, SSD: 5-15ms, Acceptable: 15-30ms, Investigate: >30ms) |
+| 11 | **Ledger Database** | Storage | Bar Gauge | Ledger DB and NuDB storage consolidated (SQL database + key-value store disk usage) |
+| 12 | **Ledgers Per Minute** | Ledger | Stat | How fast the XRPL network is closing ledgers (15-20/min normal) |
+| 13 | **Load Factor Over Time** | Server | Time Series | Load factor trend (Normal: ~1.0, Elevated: 1-2, High: 2-5, Critical: >5) |
+| 14 | **Missed (1h)** | Validation | Stat | Validation rounds YOUR validator missed in the last hour |
+| 15 | **Missed (24h)** | Validation | Stat | Validation rounds YOUR validator missed in the last 24 hours |
+| 16 | **Network Activity** | Network | Bar Gauge | Network activity metrics (TCP traffic and related stats) |
+| 17 | **Network TCP In / Out** | Network | Time Series | TCP traffic (Idle: 100-500, Normal: 500-2000, High: 2000+ seg/s) |
+| 18 | **Peer Count** | Network | Bar Gauge | Total, Inbound, Outbound, and Insane peers consolidated (real-time, updates every 5s) |
+| 19 | **Peer Count Over Time** | Network | Time Series | Peer connection trend (Healthy: 21-50, Acceptable: 15-21, Critical: <10) |
+| 20 | **Peer Health** | Network | Bar Gauge | P90 peer latency and connection health (real-time, updates every 5s) |
+| 21 | **Pubkey** | Server | Stat | Your validator public key (updates every 5-60s) |
+| 22 | **Release Version** | Server | Stat | rippled build version (updates every 5-60s after upgrade) |
+| 23 | **State** | Server | Stat | Current rippled state (DISCONNECTED, FULL, PROPOSING, etc.) - Real-time via State Exporter (~1s latency) |
+| 24 | **Transaction Rate** | Ledger | Time Series | TPS trend (Low: 5-15, Normal: 15-40, High: 40-100, Spike: >100) |
+| 25 | **UNL Health** | Network | Bar Gauge | UNL publisher SSL cert expiry (XRPLF, Ripple) and cached UNL expiry (Me) |
+| 26 | **Uptime** | Server | Stat | Time since rippled started (displayed as Xd:Xh:Xm) |
+| 27 | **Validation Rate** | Validation | Stat | How many validations YOUR validator sends per minute |
+| 28 | **Validation Rate Trend** | Validation | Time Series | Your validation rate trend (Healthy: 12-18/min, Low: 10-12/min, Critical: <10/min) |
+| 29 | **Validator CPU Load** | Performance | Time Series | rippled CPU usage (Normal: 5-30%, High: 30-80%, Investigate: >100% sustained) |
+| 30 | **Validations Sent** | Validation | Stat | Validations sent by YOUR validator since rippled restarted (smart counter with restart detection) |
+| 31 | **XRP Fees** | Info | Stat | Network fee information (updates every 5-60s) |
 
-**Total: 41 panels** in the XRPL Validator dashboard row covering all aspects of validator monitoring.
+**Total: 31 panels** in the XRPL Validator dashboard row covering all aspects of validator monitoring.
 
 ---
 
@@ -1371,6 +1360,89 @@ If not set or set to 0, peer version comparison is disabled and only amendment b
 
 **Port 51235** is the default rippled peer protocol port where the `/crawl` endpoint is available.
 
+### UNL Health Metrics
+
+The State Exporter monitors UNL (Unique Node List) health by tracking SSL certificate expiry for UNL publishers and the status of your validator's cached UNL. These metrics power the **UNL Health** dashboard panel.
+
+### `xrpl_cert_expiry_days_realtime`
+
+**Type**: Gauge
+**Unit**: Days
+**Source**: State Exporter (SSL certificate check)
+**Port**: 9102
+**Update Frequency**: Every 60 seconds
+
+Days until SSL certificate expires for each UNL publisher. The dashboard tracks certificates for the two primary UNL publishers (unl.xrplf.org and vl.ripple.com).
+
+**Labels**:
+- `instance`: Validator instance (default: "validator")
+- `url`: UNL publisher URL (e.g., "unl.xrplf.org", "vl.ripple.com")
+
+**Example**:
+```
+xrpl_cert_expiry_days_realtime{instance="validator",url="unl.xrplf.org"} 89
+xrpl_cert_expiry_days_realtime{instance="validator",url="vl.ripple.com"} 45
+```
+
+**Why this matters**: If a UNL publisher's SSL certificate expires, rippled may not be able to fetch updated validator lists, potentially affecting consensus participation.
+
+### `xrpl_unl_status_active_realtime`
+
+**Type**: Gauge
+**Unit**: Boolean (0 or 1)
+**Source**: State Exporter (from `server_info` API - validators.local_static_keys)
+**Port**: 9102
+
+Whether your validator's cached UNL is active.
+
+**Values**:
+- `1` = Active - UNL is valid and in use
+- `0` = Inactive - UNL may be stale or missing
+
+**Example**:
+```
+xrpl_unl_status_active_realtime{instance="validator"} 1
+```
+
+**What it means**: An inactive UNL status indicates your validator may not have a valid list of trusted validators, which could affect consensus participation.
+
+### `xrpl_unl_expiry_days_realtime`
+
+**Type**: Gauge
+**Unit**: Days
+**Source**: State Exporter (from `server_info` API - validator_list.expiration)
+**Port**: 9102
+
+Days until your validator's cached UNL expires. This is the "Me" metric shown in the UNL Health panel.
+
+**Behavior**:
+- Counts down as time passes
+- Resets when rippled fetches a fresh UNL from publishers
+- Typical range: 0-30 days (UNLs are usually valid for ~30 days)
+
+**Example**:
+```
+xrpl_unl_expiry_days_realtime{instance="validator"} 25
+```
+
+**Why this matters**: If the cached UNL expires and rippled cannot fetch a new one (due to network issues or certificate problems), your validator loses its list of trusted validators.
+
+### UNL Health Dashboard Panel
+
+The UNL Health panel displays three bar gauges:
+
+| Gauge | Metric | Source | Meaning |
+|-------|--------|--------|---------|
+| XRPLF | `xrpl_cert_expiry_days_realtime{url="unl.xrplf.org"}` | SSL cert check | Days until XRPL Foundation UNL cert expires |
+| Ripple | `xrpl_cert_expiry_days_realtime{url="vl.ripple.com"}` | SSL cert check | Days until Ripple UNL cert expires |
+| Me | `xrpl_unl_expiry_days_realtime` | server_info | Days until your cached UNL expires |
+
+**Color thresholds**:
+- Green (>30 days): Healthy
+- Yellow (15-30 days): Attention recommended
+- Orange (7-15 days): Plan renewal
+- Red (<7 days): Critical - action required
+
 ---
 
 # Metric Collection Architecture
@@ -1513,5 +1585,3 @@ All metrics are available in Grafana via the VictoriaMetrics datasource.
 
 - [DOCKER_ADVANCED.md](DOCKER_ADVANCED.md) - Docker deployment guide
 - [README.md](README.md) - Project overview and setup
-- [Grafana Dashboard](http://localhost:3000) - Live metrics visualization
-- [VictoriaMetrics](http://localhost:8428) - Metrics database UI

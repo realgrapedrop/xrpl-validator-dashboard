@@ -1,6 +1,6 @@
 # XRPL Validator Dashboard v3.0
 
-Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 41 metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
+Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 44 metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
 
 **Real-time monitoring and alerting for XRPL validator nodes**
 
@@ -14,7 +14,7 @@ Production-ready monitoring for validators who need reliable insight without the
 
 ![XRPL Validator Dashboard](images/dashboard-preview.gif)
 
-*Real-time monitoring of XRPL validator performance with 40 metrics covering validation, consensus, network health, server state, etc. Features instant WebSocket updates, 1-second dashboard refresh, and smart validation counter with rippled restart detection.*
+*Real-time monitoring of XRPL validator performance with 44 metrics covering validation, consensus, network health, server state, UNL health, and more. Features instant WebSocket updates, 1-second dashboard refresh, and smart validation counter with rippled restart detection.*
 
 ---
 
@@ -62,17 +62,19 @@ v3.0 is a **complete architectural rewrite** featuring:
 - **97% Less Disk Usage** - ~290 MB vs 9.5 GB (30-day retention)
 
 ### Monitoring & Performance
-- **41 Metrics** - Comprehensive validator, network, and system monitoring
+- **44 Metrics** - Comprehensive validator, network, system, and UNL health monitoring
 - **Enhanced Monitoring** - Network validation tracking, consensus performance, peer events
 - **1-Second Refresh** - Real-time dashboard updates for ledger tracking
 - **State Persistence** - Smart counter & gauge recovery with rippled restart detection
 - **Validation Agreement Tracking** - 1h/24h windows with automatic state recovery
 - **Component Health Monitoring** - Real-time status tracking for all monitoring stack components
+- **UNL Health Monitoring** - Track SSL certificate expiry for UNL publishers (XRPLF, Ripple) and your cached UNL
+- **Upgrade Status Monitoring** - Amendment blocked detection and peer version comparison alerts
 - **Auto-Recovery** - WebSocket heartbeat with exponential backoff reconnection
 - **Performance Optimized** - 50% less RAM, 47% less CPU than v2.0
 
 ### Alerting & Notifications
-- **Built-in Alerting** - 14 auto-provisioned alert rules for critical validator states
+- **Built-in Alerting** - 18 auto-provisioned alert rules for critical validator states
 - **Multi-Channel Notifications** - Email, Discord, Slack, Microsoft Teams, Telegram, PagerDuty
 - **Webhook Support** - Custom webhook integrations for automation
 - **Real-time Alerts** - Instant notifications via WebSocket event streams
@@ -222,7 +224,7 @@ The stack includes safe resource limits to prevent runaway containers:
 | **Maintenance** | I maintain | XRPL team (xrpl-py) | 🆕 Lower burden |
 | **Deployment** | Mixed (filesystem + Docker) | Fully containerized | 🛠️ `docker compose` only |
 | **Type Safety** | None | Full type hints | 🆕 Better IDE support & type checking |
-| **Alerting** | None | 12 auto-provisioned rules | 🆕 Built-in monitoring |
+| **Alerting** | None | 18 auto-provisioned rules | 🆕 Built-in monitoring |
 | **Alert Channels** | None | 6+ (Email, Discord, Slack, Teams, Telegram, PagerDuty, webhooks) | 🆕 Multi-channel notifications |
 | **Counter Persistence** | None | Smart recovery with rippled restart detection | 🆕 No data loss on monitor restart |
 
@@ -243,7 +245,7 @@ The stack includes safe resource limits to prevent runaway containers:
 | [Alert Configuration Guide](docs/ALERTS.md) | Email/webhook notifications and custom alerts |
 | [Performance Tuning Guide](docs/TUNING.md) | Optimize for your hardware and workload |
 | [Frequently Asked Questions](docs/FAQ.md) | Common questions and troubleshooting |
-| [Metrics Reference](docs/METRICS.md) | Complete metrics documentation (41 panels) |
+| [Metrics Reference](docs/METRICS.md) | Complete metrics documentation (44 metrics) |
 | [Release Notes](docs/RELEASE_NOTES.md) | Version history and changelog |
 | [Contributing to XRPL Monitor](docs/CONTRIBUTING.md) | Guidelines for contributing to development |
 | [Cloudflare Deployment Guide](docs/CLOUDFLARE_GUIDE.md) | Public dashboard deployment with Cloudflare |

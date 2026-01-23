@@ -37,13 +37,13 @@ Alerts are your validator's safety net - they notify you when something needs at
 - "My peers are dropping" (Warning - check soon)
 - "Load is trending up" (Info - be aware)
 
-The XRPL Monitor comes with **14 pre-configured alert rules** that cover the most important validator health scenarios. You just need to tell the system **where** to send notifications.
+The XRPL Monitor comes with **18 pre-configured alert rules** that cover the most important validator health scenarios. You just need to tell the system **where** to send notifications.
 
 | Category | Rules | Severity Levels |
 |----------|-------|-----------------|
-| **Critical Monitoring** | 5 | Validator not proposing, Agreement < 90%, Unhealthy state, WebSocket/HTTP down |
+| **Critical Monitoring** | 8 | Validator not proposing, Agreement < 90%, Unhealthy state, WebSocket/HTTP down, Amendment blocked, UNL cert expiring, UNL inactive |
 | **Network Monitoring** | 3 | Peer count dropping, critical peer loss, connectivity issues |
-| **Performance Monitoring** | 6 | Memory exhaustion, high load, I/O latency, peer latency, disk space, CPU |
+| **Performance Monitoring** | 7 | Memory exhaustion, high load, I/O latency, peer latency, disk space, CPU, upgrade recommended |
 
 **Supported Alert Channels:**
 - **Email** - SMTP (Gmail, SendGrid, Mailgun, AWS SES)
@@ -123,7 +123,7 @@ Most users just need Option 1 - set up email, optionally add Discord/Slack, done
 
 # Alert Rules Overview
 
-XRPL Monitor includes **14 pre-configured alert rules** covering critical validator operations.
+XRPL Monitor includes **18 pre-configured alert rules** covering critical validator operations.
 
 ### Alert Severity Levels
 
@@ -151,31 +151,33 @@ XRPL Monitor includes **14 pre-configured alert rules** covering critical valida
 | 14 | **Validator CPU High** | 🟡 | Warning | rippled CPU > 90% | 1 min | Validator CPU constrained | Check container limits, reduce load, add cores |
 | 15 | **Amendment Blocked** | 🔴 | Critical | amendment_blocked = 1 | 1 min | Validator non-functional until upgraded | Upgrade rippled immediately - validator cannot participate in consensus |
 | 16 | **Upgrade Recommended** | 🟡 | Warning | >60% peers on higher version | 30 min | Newer rippled version available | Plan upgrade soon - majority of network has upgraded |
+| 17 | **UNL Publisher Certificate Expiring Soon** | 🟡 | Warning | Any UNL cert < 30 days | 1 hour | UNL publisher SSL cert expiring | Monitor renewal - rippled may not fetch UNL updates if cert expires |
+| 18 | **UNL Status Inactive** | 🔴 | Critical | UNL status not active | 5 min | Validator list may be stale | Check UNL publisher connectivity, verify rippled can fetch UNL |
 
 ### Alert Categories
 
-**Critical Monitoring (5 alerts):**
+**Critical Monitoring (8 alerts):**
 - Validator Not Proposing
 - Validator State Unhealthy
 - Validation Agreement Below 90%
 - WebSocket Unhealthy
 - HTTP RPC Unhealthy
+- Amendment Blocked (validator non-functional)
+- UNL Publisher Certificate Expiring Soon
+- UNL Status Inactive
 
 **Network Monitoring (3 alerts):**
 - Peer Count Dropping (> 10% loss in 30s)
 - Peer Count Critical Drop (> 30% loss in 30s)
 - Network Connectivity Issues (< 5 peers)
 
-**Performance Monitoring (6 alerts):**
+**Performance Monitoring (7 alerts):**
 - High Load Factor
 - High IO Latency (Trending Up)
 - Peer Latency Degradation
 - Memory Usage Critical
 - Disk Space Warning
 - Validator CPU High
-
-**Upgrade Monitoring (2 alerts):**
-- Amendment Blocked (validator non-functional)
 - Upgrade Recommended (>60% peers ahead)
 
 ### How Alerts Work (Flow Diagram)

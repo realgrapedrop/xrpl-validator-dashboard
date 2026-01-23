@@ -464,6 +464,177 @@ groups:
       summary: HTTP RPC connection to rippled failed
     labels:
       severity: critical
+  - uid: yf3s82tk5p96ab
+    title: Amendment Blocked - Upgrade Required
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_amendment_blocked_realtime
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 1m
+    annotations:
+      description: CRITICAL - rippled is amendment blocked. A new amendment has been enabled that your version doesn't support. Your validator is non-functional until upgraded!
+      summary: Amendment Blocked - Validator requires immediate upgrade
+    labels:
+      severity: critical
+  - uid: unlh3s82tk7r18cd
+    title: UNL Publisher Certificate Expiring Soon
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: min(xrpl_cert_expiry_days_realtime)
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 30
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 1h
+    annotations:
+      description: A UNL publisher's SSL certificate expires in {{ $values.A.Value }} days. rippled may not be able to update the validator list if the certificate expires.
+      summary: UNL publisher SSL certificate expiring soon
+    labels:
+      severity: warning
+  - uid: unlh3s82tk8s29de
+    title: UNL Status Inactive
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_unl_status_active_realtime
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 1
+            type: lt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 5m
+    annotations:
+      description: UNL (Unique Node List) status is not active. The validator list may be stale - check UNL publisher connectivity.
+      summary: UNL status is not active - validator list may be stale
+    labels:
+      severity: critical
 - name: Performance Monitoring
   folder: XRPL Performance Alerts
   interval: 10s
@@ -887,5 +1058,62 @@ groups:
     annotations:
       description: Validator CPU usage is {{ $values.A.Value | printf "%.1f" }}% of available capacity (80% threshold)
       summary: Validator CPU usage critical - rippled using most available CPU capacity
+    labels:
+      severity: warning
+  - uid: zf3s82tk6q07bc
+    title: Upgrade Recommended - Newer Version Available
+    condition: C
+    data:
+    - refId: A
+      queryType: ''
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: state-exporter
+      model:
+        editorMode: code
+        expr: xrpl_peers_higher_version_pct_realtime
+        format: table
+        instant: true
+        intervalMs: 1000
+        legendFormat: __auto
+        maxDataPoints: 43200
+        range: false
+        refId: A
+    - refId: C
+      queryType: ''
+      relativeTimeRange:
+        from: 0
+        to: 0
+      datasourceUid: __expr__
+      model:
+        conditions:
+        - evaluator:
+            params:
+            - 75
+            type: gt
+          operator:
+            type: and
+          query:
+            params:
+            - C
+          reducer:
+            params: []
+            type: last
+          type: query
+        datasource:
+          type: __expr__
+          uid: __expr__
+        expression: A
+        intervalMs: 1000
+        maxDataPoints: 43200
+        refId: C
+        type: threshold
+    noDataState: OK
+    execErrState: Error
+    for: 1m
+    annotations:
+      description: '{{ $values.A.Value | printf "%.1f" }}% of peers are running a newer rippled version. Consider upgrading to stay current with the network.'
+      summary: Upgrade recommended - majority of peers on newer version
     labels:
       severity: warning
