@@ -32,7 +32,7 @@
     {
       "gridPos": {
         "h": 2,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
@@ -53,9 +53,118 @@
     {
       "datasource": {
         "type": "prometheus",
+        "uid": "state-exporter"
+      },
+      "description": "Rippled version and amendment status.\n\nStates:\n- ● Current: running latest version\n- ▲ Behind: newer version available\n- ■ Blocked: amendment blocked\n- ✕ Critical: blocked and behind",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "● Current"
+                },
+                "1": {
+                  "color": "yellow",
+                  "index": 1,
+                  "text": "▲ Behind"
+                },
+                "2": {
+                  "color": "red",
+                  "index": 2,
+                  "text": "■ Blocked"
+                },
+                "3": {
+                  "color": "dark-red",
+                  "index": 3,
+                  "text": "✕ Critical"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "noValue": "Rippled: -",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              },
+              {
+                "color": "dark-red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "id": 409,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 20
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_upgrade_status_realtime",
+          "instant": true,
+          "legendFormat": "Rippled:",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Overall health of the monitoring system state management. Checks if state backups are functioning and critical metrics are being persisted. 0=Failed,\n  0.5=Degraded, 1=OK.",
+      "description": "Overall monitoring system health.\n\nStates:\n- 🟢 OK: state backups working\n- 🟡 Degraded: partial functionality\n- 🔴 Failed: state management down",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -143,7 +252,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "WebSocket connection health to rippled. Monitors heartbeat (ping every 30s), connection status, and auto-reconnection. If unhealthy, automatic\n  reconnection will attempt to restore connection.",
+      "description": "WebSocket connection to rippled.\n\nStates:\n- 🟢 Healthy: connected, heartbeat OK\n- 🔴 Down: connection failed\n- 🔴 Lost: no heartbeat response",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -245,7 +354,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "HTTP JSON-RPC connection health to rippled. Monitors uptime exporter scraping rippled's HTTP endpoint every 5 seconds. Detects failures within 3-6\n  seconds.",
+      "description": "HTTP JSON-RPC connection to rippled.\n\nStates:\n- 🟢 Healthy: endpoint responding\n- 🔴 Unhealthy: endpoint unreachable",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -336,7 +445,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "Python collector process health. Monitors if the main monitoring application (main.py) is running and emitting metrics every 30 seconds. Container crash\n   or stop detected immediately.",
+      "description": "Python collector process health.\n\nStates:\n- 🟢 Healthy: emitting metrics\n- 🔴 Unhealthy: process stopped",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -427,7 +536,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Data collection status based on rippled state.\n\n• Streaming: rippled is fully synced and producing data\n• Syncing: rippled is starting up and syncing with the network\n• No Stream: rippled is not responding or collector is down",
+      "description": "Connection status between monitor and rippled.\n\nStates:\n- 🟢 Streaming: data flowing\n- 🟡 Syncing: catching up\n- 🔴 No Stream: disconnected",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -471,7 +580,7 @@
               "type": "range"
             }
           ],
-          "noValue": "Data Collection: No Stream",
+          "noValue": "Connection: No Stream",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -527,7 +636,7 @@
           "exemplar": false,
           "expr": "xrpl_state_realtime_value",
           "instant": true,
-          "legendFormat": "Data Collection:",
+          "legendFormat": "Connection:",
           "range": false,
           "refId": "A"
         }
@@ -540,7 +649,7 @@
         "type": "prometheus",
         "uid": "victoria"
       },
-      "description": "VictoriaMetrics database health. Verifies database can respond to queries and store metrics. If down, all dashboard panels will show 'No data'.",
+      "description": "VictoriaMetrics database health.\n\nStates:\n- 🟢 Healthy: queries responding\n- 🔴 Unhealthy: database offline",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4186,7 +4295,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Days until Validator List (UNL) expires. List auto-updates from publishers. If critically low, check network connectivity to vl.ripple.com and vl.xrplf.org.\n\nThresholds:\n- Green: ≥30 days\n- Yellow: 14-29 days\n- Red: <14 days",
+      "description": "Days until SSL certificate or UNL content expires.\n\nStates:\n- 🟢 Green: >60 days (healthy)\n- 🟡 Yellow: 30-60 days (plan renewal)\n- 🔴 Red: <30 days (urgent)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4205,11 +4314,11 @@
               },
               {
                 "color": "yellow",
-                "value": 14
+                "value": 30
               },
               {
                 "color": "green",
-                "value": 30
+                "value": 60
               }
             ]
           },
@@ -4225,9 +4334,12 @@
       },
       "id": 380,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
+        "displayMode": "lcd",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "left",
+        "orientation": "horizontal",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -4235,9 +4347,9 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
       },
       "pluginVersion": "12.3.0",
       "targets": [
@@ -4248,15 +4360,28 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "xrpl_unl_expiry_days_realtime",
+          "expr": "xrpl_cert_expiry_days_realtime",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "{{url}}",
           "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "state-exporter"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "xrpl_unl_expiry_days_realtime",
+          "instant": true,
+          "legendFormat": "Me",
+          "range": false,
+          "refId": "B"
         }
       ],
-      "title": "UNL Expiry",
-      "type": "gauge"
+      "title": "UNL Health",
+      "type": "bargauge"
     },
     {
       "datasource": {

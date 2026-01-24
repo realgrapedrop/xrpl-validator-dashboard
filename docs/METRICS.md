@@ -1248,10 +1248,10 @@ Combined upgrade status indicating whether your rippled version needs updating.
 
 | Value | Status | Display | Meaning |
 |-------|--------|---------|---------|
-| 0 | Current | ✅ Current | Running current version, no action needed |
-| 1 | Behind | ⚠️ Behind | >60% of peers on newer version, upgrade soon |
-| 2 | Blocked | ⛔ Blocked | Amendment blocked, upgrade required |
-| 3 | Critical | 🚨 Critical | Both behind AND blocked, upgrade immediately |
+| 0 | Current | ● Current | Running current version, no action needed |
+| 1 | Behind | ▲ Behind | >60% of peers on newer version, upgrade soon |
+| 2 | Blocked | ■ Blocked | Amendment blocked, upgrade required |
+| 3 | Critical | ✕ Critical | Both behind AND blocked, upgrade immediately |
 
 **Formula**: `upgrade_status = upgrade_recommended + (amendment_blocked × 2)`
 

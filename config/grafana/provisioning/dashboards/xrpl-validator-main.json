@@ -55,7 +55,7 @@
         "type": "prometheus",
         "uid": "state-exporter"
       },
-      "description": "Rippled version and amendment status.\n\nStates:\n- 🟢 Current: running latest version\n- 🟡 Behind: newer version available\n- 🟠 Blocked: amendment blocked\n- 🔴 Critical: blocked and behind",
+      "description": "Rippled version and amendment status.\n\nStates:\n- ● Current: running latest version (green)\n- ▲ Behind: newer version available (yellow)\n- ■ Blocked: amendment blocked (red)\n- ✕ Critical: blocked and behind (dark red)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -67,22 +67,22 @@
                 "0": {
                   "color": "green",
                   "index": 0,
-                  "text": "✅ Current"
+                  "text": "● Current"
                 },
                 "1": {
                   "color": "yellow",
                   "index": 1,
-                  "text": "⚠️ Behind"
+                  "text": "▲ Behind"
                 },
                 "2": {
-                  "color": "orange",
+                  "color": "red",
                   "index": 2,
-                  "text": "⛔ Blocked"
+                  "text": "■ Blocked"
                 },
                 "3": {
-                  "color": "red",
+                  "color": "dark-red",
                   "index": 3,
-                  "text": "🚨 Critical"
+                  "text": "✕ Critical"
                 }
               },
               "type": "value"

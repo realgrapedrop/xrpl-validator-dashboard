@@ -159,10 +159,10 @@ New "Rippled" panel monitors your rippled version status and alerts when upgrade
 
 | Status | Display | Meaning |
 |--------|---------|---------|
-| Current | ✅ Current | Running current version, no action needed |
-| Behind | ⚠️ Behind | >60% of peers on newer version, upgrade soon |
-| Blocked | ⛔ Blocked | Amendment blocked, upgrade required |
-| Critical | 🚨 Critical | Behind AND blocked, upgrade immediately |
+| Current | ● Current | Running current version, no action needed |
+| Behind | ▲ Behind | >60% of peers on newer version, upgrade soon |
+| Blocked | ■ Blocked | Amendment blocked, upgrade required |
+| Critical | ✕ Critical | Behind AND blocked, upgrade immediately |
 
 **How it works**:
 - Crawls peer versions via rippled's `/crawl` endpoint (port 51235)
