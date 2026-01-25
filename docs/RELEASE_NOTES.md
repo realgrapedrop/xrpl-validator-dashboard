@@ -153,6 +153,12 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 
 ### v3.0.5
 
+**Automatic Validator Key Detection**:
+- Dashboard auto-detects validator public key from rippled
+- Supports stock node to validator conversion without reinstall
+- Pubkey panel updates automatically when validator token is added
+- Validation metrics (Validations Sent, Agreements, Missed) begin populating once validator starts proposing
+
 **Rippled Version Monitoring Panel**:
 
 New "Rippled" panel monitors your rippled version status and alerts when upgrades are needed:
@@ -198,12 +204,6 @@ Users who ran `sudo ./install.sh` may have `.env` owned by root, preventing `./m
 ---
 
 ### v3.0.3
-
-**Automatic Validator Key Detection**:
-- Dashboard auto-detects validator public key from rippled
-- Supports stock node to validator conversion without reinstall
-- Pubkey panel updates automatically when validator token is added
-- Validation metrics (Validations Sent, Agreements, Missed) begin populating once validator starts proposing
 
 **Smarter Data Collection Status**:
 - Data Collection panel now shows connection state: "Streaming", "Syncing", or "No Stream"
