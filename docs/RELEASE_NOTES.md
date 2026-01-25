@@ -151,7 +151,7 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 
 # Changelog
 
-### v3.0.4
+### v3.0.5
 
 **Rippled Version Monitoring Panel**:
 
@@ -181,6 +181,10 @@ PEER_CRAWL_PORT=51235
 ```
 
 **Existing users**: Run `./manage.sh` → Option 10 (Update) after `git pull` to add the new panel.
+
+---
+
+### v3.0.4
 
 **Permission Fix for .env File**:
 

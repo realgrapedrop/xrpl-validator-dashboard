@@ -4,7 +4,7 @@ Production-ready monitoring for validators who need reliable insight without the
 
 **Real-time monitoring and alerting for XRPL validator nodes**
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.5-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
