@@ -1,4 +1,4 @@
-# XRPL Validator Dashboard v3.0
+# XRPL Validator Dashboard v3.0.5
 
 Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 44 metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
 
