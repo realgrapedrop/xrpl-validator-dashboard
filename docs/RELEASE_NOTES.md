@@ -151,6 +151,31 @@ Dashboard's 1-second refresh captures real state transitions. During consensus, 
 
 # Changelog
 
+### v3.0.6
+
+**Light Mode is Now the Default Dashboard**:
+- Community poll results:
+  - 55% Light Mode - Dark Theme
+  - 36% Classic - Dark Theme
+  - 9% Cyberpunk - Dark Theme
+  - 0% Classic - Light Theme
+  - 0% Cyberpunk - Light Theme
+  - 0% Light Mode - Light Theme
+- Clicking Home or navigating to the root URL now loads the Light Mode dashboard
+- Other themes (Main, Cyberpunk) remain available via dashboard browser
+
+**Panel Names Shortened for Mobile/Tablet**:
+- Validation panels renamed for better iPad and mobile display
+- "Agreements (1h)" → "1h Agreements"
+- "Agreements (24h)" → "24h Agreements"
+- "Missed (1h)" → "1h Missed"
+- "Missed (24h)" → "24h Missed"
+- "Agreements % (1h)" → "% 1h Agreements"
+- "Agreements % (24h)" → "% 24h Agreements"
+- "Ledgers Per Minute" → "Ledgers Per Min"
+
+---
+
 ### v3.0.5
 
 **Automatic Validator Key Detection**:

@@ -765,7 +765,7 @@ set_home_dashboard_api() {
     curl -s -X PATCH "http://localhost:${grafana_port}/api/org/preferences" \
         -u "${username}:${password}" \
         -H "Content-Type: application/json" \
-        -d '{"homeDashboardUID": "xrpl-validator-monitor-full"}' > /dev/null 2>&1
+        -d '{"homeDashboardUID": "xrpl-validator-monitor-light"}' > /dev/null 2>&1
 }
 
 # Restore default dashboard
@@ -1393,7 +1393,7 @@ update_dashboard_menu() {
     # Set home dashboard via API (ensures dashboards can be saved, not just "Save as copy")
     curl -s -X PATCH "http://localhost:${GRAFANA_PORT}/api/org/preferences" \
         -u "admin:admin" -H "Content-Type: application/json" \
-        -d '{"homeDashboardUID": "xrpl-validator-monitor-full"}' > /dev/null 2>&1
+        -d '{"homeDashboardUID": "xrpl-validator-monitor-light"}' > /dev/null 2>&1
     print_status "Home dashboard configured"
 
     # Import contact point via API (use email from .env if available)

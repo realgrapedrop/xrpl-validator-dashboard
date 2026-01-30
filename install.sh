@@ -89,6 +89,37 @@ print_step() {
     echo ""
 }
 
+# Detect operating system and set package manager
+# Must be called early, before install_dependencies()
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_ID=$ID
+        OS_VERSION=$VERSION_ID
+    else
+        print_error "Cannot detect operating system"
+        print_info "Missing /etc/os-release file"
+        exit 1
+    fi
+
+    case "$OS_ID" in
+        ubuntu)
+            PKG_MANAGER="apt"
+            ;;
+        debian)
+            PKG_MANAGER="apt"
+            ;;
+        photon)
+            PKG_MANAGER="tdnf"
+            ;;
+        *)
+            print_error "Unsupported operating system: $OS_ID"
+            print_info "Supported: Ubuntu 20.04+, Debian 11+, PhotonOS 4.0+"
+            exit 1
+            ;;
+    esac
+}
+
 # Install required system dependencies (curl, jq)
 install_dependencies() {
     local missing_pkgs=""
@@ -99,15 +130,32 @@ install_dependencies() {
     if [ -n "$missing_pkgs" ]; then
         echo ""
         print_info "Installing required packages:$missing_pkgs"
-        if apt-get update -qq && apt-get install -y -qq $missing_pkgs > /dev/null 2>&1; then
-            print_status "Required packages installed"
-        else
-            print_error "Failed to install packages:$missing_pkgs"
-            echo "Please install manually: sudo apt-get install$missing_pkgs"
-            exit 1
-        fi
+
+        case "$PKG_MANAGER" in
+            apt)
+                if apt-get update -qq && apt-get install -y -qq $missing_pkgs > /dev/null 2>&1; then
+                    print_status "Required packages installed"
+                else
+                    print_error "Failed to install packages:$missing_pkgs"
+                    echo "Please install manually: sudo apt-get install$missing_pkgs"
+                    exit 1
+                fi
+                ;;
+            tdnf)
+                if tdnf install -y $missing_pkgs > /dev/null 2>&1; then
+                    print_status "Required packages installed"
+                else
+                    print_error "Failed to install packages:$missing_pkgs"
+                    echo "Please install manually: tdnf install$missing_pkgs"
+                    exit 1
+                fi
+                ;;
+        esac
     fi
 }
+
+# Detect OS early (before any package installation)
+detect_os
 
 # Install dependencies early (before any curl/jq usage)
 install_dependencies
@@ -320,13 +368,13 @@ set_home_dashboard() {
         -X PATCH "http://localhost:${grafana_port}/api/org/preferences" \
         -u "admin:admin" \
         -H "Content-Type: application/json" \
-        -d '{"homeDashboardUID": "xrpl-validator-monitor-full"}' 2>&1)
+        -d '{"homeDashboardUID": "xrpl-validator-monitor-light"}' 2>&1)
 
     local http_code=$(echo "$response" | tail -n1)
 
     if [ "$http_code" = "200" ]; then
-        print_status "Home dashboard set to XRPL Validator Dashboard"
-        log "Home dashboard set via API: xrpl-validator-monitor-full"
+        print_status "Home dashboard set to XRPL Validator Dashboard Light Mode"
+        log "Home dashboard set via API: xrpl-validator-monitor-light"
     else
         print_warning "Could not set home dashboard (HTTP $http_code)"
         log "Home dashboard warning: HTTP $http_code"
@@ -1010,28 +1058,32 @@ check_system_requirements() {
         REQUIREMENTS_MET=false
     fi
 
-    # Check OS
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        OS_ID=$ID
-        OS_VERSION=$VERSION_ID
-    else
-        print_error "Cannot detect operating system"
-        exit 1
-    fi
-
-    if [ "$OS_ID" != "ubuntu" ]; then
-        print_error "This installer requires Ubuntu 20.04 LTS or later"
-        print_info "For other distributions, install Docker Compose manually"
-        exit 1
-    fi
-
+    # Validate OS version (OS_ID and OS_VERSION already set by detect_os)
     VERSION_MAJOR="${OS_VERSION%%.*}"
-    if [ "$VERSION_MAJOR" -lt 20 ]; then
-        print_error "Ubuntu 20.04 LTS or later is required (detected: $OS_VERSION)"
-        exit 1
-    fi
-    print_status "Operating system: Ubuntu $OS_VERSION"
+
+    case "$OS_ID" in
+        ubuntu)
+            if [ "$VERSION_MAJOR" -lt 20 ]; then
+                print_error "Ubuntu 20.04 LTS or later required (detected: $OS_VERSION)"
+                exit 1
+            fi
+            print_status "Operating system: Ubuntu $OS_VERSION"
+            ;;
+        debian)
+            if [ "$VERSION_MAJOR" -lt 11 ]; then
+                print_error "Debian 11 or later required (detected: $OS_VERSION)"
+                exit 1
+            fi
+            print_status "Operating system: Debian $OS_VERSION"
+            ;;
+        photon)
+            if [ "$VERSION_MAJOR" -lt 4 ]; then
+                print_error "PhotonOS 4.0 or later required (detected: $OS_VERSION)"
+                exit 1
+            fi
+            print_status "Operating system: PhotonOS $OS_VERSION"
+            ;;
+    esac
 
     # Check for Docker
     if ! command -v docker &> /dev/null; then
@@ -1063,27 +1115,58 @@ install_missing_components() {
         case $component in
             "Docker")
                 print_info "Installing Docker..."
-                if curl -fsSL https://get.docker.com | sh; then
-                    print_status "Docker installed successfully"
-                    if [[ $EUID -eq 0 ]]; then
-                        print_info "Adding user $ACTUAL_USER to docker group..."
-                        usermod -aG docker $ACTUAL_USER
-                        print_warning "You may need to log out and back in for docker group membership to take effect"
-                    fi
-                else
-                    print_error "Failed to install Docker"
-                    print_info "Please install Docker manually: https://docs.docker.com/engine/install/"
-                    exit 1
+                case "$PKG_MANAGER" in
+                    apt)
+                        # Ubuntu/Debian: Use official Docker install script
+                        if curl -fsSL https://get.docker.com | sh; then
+                            print_status "Docker installed successfully"
+                        else
+                            print_error "Failed to install Docker"
+                            print_info "Please install Docker manually: https://docs.docker.com/engine/install/"
+                            exit 1
+                        fi
+                        ;;
+                    tdnf)
+                        # PhotonOS: Docker available in repos
+                        if tdnf install -y docker; then
+                            systemctl enable docker
+                            systemctl start docker
+                            print_status "Docker installed and started"
+                        else
+                            print_error "Failed to install Docker"
+                            print_info "Please install manually: tdnf install docker"
+                            exit 1
+                        fi
+                        ;;
+                esac
+                # Add user to docker group
+                if [[ $EUID -eq 0 ]]; then
+                    print_info "Adding user $ACTUAL_USER to docker group..."
+                    usermod -aG docker $ACTUAL_USER
+                    print_warning "You may need to log out and back in for docker group membership to take effect"
                 fi
                 ;;
             "Docker Compose")
                 print_info "Installing Docker Compose..."
-                if apt-get update && apt-get install -y docker-compose-plugin; then
-                    print_status "Docker Compose installed successfully"
-                else
-                    print_error "Failed to install Docker Compose"
-                    exit 1
-                fi
+                case "$PKG_MANAGER" in
+                    apt)
+                        if apt-get update && apt-get install -y docker-compose-plugin; then
+                            print_status "Docker Compose installed successfully"
+                        else
+                            print_error "Failed to install Docker Compose"
+                            exit 1
+                        fi
+                        ;;
+                    tdnf)
+                        if tdnf install -y docker-compose; then
+                            print_status "Docker Compose installed successfully"
+                        else
+                            print_error "Failed to install Docker Compose"
+                            print_info "Please install manually: tdnf install docker-compose"
+                            exit 1
+                        fi
+                        ;;
+                esac
                 ;;
         esac
     done
