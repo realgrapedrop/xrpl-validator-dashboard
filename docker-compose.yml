@@ -25,6 +25,9 @@ services:
       - '--storage.cacheSizeIndexDBIndexBlocks=64MB'
       - '--storage.cacheSizeIndexDBDataBlocks=64MB'
       - '--storage.cacheSizeStorageTSID=64MB'
+      # Max staleness interval for instant queries - ensures sparse metrics (30s intervals)
+      # are found by instant queries. Without this, Monitor Health panels show "Offline".
+      - '--search.maxStalenessInterval=60s'
     restart: unless-stopped
     networks:
       - xrpl-monitor-network
