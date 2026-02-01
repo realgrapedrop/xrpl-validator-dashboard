@@ -1,10 +1,10 @@
-# XRPL Validator Dashboard v3.0.6
+# XRPL Validator Dashboard v3.0.7
 
 Production-ready monitoring for validators who need reliable insight without the overhead. Real-time tracking of health, agreements, ledger flow, and 44 metrics through direct WebSocket streams and official RPC endpoints. Includes email and webhook alerts out of the box.
 
 **Real-time monitoring and alerting for XRPL validator nodes**
 
-![Version](https://img.shields.io/badge/version-3.0.6-blue)
+![Version](https://img.shields.io/badge/version-3.0.7-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
