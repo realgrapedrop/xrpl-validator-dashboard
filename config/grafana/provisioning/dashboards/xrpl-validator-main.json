@@ -43,7 +43,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"display: flex; align-items: center; height: 100%;\">\n  <h3>🛡️ Monitor Health:</h3>\n  </div>",
+        "content": "<div style=\"display: flex; align-items: center; height: 100%; padding-top: 4px;\">\n  <h3 style=\"font-size: 28px; margin: 0;\">🛡️ Health:</h3>\n  </div>",
         "mode": "html"
       },
       "pluginVersion": "12.3.0",
@@ -192,7 +192,7 @@
               "type": "value"
             }
           ],
-          "noValue": "Monitor Health: Offline",
+          "noValue": "Health: Offline",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -239,7 +239,7 @@
           "exemplar": false,
           "expr": "xrpl_state_health",
           "instant": true,
-          "legendFormat": "Monitor Health:",
+          "legendFormat": "Health:",
           "range": false,
           "refId": "A"
         }
