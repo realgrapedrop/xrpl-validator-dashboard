@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.8] - 2026-02-11
+
+### Improved
+- **Health panel label**: Shortened "Monitor Health:" to "Health:" to reduce wrapping on mobile devices. Adjusted CSS for better horizontal alignment with stat panels in the top row. Applied across all three themes.
+
+---
+
 ## [3.0.7] - 2026-02-01
 
 ### Fixed

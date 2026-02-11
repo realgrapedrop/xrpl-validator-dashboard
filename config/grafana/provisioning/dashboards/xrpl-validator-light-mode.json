@@ -43,7 +43,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"display: flex; align-items: center; height: 100%;\">\n  <h3>🛡️ Monitor Health:</h3>\n  </div>",
+        "content": "<div style=\"display: flex; align-items: center; height: 100%; padding-top: 4px;\">\n  <h3 style=\"font-size: 28px; margin: 0;\">🛡️ Health:</h3>\n  </div>",
         "mode": "html"
       },
       "pluginVersion": "12.3.0",
@@ -192,7 +192,7 @@
               "type": "value"
             }
           ],
-          "noValue": "Monitor Health: Offline",
+          "noValue": "Health: Offline",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -239,7 +239,7 @@
           "exemplar": false,
           "expr": "xrpl_state_health",
           "instant": true,
-          "legendFormat": "Monitor Health:",
+          "legendFormat": "Health:",
           "range": false,
           "refId": "A"
         }
@@ -2992,7 +2992,7 @@
           "refId": "A"
         }
       ],
-      "title": "Ledgers Per Minute",
+      "title": "Ledgers Per Min",
       "type": "stat"
     },
     {
@@ -3155,7 +3155,7 @@
         }
       ],
       "timeFrom": "1h",
-      "title": "Agreements % (1h)",
+      "title": "% 1h Agreements",
       "type": "stat"
     },
     {
@@ -3234,7 +3234,7 @@
         }
       ],
       "timeFrom": "1h",
-      "title": "Agreements (1h)",
+      "title": "1h Agreements",
       "type": "stat"
     },
     {
@@ -3322,7 +3322,7 @@
         }
       ],
       "timeFrom": "1h",
-      "title": "Missed (1h)",
+      "title": "1h Missed",
       "type": "stat"
     },
     {
@@ -3870,7 +3870,7 @@
         }
       ],
       "timeFrom": "24h",
-      "title": "Agreements % (24h)",
+      "title": "% 24h Agreements",
       "type": "stat"
     },
     {
@@ -3948,7 +3948,7 @@
         }
       ],
       "timeFrom": "24h",
-      "title": "Agreements (24h)",
+      "title": "24h Agreements",
       "type": "stat"
     },
     {
@@ -4035,7 +4035,7 @@
         }
       ],
       "timeFrom": "24h",
-      "title": "Missed (24h)",
+      "title": "24h Missed",
       "type": "stat"
     },
     {
@@ -21181,6 +21181,6 @@
   "timezone": "",
   "title": "XRPL Validator Dashboard Light Mode",
   "uid": "xrpl-validator-monitor-light",
-  "version": 12,
+  "version": 16,
   "weekStart": ""
 }
