@@ -20,6 +20,8 @@ import logging
 import time
 import json
 import re
+import ssl
+import socket
 from datetime import datetime, timezone
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
@@ -34,6 +36,8 @@ PEERS_POLL_INTERVAL = float(os.getenv("PEERS_POLL_INTERVAL", "5"))
 # Default disabled (port 0), set PEER_CRAWL_PORT to enable (e.g., 51235)
 PEER_CRAWL_PORT = int(os.getenv("PEER_CRAWL_PORT", "0"))
 PEER_CRAWL_INTERVAL = float(os.getenv("PEER_CRAWL_INTERVAL", "300"))  # 5 minutes
+# SSL certificate check interval (6 hours - certs don't change rapidly)
+CERT_CHECK_INTERVAL = float(os.getenv("CERT_CHECK_INTERVAL", "21600"))
 EXPORTER_PORT = int(os.getenv("EXPORTER_PORT", "9103"))
 INSTANCE = os.getenv("INSTANCE_LABEL", "validator")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -95,7 +99,12 @@ current_metrics = {
     'peers_higher_version': 0,
     'peers_higher_version_pct': 0.0,
     'upgrade_recommended': 0,  # 1 if >60% of peers on higher version
-    'crawl_timestamp': 0
+    'crawl_timestamp': 0,
+    # UNL Health metrics (from /crawl endpoint)
+    'unl_status_active': 1,  # 1=active, 0=inactive/problem
+    'unl_publishers': [],  # List of publisher URIs from /crawl
+    'cert_expiry_days': {},  # Dict mapping publisher URL to days until cert expiry
+    'cert_check_timestamp': 0
 }
 metrics_lock = threading.Lock()
 
@@ -283,6 +292,24 @@ class MetricsHandler(BaseHTTPRequestHandler):
             lines.append('# HELP xrpl_upgrade_status_realtime Upgrade status (0=Current, 1=Behind, 2=Blocked, 3=Critical)')
             lines.append('# TYPE xrpl_upgrade_status_realtime gauge')
             lines.append(f'xrpl_upgrade_status_realtime{{instance="{INSTANCE}"}} {version_status}')
+
+            # === UNL Health metrics (from /crawl endpoint) ===
+            with metrics_lock:
+                unl_status_active = current_metrics['unl_status_active']
+                cert_expiry_days = current_metrics['cert_expiry_days']
+
+            # xrpl_unl_status_active_realtime (1=active, 0=problem)
+            lines.append('# HELP xrpl_unl_status_active_realtime UNL validator list status (1=active, 0=inactive)')
+            lines.append('# TYPE xrpl_unl_status_active_realtime gauge')
+            lines.append(f'xrpl_unl_status_active_realtime{{instance="{INSTANCE}"}} {unl_status_active}')
+
+            # xrpl_cert_expiry_days_realtime (one per publisher)
+            if cert_expiry_days:
+                lines.append('# HELP xrpl_cert_expiry_days_realtime Days until SSL certificate expires for UNL publisher')
+                lines.append('# TYPE xrpl_cert_expiry_days_realtime gauge')
+                for url, days in cert_expiry_days.items():
+                    if days >= 0:  # Only output valid values
+                        lines.append(f'xrpl_cert_expiry_days_realtime{{instance="{INSTANCE}",url="{url}"}} {days}')
 
         # === Peer metrics ===
         # xrpl_peer_count_realtime
@@ -598,6 +625,38 @@ class MetricsHandler(BaseHTTPRequestHandler):
                 },
                 "value": [timestamp, str(upgrade_status)]
             })
+        # === UNL Health metrics ===
+        elif 'xrpl_unl_status_active_realtime' in query:
+            with metrics_lock:
+                unl_status_active = current_metrics['unl_status_active']
+            result.append({
+                "metric": {
+                    "__name__": "xrpl_unl_status_active_realtime",
+                    "instance": INSTANCE
+                },
+                "value": [timestamp, str(unl_status_active)]
+            })
+        elif 'xrpl_cert_expiry_days_realtime' in query:
+            # Check if query filters by url label
+            url_filter = None
+            match = re.search(r'url\s*=\s*["\']?([^"\'}\s]+)["\']?', query)
+            if match:
+                url_filter = match.group(1)
+
+            with metrics_lock:
+                cert_expiry_days = current_metrics['cert_expiry_days']
+            for url, days in cert_expiry_days.items():
+                if url_filter and url != url_filter:
+                    continue
+                if days >= 0:
+                    result.append({
+                        "metric": {
+                            "__name__": "xrpl_cert_expiry_days_realtime",
+                            "instance": INSTANCE,
+                            "url": url
+                        },
+                        "value": [timestamp, str(days)]
+                    })
         else:
             # Unknown metric - return empty result
             pass
@@ -908,15 +967,65 @@ def compare_versions(v1: tuple, v2: tuple) -> int:
     return 0
 
 
+def get_cert_expiry_days(url: str) -> int:
+    """
+    Get days until SSL certificate expires for a URL.
+
+    Args:
+        url: Full URL (e.g., "https://vl.ripple.com")
+
+    Returns:
+        Days until certificate expires, or -1 on error
+    """
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    port = parsed.port or 443
+
+    if not hostname:
+        logger.warning(f"Invalid URL for cert check: {url}")
+        return -1
+
+    context = ssl.create_default_context()
+
+    try:
+        with socket.create_connection((hostname, port), timeout=10) as sock:
+            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                cert = ssock.getpeercert()
+                expire_str = cert['notAfter']  # e.g., 'Sep 28 23:59:59 2026 GMT'
+                expire_date = datetime.strptime(expire_str, '%b %d %H:%M:%S %Y %Z')
+                expire_date = expire_date.replace(tzinfo=timezone.utc)
+                now = datetime.now(timezone.utc)
+                days = (expire_date - now).days
+                return max(0, days)
+    except socket.timeout:
+        logger.warning(f"Timeout checking SSL cert for {hostname}")
+        return -1
+    except socket.gaierror as e:
+        logger.warning(f"DNS error checking SSL cert for {hostname}: {e}")
+        return -1
+    except ssl.SSLError as e:
+        logger.warning(f"SSL error checking cert for {hostname}: {e}")
+        return -1
+    except Exception as e:
+        logger.warning(f"Failed to check SSL cert for {url}: {e}")
+        return -1
+
+
 async def fetch_peer_versions(client: httpx.AsyncClient) -> dict:
     """
-    Fetch peer versions from rippled /crawl endpoint.
+    Fetch peer versions and UNL data from rippled /crawl endpoint.
 
     The /crawl endpoint exposes connected peer information including their
     rippled versions. This is used to detect when an upgrade may be needed.
+    Also extracts UNL publisher information for health monitoring.
 
     Returns:
-        dict with keys: peer_versions (list of version strings), peer_count
+        dict with keys:
+            - peer_versions: list of version strings
+            - peer_count: number of peers
+            - unl_status: 'active' or other status string
+            - unl_status_active: 1 if active, 0 otherwise
+            - unl_publishers: list of publisher URIs
         Returns None if endpoint not accessible
     """
     if PEER_CRAWL_PORT == 0:
@@ -948,9 +1057,24 @@ async def fetch_peer_versions(client: httpx.AsyncClient) -> dict:
                 if version:
                     versions.append(version)
 
+            # Extract UNL data
+            unl = data.get('unl', {})
+            validator_list = unl.get('validator_list', {})
+            unl_status = validator_list.get('status', 'unknown')
+            unl_status_active = 1 if unl_status == 'active' else 0
+
+            # Extract publisher URIs from validator_sites (HTTPS URLs)
+            # Note: publisher_lists[].uri contains raw IP:port (not parseable by urlparse),
+            # while validator_sites[].uri has proper HTTPS URLs needed for SSL cert checks
+            validator_sites = unl.get('validator_sites', [])
+            publishers = [s.get('uri') for s in validator_sites if s.get('uri')]
+
             return {
                 'peer_versions': versions,
-                'peer_count': len(versions)
+                'peer_count': len(versions),
+                'unl_status': unl_status,
+                'unl_status_active': unl_status_active,
+                'unl_publishers': publishers
             }
         else:
             logger.warning(f"/crawl endpoint returned {response.status_code}")
@@ -1119,8 +1243,36 @@ async def run_peers_polling_loop(client: httpx.AsyncClient):
             await asyncio.sleep(PEERS_POLL_INTERVAL)
 
 
+def check_all_cert_expiry(publishers: list) -> dict:
+    """
+    Check SSL certificate expiry for all UNL publishers.
+
+    Args:
+        publishers: List of publisher URIs (e.g., ['https://vl.ripple.com'])
+
+    Returns:
+        Dict mapping publisher URL (hostname only) to days until expiry
+    """
+    cert_expiry = {}
+    for url in publishers:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if hostname:
+            days = get_cert_expiry_days(url)
+            cert_expiry[hostname] = days
+            if days >= 0:
+                logger.info(f"SSL cert for {hostname}: {days} days until expiry")
+            else:
+                logger.warning(f"SSL cert check failed for {hostname}")
+        else:
+            logger.warning(f"Skipping unparseable publisher URI: {url}")
+    if not cert_expiry and publishers:
+        logger.warning(f"No valid cert results from {len(publishers)} publishers")
+    return cert_expiry
+
+
 async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
-    """Poll rippled /crawl endpoint for peer versions every PEER_CRAWL_INTERVAL seconds"""
+    """Poll rippled /crawl endpoint for peer versions and UNL health every PEER_CRAWL_INTERVAL seconds"""
     global current_metrics
 
     if PEER_CRAWL_PORT == 0:
@@ -1128,6 +1280,7 @@ async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
         return
 
     logger.info(f"Starting peer version crawl loop: port {PEER_CRAWL_PORT} every {PEER_CRAWL_INTERVAL}s")
+    logger.info(f"SSL certificate checks every {CERT_CHECK_INTERVAL}s ({CERT_CHECK_INTERVAL/3600:.1f} hours)")
 
     # Wait for build_version to be populated by state polling loop
     # (prevents race condition on startup)
@@ -1139,6 +1292,9 @@ async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
             break
         await asyncio.sleep(2)
 
+    # Track last cert check time (check on first run)
+    last_cert_check = 0
+
     # Create a separate client with SSL verification disabled for /crawl endpoint
     async with httpx.AsyncClient(verify=False) as crawl_client:
         while True:
@@ -1147,7 +1303,7 @@ async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
                 with metrics_lock:
                     my_version = current_metrics['build_version']
 
-                # Fetch peer versions from /crawl endpoint
+                # Fetch peer versions and UNL data from /crawl endpoint
                 result = await fetch_peer_versions(crawl_client)
 
                 if result and my_version:
@@ -1161,6 +1317,13 @@ async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
                         current_metrics['peers_higher_version_pct'] = upgrade_info['peers_higher_pct']
                         current_metrics['upgrade_recommended'] = upgrade_info['upgrade_recommended']
                         current_metrics['crawl_timestamp'] = time.time()
+                        # UNL health metrics
+                        current_metrics['unl_status_active'] = result.get('unl_status_active', 1)
+                        current_metrics['unl_publishers'] = result.get('unl_publishers', [])
+
+                    # Log UNL status if not active
+                    if result.get('unl_status_active', 1) == 0:
+                        logger.warning(f"UNL status is NOT active: {result.get('unl_status', 'unknown')}")
 
                     # Log if upgrade is recommended
                     if upgrade_info['upgrade_recommended']:
@@ -1174,6 +1337,18 @@ async def run_peer_version_crawl_loop(client: httpx.AsyncClient):
                             f"{result['peer_count']} peers on higher version "
                             f"({upgrade_info['peers_higher_pct']:.1f}%)"
                         )
+
+                    # Check SSL certificates periodically (every CERT_CHECK_INTERVAL)
+                    now = time.time()
+                    if now - last_cert_check >= CERT_CHECK_INTERVAL:
+                        publishers = result.get('unl_publishers', [])
+                        if publishers:
+                            logger.info(f"Checking SSL certificates for {len(publishers)} publishers")
+                            cert_expiry = check_all_cert_expiry(publishers)
+                            with metrics_lock:
+                                current_metrics['cert_expiry_days'] = cert_expiry
+                                current_metrics['cert_check_timestamp'] = now
+                            last_cert_check = now
 
                 await asyncio.sleep(PEER_CRAWL_INTERVAL)
 

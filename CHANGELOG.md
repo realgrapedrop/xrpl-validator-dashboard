@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.9] - 2026-04-07
+
+### Fixed
+- **UNL Health panel showing single bar instead of three**: The `/crawl` endpoint's `publisher_lists[].uri` field returns raw IP:port addresses, which are not parseable as HTTPS URLs. Changed to read from `validator_sites[].uri` which always contains proper HTTPS URLs needed for SSL certificate expiry checks. Affected panel: UNL Health (unl.xrplf.org, vl.ripple.com, Me).
+- Added warning logs for unparseable publisher URIs to prevent silent failures.
+
+  **To apply this fix:** Run `git pull`, then `./manage.sh` and select option 10 (Apply Updates).
+
+---
+
 ## [3.0.8] - 2026-02-11
 
 ### Improved
